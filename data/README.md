@@ -6,7 +6,7 @@ This folder contains the raw data acquired for Dispersion Core Flooding Experime
 - Omega pressure transducer data (pressure)
 
 # Experiment characteristics:
-- Core with 2 inches diameter and 6 inches length:
+- Core with 2 inches diameter and 6 inches length
 - Volume before core:
 - Pore core volume:
 - Volume after core:
