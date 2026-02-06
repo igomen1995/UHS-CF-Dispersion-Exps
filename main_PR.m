@@ -1,4 +1,4 @@
-% main_rhovsC-PR.m
+% main_PR.m
 % version: v1_Feb2026
 % Author: Ianna Gomez Mendez
 %
@@ -28,10 +28,10 @@
 %
 %% INPUT
 
-addpath('Functions/');
+addpath('functions/');
 
 % import pure components NIST data: Tc, Pc and acentric factor w
-filenamePure = 'Input/ThermoNIST-pureData.xlsx';
+filenamePure = 'input/input_PR_pure.xlsx';
 opts = spreadsheetImportOptions("NumVariables", 5);
 % Specify sheet and range
 opts.Sheet = "Sheet1";
@@ -42,7 +42,7 @@ opts.VariableTypes = ["string", "double", "double", "double", "double"];
 filedataPure = readtable(filenamePure,opts);
 
 % import mixture components A12 and B12 factor to estimate BIP (kij)
-filenameBIP = 'Input/Thermo-binaryInteractionParamsHighPressure.xlsx';
+filenameBIP = 'input/input_PR_BIP.xlsx';
 opts = spreadsheetImportOptions("NumVariables", 4);
 % Specify sheet and range
 opts.Sheet = "Sheet1";
@@ -57,7 +57,7 @@ fl = {"H2","CO2"}; % fluids in the mixture
 x1 = 0:0.01:1; %string molar fraction component 1
 P_MPa = 10.4; % MPa, 1500psig
 P = P_MPa*(10^6); % Pa
-T_C = 28; % C
+T_C = 32; % C
 T = T_C +273.15; %K
 Pc = zeros(length(fl),1);
 Tc = zeros(length(fl),1);
@@ -73,8 +73,8 @@ end
 A12 = filedataBIP.A12(filedataBIP.Fluid1 == fl{1} & filedataBIP.Fluid2  == fl{2});
 B12 = filedataBIP.B12(filedataBIP.Fluid1 == fl{1} & filedataBIP.Fluid2  == fl{2});
 
-mkdir('Results/PR-H2CO2-28C-1500psig');
-pathExportAll = 'Results/PR-H2CO2-28C-1500psig/';
+mkdir('results/PR-H2CO2-32C-1500psig');
+pathExportAll = 'results/PR-H2CO2-32C-1500psig/';
 
 %% PR - EOS 
 
@@ -111,6 +111,40 @@ PR_results = table(x1',Zmix',rho_mix','VariableNames',{'x1','Zmix','rho_mix'});
 writetable(PR_results,pathExportAll + "PR_results.xlsx");
 save(pathExportAll + "PR_results.mat",'PR_results')
 
+%% Fitting
+
+%functions
+lin_function = @(p,x)p(1)+p(2)*x;
+pow_function = @(p,x)p(1)+p(2)*(x.^2);
+exp_function = @(p,x)p(1)*exp(p(2)*x);
+p_init = [0,0];
+
+xi_rho_fit_exp = fitnlm([PR_results(:,3),PR_results(:,1)],exp_function,p_init);
+
+
+
+%%
+rho_cal_fit_pow = fitnlm(dens_cal_vals_all(:,1:2),pow_function,p_init);
+rho_cal_fit_exp = fitnlm(dens_cal_vals_all(:,1:2),exp_function,p_init);
+
+% save fit model params
+fittingRhoResultsAll = table('Size',[0 4],'VariableTypes',{'string','double','double','double'},'VariableNames',{'model','p1','p2','RMSE'});
+calProcData.rho_cal_fit_lin = rho_cal_fit_lin;
+fittingRhoResultsAll(1,:) = {"all_lin",rho_cal_fit_lin.Coefficients.Estimate(1),rho_cal_fit_lin.Coefficients.Estimate(2),rho_cal_fit_lin.RMSE};
+calProcData.rho_cal_fit_pow = rho_cal_fit_pow;
+fittingRhoResultsAll(2,:) = {"all_pow",rho_cal_fit_pow.Coefficients.Estimate(1),rho_cal_fit_pow.Coefficients.Estimate(2),rho_cal_fit_pow.RMSE};
+calProcData.rho_cal_fit_exp = rho_cal_fit_exp;
+fittingRhoResultsAll(3,:) = {"all_exp",rho_cal_fit_exp.Coefficients.Estimate(1),rho_cal_fit_exp.Coefficients.Estimate(2),rho_cal_fit_exp.RMSE};
+calProcData.rho_cal_HP_fit_lin = rho_cal_HP_fit_lin;
+fittingRhoResultsAll(4,:) = {"HP_lin",rho_cal_HP_fit_lin.Coefficients.Estimate(1),rho_cal_HP_fit_lin.Coefficients.Estimate(2),rho_cal_HP_fit_lin.RMSE};
+calProcData.rho_cal_HP_fit_pow = rho_cal_HP_fit_pow;
+fittingRhoResultsAll(5,:) = {"HP_pow",rho_cal_HP_fit_pow.Coefficients.Estimate(1),rho_cal_HP_fit_pow.Coefficients.Estimate(2),rho_cal_HP_fit_pow.RMSE};
+calProcData.rho_cal_HP_fit_exp = rho_cal_HP_fit_exp;
+fittingRhoResultsAll(6,:) = {"HP_exp",rho_cal_HP_fit_exp.Coefficients.Estimate(1),rho_cal_HP_fit_exp.Coefficients.Estimate(2),rho_cal_HP_fit_exp.RMSE};
+
+writetable(fittingRhoResultsAll,pathExportAll + "fittingRhoResultsAll.xlsx");
+save(pathExportAll + "calProcData.mat",'calProcData')
+
 %% Plot
 
 figure
@@ -130,3 +164,14 @@ title_aux = sprintf('Z_{mix} vs x_{H2} @ %.1f MPa, %.1f °C', P_MPa, T_C);
 title(title_aux)
 grid on
 saveas(gcf,pathExportAll + "Zmix-vs-x1",'png')
+
+%% 
+figure
+scatter(rho_mix,x1,20,"filled")
+hold on
+plot(0:1:706,feval(xi_rho_fit_exp,0:1:706))
+ylabel('x_1 [-]');
+xlabel('Density PR-EOS [kg/m^{3}]');
+title_aux = sprintf('x_{H2} vs \\rho_{mix} @ %.1f MPa, %.1f °C', P_MPa, T_C);
+title(title_aux)
+grid on
