@@ -34,7 +34,7 @@
 %
 %% INPUT
 
-addpath('Functions/');
+addpath('functions/');
 
 %Exp data
 filenameExp = 'input/input_cal_exp.xlsx';
@@ -353,8 +353,6 @@ P_unique = P_unique(~isnan(P_unique));
 P_unique_field = "P"+ string(P_unique);
 T_unique = unique(filedataExp.T);
 T_unique = T_unique(~isnan(T_unique));
-Q_unique = unique(filedataExp.Q);
-Q_unique = Q_unique(~isnan(Q_unique));
 
 aux_idx = find(ismissing(filedataExp.P) == 0)';
 
@@ -511,11 +509,25 @@ rho_corr_lin = @(p,y) (y-p(1))/p(2);
 
 %% Density cal plot all densitites (all fluids, temperatures and pressures)
 figure
+set(gcf, 'Position', [100, 100, 700, 550])
 scatter(dens_cal_vals_all.dens_cal_NIST,dens_cal_vals_all.dens_cal_MFM,20,dens_cal_vals_all.T_cal_MFM,'filled')
 hold on
 plot(0:1:800,feval(rho_cal_fit_lin,0:1:800),"Color",'k')
-xlabel('Density NIST [kg/m^{3}]');
-ylabel('Density MFM [kg/m^{3}]');
+xlabel('\rho_{ref} [kg/m^{3}]');
+ylabel('\rho_{MFM} [kg/m^{3}]');
+xlim([0 800]);
+ylim([0 800]);
+xticks(0:100:800)
+yticks(0:100:800)
+c=colorbar;
+c.Title.String = 'Temperature [°C]';
+c.Title.Rotation = 90;
+c.Title.Units = 'normalized';
+c.Title.Position = [3.55, 0.5, 0];
+c.Title.FontSize = 14;
+cTicks = c.Ticks;
+cTicks = cTicks(mod(cTicks,1) == 0);
+c.Ticks = cTicks;
 grid on
 title("Calibration curve - all cal fluids P and T")
 saveas(gcf,pathExportAll + "Cal-all",'png')
@@ -526,8 +538,21 @@ figure
 scatter(dens_cal_vals_HP.dens_cal_NIST,dens_cal_vals_HP.dens_cal_MFM,20,dens_cal_vals_HP.T_cal_MFM,'filled')
 hold on
 plot(0:1:800,feval(rho_cal_HP_fit_lin,0:1:800),"Color",'k')
-xlabel('Density NIST [kg/m^{3}]');
-ylabel('Density MFM [kg/m^{3}]');
+xlabel('\rho_{ref} [kg/m^{3}]');
+ylabel('\rho_{MFM} [kg/m^{3}]');
+xlim([0 800]);
+ylim([0 800]);
+xticks(0:100:800)
+yticks(0:100:800)
+c=colorbar;
+c.Title.String = 'Temperature [°C]';
+c.Title.Rotation = 90;
+c.Title.Units = 'normalized';
+c.Title.Position = [3.55, 0.5, 0];
+c.Title.FontSize = 14;
+cTicks = c.Ticks;
+cTicks = cTicks(mod(cTicks,1) == 0);
+c.Ticks = cTicks;
 grid on
 title("Calibration curve - all cal fluids and T at HP")
 saveas(gcf,pathExportAll + "Cal-all_HP",'png')
@@ -537,31 +562,21 @@ saveas(gcf,pathExportAll + "Cal-all_HP",'png')
 % three different fluids H2, He, CO2 for paper! High pressure = 1500 psig,
 % Tref = 32C
 
-calfluidsPT = unique(dens_cal_vals_HP.Fluid_cal_ref);
-
 figure;
 set(gcf, 'Position', [100, 100, 700, 550])
-t = tiledlayout(2,2, 'TileSpacing', 'tight', 'Padding','tight');
-title (t, "Calibration plot MFM density", 'FontSize', 16)
-legendEntries = [];
-legendLabels = {};
 ax1 = axes;
-axis(ax1, 'tight');
-ax1pos = ax1.Position;
-ax1.Position = ax1pos + [0,0,-0.14,0];
 scatter(dens_cal_vals_HP.dens_cal_NIST,dens_cal_vals_HP.dens_cal_MFM,15,dens_cal_vals_HP.T_cal_MFM,'filled')
 hold on
 plot(0:1:800,feval(rho_cal_HP_fit_lin,0:1:800),"Color",'k')
-x1 = xlabel('Density NIST [kg/m^{3}]', 'FontSize', 14);
-pos = get(x1, 'Position');  % Get current position [x y z]
-pos(2) = pos(2) + 0.02;      % Increase y-position slightly
-set(x1, 'Position', pos);   % Apply new position
-ylabel('Density MFM [kg/m^{3}]', 'FontSize', 14);
+x1 = xlabel('\rho_{ref} [kg/m^{3}]', 'FontSize', 14);
+ylabel('\rho_{MFM} [kg/m^{3}]', 'FontSize', 14);
+xlim([0 800]);
+ylim([0 800]);
+xticks(0:100:800)
+yticks(0:100:800)
 numTicks = 6;
 ax1.FontSize = 14;
 c=colorbar;
-cpos = c.Position;
-c.Position = cpos + [0.1,0,0,0];
 c.Title.String = 'Temperature [°C]';
 c.Title.Rotation = 90;
 c.Title.Units = 'normalized';
@@ -574,9 +589,8 @@ grid on
 legend({'Measured density','Calibration curve'},'Location','southeast')
 % cal curve formula annotation
 coeffs = calProcData.rho_cal_HP_fit_lin.Coefficients.Estimate;
-%R2 = calProcData.rho_cal_HP_fit_lin.Rsquared.Ordinary;
 annotText = sprintf('\\rho_{MFM} = %.1f \\cdot \\rho_{NIST} + %.1f', coeffs(2), coeffs(1));
-annotation('textbox', [0.2, 0.10, 0.3, 0.1], 'String', annotText, ...
+annotation('textbox', [0.2, 0.12, 0.3, 0.1], 'String', annotText, ...
     'Interpreter', 'tex', 'FontSize', 11, 'EdgeColor', 'none');
 % H2
 insetAx = axes('Position', [0.19 0.70 0.1 0.15]);  % [x y width height]
