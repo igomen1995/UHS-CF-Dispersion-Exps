@@ -111,40 +111,6 @@ PR_results = table(x1',Zmix',rho_mix','VariableNames',{'x1','Zmix','rho_mix'});
 writetable(PR_results,pathExportAll + "PR_results.xlsx");
 save(pathExportAll + "PR_results.mat",'PR_results')
 
-%% Fitting
-
-%functions
-lin_function = @(p,x)p(1)+p(2)*x;
-pow_function = @(p,x)p(1)+p(2)*(x.^2);
-exp_function = @(p,x)p(1)*exp(p(2)*x);
-p_init = [0,0];
-
-xi_rho_fit_exp = fitnlm([PR_results(:,3),PR_results(:,1)],exp_function,p_init);
-
-
-
-%%
-rho_cal_fit_pow = fitnlm(dens_cal_vals_all(:,1:2),pow_function,p_init);
-rho_cal_fit_exp = fitnlm(dens_cal_vals_all(:,1:2),exp_function,p_init);
-
-% save fit model params
-fittingRhoResultsAll = table('Size',[0 4],'VariableTypes',{'string','double','double','double'},'VariableNames',{'model','p1','p2','RMSE'});
-calProcData.rho_cal_fit_lin = rho_cal_fit_lin;
-fittingRhoResultsAll(1,:) = {"all_lin",rho_cal_fit_lin.Coefficients.Estimate(1),rho_cal_fit_lin.Coefficients.Estimate(2),rho_cal_fit_lin.RMSE};
-calProcData.rho_cal_fit_pow = rho_cal_fit_pow;
-fittingRhoResultsAll(2,:) = {"all_pow",rho_cal_fit_pow.Coefficients.Estimate(1),rho_cal_fit_pow.Coefficients.Estimate(2),rho_cal_fit_pow.RMSE};
-calProcData.rho_cal_fit_exp = rho_cal_fit_exp;
-fittingRhoResultsAll(3,:) = {"all_exp",rho_cal_fit_exp.Coefficients.Estimate(1),rho_cal_fit_exp.Coefficients.Estimate(2),rho_cal_fit_exp.RMSE};
-calProcData.rho_cal_HP_fit_lin = rho_cal_HP_fit_lin;
-fittingRhoResultsAll(4,:) = {"HP_lin",rho_cal_HP_fit_lin.Coefficients.Estimate(1),rho_cal_HP_fit_lin.Coefficients.Estimate(2),rho_cal_HP_fit_lin.RMSE};
-calProcData.rho_cal_HP_fit_pow = rho_cal_HP_fit_pow;
-fittingRhoResultsAll(5,:) = {"HP_pow",rho_cal_HP_fit_pow.Coefficients.Estimate(1),rho_cal_HP_fit_pow.Coefficients.Estimate(2),rho_cal_HP_fit_pow.RMSE};
-calProcData.rho_cal_HP_fit_exp = rho_cal_HP_fit_exp;
-fittingRhoResultsAll(6,:) = {"HP_exp",rho_cal_HP_fit_exp.Coefficients.Estimate(1),rho_cal_HP_fit_exp.Coefficients.Estimate(2),rho_cal_HP_fit_exp.RMSE};
-
-writetable(fittingRhoResultsAll,pathExportAll + "fittingRhoResultsAll.xlsx");
-save(pathExportAll + "calProcData.mat",'calProcData')
-
 %% Plot
 
 figure
@@ -164,14 +130,3 @@ title_aux = sprintf('Z_{mix} vs x_{H2} @ %.1f MPa, %.1f °C', P_MPa, T_C);
 title(title_aux)
 grid on
 saveas(gcf,pathExportAll + "Zmix-vs-x1",'png')
-
-%% 
-figure
-scatter(rho_mix,x1,20,"filled")
-hold on
-plot(0:1:706,feval(xi_rho_fit_exp,0:1:706))
-ylabel('x_1 [-]');
-xlabel('Density PR-EOS [kg/m^{3}]');
-title_aux = sprintf('x_{H2} vs \\rho_{mix} @ %.1f MPa, %.1f °C', P_MPa, T_C);
-title(title_aux)
-grid on
