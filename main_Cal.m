@@ -2,27 +2,29 @@
 % version: v9_Feb2026
 % Author: Ianna Gomez Mendez
 %
-% 
-% Author: Ianna Gomez Mendez
-% Objective: Extract data for density calibration of MFM2
-% collected during bypass experiments at fix temperature and variable
-% pressure and fluids
+%
+% Objective: 
+% Extract data for density calibration of Corilis MFM
+% collected during bypass experiments at fix temperature 
+% and variable  pressure and fluids
 % using 3 Quizix pumps, 2 mass flow meters Bronkhorst, 2 transducers Omega
 % and 2 portable gas detectors Cosmos (DOD Technologies)
 % 
 % Input:
-% 1 - input_exps contains:
-% 1.1 Pumps file (.dat)
-% 1.2 Transducer file (.csv)
-% 1.3 Mass Flow Meters (.csv)
-% 1.4 Gas detectors - could be more than one file (.csv)
-% 2 - NIST data (.xlsx)
+% 1. Exp file:
+% - Pumps file (.dat)
+% - Transducer file (.csv)
+% - Mass Flow Meters (.csv)
+% - Gas detectors - could be more than one file (.csv)
+% 2. Cal reference file
 % 
 % Procedure:
-% 1 - Import files (and prepare time data)
-% 2 - Resample data
-% 3 - Create one file with all data and save
+% 1 - Take input file 
+% 2 - Import files (and prepare time data)
+% 3 - Create one file with all raw data and save
 % 4 - Inspect data in plot density and temperature vs time
+% Come back to input cal exp file to input/correct input st and et (start and end time) of each
+% P, T, fluid fixed, also input P and T, and change key
 % 5 - Calculate error of density for a given period of time with Temperature and pressure stable
 % 6 - Plot density inst vs NIST data
 % 
@@ -35,21 +37,21 @@
 addpath('Functions/');
 
 %Exp data
-filenameExp = 'Input/input-cal_H2-He-CO2_T32_0725.xlsx';
-opts = spreadsheetImportOptions("NumVariables", 22);
+filenameExp = 'input/input_cal_exp.xlsx';
+opts = spreadsheetImportOptions("NumVariables", 16);
 % Specify sheet and range
 opts.Sheet = "Sheet1";
 opts.DataRange = [3,Inf];
 % Specify column names and types
-opts.VariableNames = ["Key", "Date", "Fluid1", "Fluid2", "T", "P", "Q", "Run", "rho1sat", "rho2sat", "PGD1sat", "PGD2sat", "st", "et", "dt", "path", "pumps_data_name", "trans_data_name", "MFM_data_name", "PGD1_data_name", "PGD2_data_name","GMT_PGD"];
-opts.VariableTypes = ["string", "string","string", "string", "double", "double", "double", "double", "double", "double", "double", "double", "datetime", "datetime", "double", "string", "string", "string", "string", "string", "string", "string"];
+opts.VariableNames = ["Key", "Date", "Fluid1", "T", "P", "Run", "st", "et", "dt", "path", "pumps_data_name", "trans_data_name", "MFM_data_name", "PGD1_data_name", "PGD2_data_name","GMT_PGD"];
+opts.VariableTypes = ["string", "string","string", "double", "double", "double", "datetime", "datetime", "double", "string", "string", "string", "string", "string", "string", "string"];
 filedataExp = readtable(filenameExp,opts);
 
 filedataExp.st = datetime(filedataExp.st,'Format','MM/dd/uuuu HH:mm:ss');
 filedataExp.et = datetime(filedataExp.et,'Format','MM/dd/uuuu HH:mm:ss');
 
 % NIST data
-filenameNIST = 'Input/PR-data_cal_H2-He-CO2_T32.xlsx';
+filenameNIST = 'input/input_cal_PR.xlsx';
 opts = spreadsheetImportOptions("NumVariables", 7);
 % Specify sheet and range
 opts.Sheet = "Sheet1";
@@ -59,8 +61,8 @@ opts.VariableNames = ["Fluid", "Temp", "P_psig", "P_psia", "P_bar", "dens", "Pha
 opts.VariableTypes = ["string", "double","double", "double", "double", "double", "string"];
 filedataNIST = readtable(filenameNIST,opts);
 
-mkdir('Results/Cal_H2-He-CO2_T32_0725_PR');
-pathExportAll = 'Results/Cal_H2-He-CO2_T32_0725_PR/';
+mkdir('results/cal_250725_PR');
+pathExportAll = 'results/cal_250725_PR/';
 
 %% Import data
 
