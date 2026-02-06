@@ -468,44 +468,23 @@ end
 
 calProcData.dens_cal_vals_all = dens_cal_vals_all;
 
-%functions
-lin_function = @(p,x)p(1)+p(2)*x;
-pow_function = @(p,x)p(1)+p(2)*(x.^2);
-exp_function = @(p,x)p(1)*exp(p(2)*x);
-p_init = [0,0];
-
-% choose best model
-rho_cal_fit_lin = fitnlm(dens_cal_vals_all(:,1:2),lin_function,p_init); 
-rho_cal_fit_pow = fitnlm(dens_cal_vals_all(:,1:2),pow_function,p_init);
-rho_cal_fit_exp = fitnlm(dens_cal_vals_all(:,1:2),exp_function,p_init);
-
+% fit linear
+% all
+rho_cal_fit_lin = fitlm(dens_cal_vals_all(:,1:2)); 
 % high pressure cal only
-% choose best model
 dens_cal_vals_HP = dens_cal_vals_all(dens_cal_vals_all.P_cal_ref==1500,:);
-rho_cal_HP_fit_lin = fitnlm(dens_cal_vals_HP(:,1:2),lin_function,p_init); 
-rho_cal_HP_fit_pow = fitnlm(dens_cal_vals_HP(:,1:2),pow_function,p_init);
-rho_cal_HP_fit_exp = fitnlm(dens_cal_vals_HP(:,1:2),exp_function,p_init);
+rho_cal_HP_fit_lin = fitlm(dens_cal_vals_HP(:,1:2)); 
 
 % save fit model params
 fittingRhoResultsAll = table('Size',[0 4],'VariableTypes',{'string','double','double','double'},'VariableNames',{'model','p1','p2','RMSE'});
 calProcData.rho_cal_fit_lin = rho_cal_fit_lin;
 fittingRhoResultsAll(1,:) = {"all_lin",rho_cal_fit_lin.Coefficients.Estimate(1),rho_cal_fit_lin.Coefficients.Estimate(2),rho_cal_fit_lin.RMSE};
-calProcData.rho_cal_fit_pow = rho_cal_fit_pow;
-fittingRhoResultsAll(2,:) = {"all_pow",rho_cal_fit_pow.Coefficients.Estimate(1),rho_cal_fit_pow.Coefficients.Estimate(2),rho_cal_fit_pow.RMSE};
-calProcData.rho_cal_fit_exp = rho_cal_fit_exp;
-fittingRhoResultsAll(3,:) = {"all_exp",rho_cal_fit_exp.Coefficients.Estimate(1),rho_cal_fit_exp.Coefficients.Estimate(2),rho_cal_fit_exp.RMSE};
 calProcData.rho_cal_HP_fit_lin = rho_cal_HP_fit_lin;
-fittingRhoResultsAll(4,:) = {"HP_lin",rho_cal_HP_fit_lin.Coefficients.Estimate(1),rho_cal_HP_fit_lin.Coefficients.Estimate(2),rho_cal_HP_fit_lin.RMSE};
-calProcData.rho_cal_HP_fit_pow = rho_cal_HP_fit_pow;
-fittingRhoResultsAll(5,:) = {"HP_pow",rho_cal_HP_fit_pow.Coefficients.Estimate(1),rho_cal_HP_fit_pow.Coefficients.Estimate(2),rho_cal_HP_fit_pow.RMSE};
-calProcData.rho_cal_HP_fit_exp = rho_cal_HP_fit_exp;
-fittingRhoResultsAll(6,:) = {"HP_exp",rho_cal_HP_fit_exp.Coefficients.Estimate(1),rho_cal_HP_fit_exp.Coefficients.Estimate(2),rho_cal_HP_fit_exp.RMSE};
+fittingRhoResultsAll(2,:) = {"HP_lin",rho_cal_HP_fit_lin.Coefficients.Estimate(1),rho_cal_HP_fit_lin.Coefficients.Estimate(2),rho_cal_HP_fit_lin.RMSE};
 
+calProcData.fittingRhoResultsAll = fittingRhoResultsAll;
 writetable(fittingRhoResultsAll,pathExportAll + "fittingRhoResultsAll.xlsx");
 save(pathExportAll + "calProcData.mat",'calProcData')
-
-%rho_corr_lin function
-rho_corr_lin = @(p,y) (y-p(1))/p(2);
 
 %% Density cal plot all densitites (all fluids, temperatures and pressures)
 figure
