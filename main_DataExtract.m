@@ -277,3 +277,35 @@ for i = 1:length(filedataExp.Key)
 
     saveas(gcf,pathExportAll + filedataExp.Key(i) + "_BT_All_Vars",'png')
 end
+
+%% Plot concentration molar all together
+for i = 1:length(filedataExp.Key)
+    pumps_data_name = filedataExp.path(i) + filedataExp.pumps_data_name(i);
+    trans_data_name = filedataExp.path(i) + filedataExp.trans_data_name(i);
+    MFM_data_name = filedataExp.path(i) + filedataExp.MFM_data_name(i);
+    PGD1_data_name = filedataExp.path(i) + filedataExp.PGD1_data_name(i);
+    PGD2_data_name = filedataExp.path(i) + filedataExp.PGD1_data_name(i);
+    % Densities and concentrations PGD
+    figure('Position', [100, 100, 700, 550]);
+    tiledlayout(2,2, 'TileSpacing', 'tight', 'Padding','tight');
+    if isempty(expProcData.(filedataExp.Key(i)).PGD2Data) == 0 && ismissing(PGD2_data_name) == 0
+        h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,5,'filled','MarkerFaceColor',[0.7 0.7 0.7],'DisplayName','PGD2');
+        hold on 
+    end
+    if isempty(expProcData.(filedataExp.Key(i)).PGD1Data) == 0 && ismissing(PGD1_data_name) == 0
+        h2 = scatter(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,5,'filled','MarkerFaceColor',[0.9290 0.6940 0.1250],'DisplayName','PGD1');
+        hold on 
+    end
+    if isempty(expProcData.(filedataExp.Key(i)).MFMData) == 0 && ismissing(MFM_data_name) == 0
+        h3 = scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.Ci_corr_mean,5,'filled','MarkerFaceColor','r','DisplayName','MFM');
+        hold on
+    end
+    xlabel('Time elapsed [hh:mm:ss]','FontSize', 14);
+    xtickformat('hh:mm:ss')
+    ylabel('C_{1} [mol %]','FontSize', 14);
+    ylim([0,100]);
+    legend([h3,h2,h1], 'Location','southeast');
+    title (filedataExp.Key(i), 'Interpreter', 'none','FontSize', 16)
+    grid on;
+    saveas(gcf,pathExportAll + filedataExp.Key(i) + "_dens_conc",'png')
+end
