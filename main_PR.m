@@ -73,8 +73,8 @@ end
 A12 = filedataBIP.A12(filedataBIP.Fluid1 == fl{1} & filedataBIP.Fluid2  == fl{2});
 B12 = filedataBIP.B12(filedataBIP.Fluid1 == fl{1} & filedataBIP.Fluid2  == fl{2});
 
-mkdir('results/PR-H2CO2-32C-1500psig');
-pathExportAll = 'results/PR-H2CO2-32C-1500psig/';
+mkdir('results/PR_H2-CO2-T32-P1500');
+pathExportAll = 'results/PR_H2-CO2-T32-P1500/';
 
 %% PR - EOS 
 

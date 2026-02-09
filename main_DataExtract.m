@@ -20,13 +20,14 @@
 % 2 - Estimate xi array
 % 3 - Export in Results one Excel for each experiment with all data in each
 % spreadsheet
-% 4 - Plot individually and together
+% 4 - Plot in one figure all vars (5 panels): vars included:PT1, PT2 P
+% Conf, q pump, T MFM, densitites corrected, Xi estimated, C1 from PGDs
 % 
 % Output: 
 % Database
 % Figures
 %
-%% IMPORT
+%% IMPORT input
 
 addpath('functions/');
 
@@ -34,11 +35,11 @@ addpath('functions/');
 
 filenameExp = 'input/input_exp_H2-CO2-T32-P1500.xlsx';
 pathImportCal = 'results/cal_250725_PR/';
-pathImportPR = 'results/PR-H2CO2-32C-1500psig/';
-mkdir('results/H2CO2_T32_P1500_H');
-pathExportAll = 'results/H2CO2_T32_P1500_H/';
+pathImportPR = 'results/PR_H2-CO2-T32-P1500/';
+mkdir('results/exp_H2-CO2-T32-P1500-H');
+pathExportAll = 'results/exp_H2-CO2-T32-P1500-H/';
 
-%% IMPORT variables
+%% IMPORT data
 
 % Do not change unless input excel format changed
 
@@ -140,33 +141,35 @@ for i = 1:length(filedataExp.Key)
 end
 
 load(pathImportCal + "calProcData.mat")
+load(pathImportCal + "calResults.mat")
 load(pathImportPR + "PR_results.mat")
 
+%% Extract breakthrough curve data
 
 %rho_corr_lin function
 rho_corr_lin = @(p,y) (y-p(1))/p(2);
 
-%% Volume concentration
-% do not use drho or rhosat values from input
-% for i = 1:length(filedataExp.Key)
-%     expProcData.(filedataExp.Key(i)).
-% end
-        expProcData.(filedataExp.Key(i)).MFMData.C1 = 100*(filedataExp.rho2sat(i)-expProcData.(filedataExp.Key(i)).MFMData.dens_MFM2)./(filedataExp.rho2sat(i)-filedataExp.rho1sat(i));
-        drho_cal = [filedataExp.drho2(i) filedataExp.drho1(i)];
-        rho_cal = [filedataExp.rho2sat(i) filedataExp.rho1sat(i)];
-        aux_cal = polyfit(rho_cal,drho_cal,1);
-        expProcData.(filedataExp.Key(i)).MFMCal = aux_cal;
-        expProcData.(filedataExp.Key(i)).MFMData.drho = aux_cal(1)*expProcData.(filedataExp.Key(i)).MFMData.dens_MFM2 + aux_cal(2);
-        dC1 = (((-100/(filedataExp.rho2sat(i)-filedataExp.rho1sat(i)))^2)*(expProcData.(filedataExp.Key(i)).MFMData.drho.^2)).^(1/2);
-        expProcData.(filedataExp.Key(i)).MFMData.dC1 = dC1;
-        BT = table(expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed, ...
-            seconds(expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed), ...
-            expProcData.(filedataExp.Key(i)).MFMData.dens_MFM2, ...
-            expProcData.(filedataExp.Key(i)).MFMData.drho, ...
-            expProcData.(filedataExp.Key(i)).MFMData.C1, ...
-            expProcData.(filedataExp.Key(i)).MFMData.dC1, ...
-            'VariableNames',{'Time','TimeElapsed','MFMdens','drho','C1','dC1'});
-        expProcData.(filedataExp.Key(i)).BT = rmmissing(BT);
+for i = 1:length(filedataExp.Key)
+    % Extrat measured density vs time & remove missing
+    BTaux = table(expProcData.(filedataExp.Key(i)).MFMData.TimeStamp, ...
+        expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed, ...
+        seconds(expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed), ...
+        expProcData.(filedataExp.Key(i)).MFMData.dens_MFM2, ...
+        expProcData.(filedataExp.Key(i)).MFMData.T_MFM2, ...
+        expProcData.(filedataExp.Key(i)).MFMData.q_MFM2, ...
+        'VariableNames',{'TimeStamp','TimeElapsed', 'SecondsElapsed', 'rho_MFM','T_MFM','q_MFM'});
+    expProcData.(filedataExp.Key(i)).BT = rmmissing(BTaux);
+    % fitting parameters for rho corrected
+    auxLinFit = calProcData.fittingRhoResultsAll(calProcData.fittingRhoResultsAll.model == "HP_lin",:);
+    expProcData.(filedataExp.Key(i)).BT.rho_corr_mean = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM);
+    expProcData.(filedataExp.Key(i)).BT.rho_corr_min = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM-auxLinFit.RMSE);
+    expProcData.(filedataExp.Key(i)).BT.rho_corr_max = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM+auxLinFit.RMSE);
+    % look up for correspondent Xi in PR EOS table
+    expProcData.(filedataExp.Key(i)).BT.Ci_corr_mean = 100*interp1(PR_results.rho_mix, PR_results.x1, expProcData.(filedataExp.Key(i)).BT.rho_corr_mean, 'linear');
+end
+
+%% Propagation of error in Xi
+
 
 %% Save data
 
@@ -182,31 +185,38 @@ for i = 1:length(filedataExp.Key)
     save(pathExportAll + "expProcData.mat",'expProcData')
 end
 
-%% Plotting
+%% Plots for analysis
 
-%Individual plots for checking
-
-%Pressure and flow rates
-
+% Subplot all in 4 panels
 for i = 1:length(filedataExp.Key)
-    f1 = figure; % all pressures
+    figure('Position', [100, 100, 600, 900]); % [left, bottom, width, height];
+    subplot(5,1,1);
     if isempty(expProcData.(filedataExp.Key(i)).transData) == 0 && ismissing(trans_data_name) == 0
         scatter(expProcData.(filedataExp.Key(i)).transData.TimeElapsed,expProcData.(filedataExp.Key(i)).transData.PT1,10,'filled','DisplayName','PT1')
         hold on
         scatter(expProcData.(filedataExp.Key(i)).transData.TimeElapsed,expProcData.(filedataExp.Key(i)).transData.PT2,10,'filled','DisplayName','PT2')
     end
+    % xlabel('Time elapsed [hh:mm:ss]')
+    ylabel('Pressure [psig]')
+    xtickformat('hh:mm:ss')
+    ylim([1450,1550])
+    grid("on")
+    title(filedataExp.Key(i) + " pore pressure", 'Interpreter', 'none')
+    legend('Location','southeast');
+
+    subplot(5,1,2);
     if isempty(expProcData.(filedataExp.Key(i)).pumpsData) == 0 && ismissing(pumps_data_name) == 0
         scatter(expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed,expProcData.(filedataExp.Key(i)).pumpsData.P_P3,10,'filled','DisplayName','Pconf')
     end
-    xlabel('Time elapsed [hh:mm:ss]')
+    % xlabel('Time elapsed [hh:mm:ss]')
     ylabel('Pressure [psig]')
     xtickformat('hh:mm:ss')
+    ylim([1900,2400])
     grid("on")
-    title(filedataExp.Key(i) + " pressure", 'Interpreter', 'none')
-    legend();
-    saveas(f1,pathExportAll + filedataExp.Key(i) + "_pplot",'png')
+    title(filedataExp.Key(i) + " confining pressure", 'Interpreter', 'none')
+    legend('Location','southeast');
 
-    f2 = figure; % all flow rates
+    subplot(5,1,3);
     if isempty(expProcData.(filedataExp.Key(i)).pumpsData) == 0 && ismissing(pumps_data_name) == 0
         scatter(expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed,expProcData.(filedataExp.Key(i)).pumpsData.q_P1,10,'filled','DisplayName','q_{pump}')
         hold on
@@ -216,99 +226,54 @@ for i = 1:length(filedataExp.Key)
     end
     xlabel('Time elapsed [hh:mm:ss]')
     xtickformat('hh:mm:ss')
+    ylim([-1,15])
     ylabel('Flow rate [ml/min]')
-    title(filedataExp.Key(i) + " flow rates", 'Interpreter', 'none')
-    legend();
     grid on;
-    saveas(f2,pathExportAll + filedataExp.Key(i) + "_qplot",'png')
-end
+    title(filedataExp.Key(i) + " flow rates", 'Interpreter', 'none')
+    legend('Location','southeast');
 
-%%
-     
-% Densities and concentrations
-for i = 1:length(filedataExp.Key)
-    if filedataExp.Fluid1(i) == "H2"
-        pumps_data_name = filedataExp.path(i) + filedataExp.pumps_data_name(i);
-        trans_data_name = filedataExp.path(i) + filedataExp.trans_data_name(i);
-        MFM_data_name = filedataExp.path(i) + filedataExp.MFM_data_name(i);
-        PGD1_data_name = filedataExp.path(i) + filedataExp.PGD1_data_name(i);
-        PGD2_data_name = filedataExp.path(i) + filedataExp.PGD1_data_name(i);
-    
-%         % concentrations and densities PGDs1
-%         f3 = figure; % concentrations and densities
-%         yyaxis left
-%         ax = gca;
-%         ax.YColor = [0 0 0];
-%         if isempty(expProcData.(filedataExp.Key(i)).MFMData) == 0 && ismissing(MFM_data_name) == 0
-%             scatter(expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed,expProcData.(filedataExp.Key(i)).MFMData.dens_MFM2,10,'filled','MarkerFaceColor','r')
-%         end
-%         xlabel('Time elapsed [hh:mm:ss]');
-%         xtickformat('hh:mm:ss')
-%         ylabel('Density (kg/m^{3}');
-%         yyaxis right
-%         ax = gca;
-%         ax.YColor = [0 0 0];
-%         set(gca,'ylim',[0,100])
-%         title(filedataExp.Key(i) + " density & concentrations PGDS", 'Interpreter', 'none')
-%         legend("MFM", 'Location','southeast');
-%         if isempty(expProcData.(filedataExp.Key(i)).PGD2Data) == 0 && ismissing(PGD2_data_name) == 0
-%             hold on 
-%             yyaxis right
-%             plot(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.CO2GasConcentration,'DisplayName','PGD2','LineWidth',1.5, 'Color',[0.9290 0.6940 0.1250],'LineStyle','--')
-%         end
-%         if isempty(expProcData.(filedataExp.Key(i)).PGD1Data) == 0 && ismissing(PGD1_data_name) == 0
-%             hold on 
-%             yyaxis right
-%             plot(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.H2GasConcentration,'DisplayName','PGD1','LineWidth',1.5, 'Color',[0.9290 0.6940 0.1250],'LineStyle',':')
-%         end
-%         grid on;
-%         saveas(f3,pathExportAll + filedataExp.Key(i) + "_dens_conc_PGDS",'png')
-%     
-        % Densities and concentrations C1
-        f4 = figure('Position', [100, 100, 700, 550]);
-        tiledlayout(2,2, 'TileSpacing', 'tight', 'Padding','tight');
-        title (filedataExp.Key(i), 'Interpreter', 'none','FontSize', 16)
-        yyaxis left
-        ax = gca;
-        ax.YColor = [0 0 0];
-        if isempty(expProcData.(filedataExp.Key(i)).MFMData) == 0 && ismissing(MFM_data_name) == 0
-            t = expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed;
-            C = expProcData.(filedataExp.Key(i)).MFMData.C1;
-            dC = expProcData.(filedataExp.Key(i)).MFMData.dC1;
-            %fill([t fliplr(t)], [C+dC fliplr(C-dC)], [1 0 0], 'EdgeColor', 'none', 'FaceAlpha', 1);  % Light blue shade
-            h1 = errorbar(t,C,dC,'Color',[1, 0.8, 0.8],'DisplayName','MFM error');
-            set(h1, 'LineStyle', 'none'); 
-            hold on
-            h2=scatter(t,C,1,'filled','MarkerFaceColor','r','DisplayName','MFM');
-        end
-        xlabel('Time elapsed [hh:mm:ss]','FontSize', 14);
-        xtickformat('hh:mm:ss')
-        ylabel('C_{1}[%]','FontSize', 14);
-        ylim_array = [-2,102];
-        ylim(ylim_array);
-        ax.FontSize = 14;
-        yyaxis right
-        ax = gca;
-        ax.FontSize = 14;
-        ax.YColor = [0 0 0];
-        rho_C_rel_m = (filedataExp.rho2sat(i) - filedataExp.rho1sat(i))/100;
-        rho_C_rel_n = filedataExp.rho1sat(i);
-        set(gca,'ylim',[ylim_array(1)*rho_C_rel_m + rho_C_rel_n, ylim_array(2)*rho_C_rel_m + rho_C_rel_n])
-        set(gca, 'YDir', 'reverse')
-        ylabel('MFM Density [kg/m^{3}]','FontSize',14);
-        if isempty(expProcData.(filedataExp.Key(i)).PGD2Data) == 0 && ismissing(PGD2_data_name) == 0
-            hold on 
-            yyaxis left
-            h3 = plot(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,'DisplayName','PGD2','LineWidth',1.5, 'Color',[0.9290 0.6940 0.1250],'LineStyle','--');
-        end
-        if isempty(expProcData.(filedataExp.Key(i)).PGD1Data) == 0 && ismissing(PGD1_data_name) == 0
-            hold on 
-            yyaxis left
-            h4 = plot(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,'DisplayName','PGD1','LineWidth',1.5, 'Color',[0.9290 0.6940 0.1250],'LineStyle',':');
-        end
-        legend([h2,h1,h4,h3],'Location','southeast');
-        grid on;
-        saveas(f4,pathExportAll + filedataExp.Key(i) + "_dens_conc",'png')
+    subplot(5,1,4);
+    yyaxis left
+    ax = gca;
+    ax.YColor = [0 0 0];
+    scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.rho_corr_mean,10,'filled','MarkerFaceColor','r')
+    hold on
+    xlabel('Time elapsed [hh:mm:ss]')
+    xtickformat('hh:mm:ss')
+    ylabel('Corrected Density [kg/m^{3}]');
+    yyaxis right
+    ax = gca;
+    ax.YColor = [0 0 0];
+    ylabel('Temperature [°C]');
+    scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.T_MFM,10,'filled', 'MarkerFaceColor',[0.9290, 0.6940, 0.1250])
+    legend('density_{MFM}','T_{MFM}', 'Location','southeast');
+    title(filedataExp.Key(i) + " density and temperature", 'Interpreter', 'none')
+    grid on;
+
+    subplot(5,1,5);
+    yyaxis left
+    ax = gca;
+    ax.YColor = [0 0 0];
+    ylabel('PGD molar concentration [mol %]');
+    if isempty(expProcData.(filedataExp.Key(i)).PGD2Data) == 0 && ismissing(PGD2_data_name) == 0
+        scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,10,'filled', 'MarkerFaceColor',[0.0000 0.4470 0.7410], 'DisplayName','C1_{PGD2}')
+        hold on
     end
-end
+    if isempty(expProcData.(filedataExp.Key(i)).PGD1Data) == 0 && ismissing(PGD1_data_name) == 0
+        scatter(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,10,'filled','MarkerFaceColor', [0.9290 0.6940 0.1250], 'DisplayName','C1_{PGD1}')
+        hold on
+    end
+    yyaxis right
+    ax = gca;
+    ax.YColor = [0 0 0];
+    scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.Ci_corr_mean,10,'filled','MarkerFaceColor','r','DisplayName','C1_{MFM}')
+    hold on
+    xlabel('Time elapsed [hh:mm:ss]')
+    xtickformat('hh:mm:ss')
+    ylabel('MFM molar concentration [mol %]');
+    legend('Location','southeast');
+    title(filedataExp.Key(i) + " molar concentrations", 'Interpreter', 'none')
+    grid on;
 
+    saveas(gcf,pathExportAll + filedataExp.Key(i) + "_BT_All_Vars",'png')
+end
