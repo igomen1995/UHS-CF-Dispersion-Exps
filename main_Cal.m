@@ -134,78 +134,6 @@ for i = aux_idx
 end
 
 %% Plotting for analysis
-
-% Pressure and flow rates together
-for i = 1:length(fields(expRawData))
-    f1 = figure; % concentrations and densities
-    yyaxis left
-    ax = gca;
-    ax.YColor = [0 0 0];
-    scatter(expRawData.(filedataExp.Key(i)).pumpsData.TimeStamp,expRawData.(filedataExp.Key(i)).pumpsData.P_P1,10,'filled','MarkerFaceColor',[0, 0.4470, 0.7410])
-    hold on
-    scatter(expRawData.(filedataExp.Key(i)).pumpsData.TimeStamp,expRawData.(filedataExp.Key(i)).pumpsData.P_P2,10,'filled','MarkerFaceColor',[0.4660, 0.6740, 0.1880])
-    xlabel('Time MM/dd/uuuu HH:mm');
-    ylabel('Pressure (psig)');
-    yyaxis right
-    ax = gca;
-    ax.YColor = [0 0 0];
-    ylabel('Flow rate (ml/min)');
-    title(filedataExp.Key(i) + " pressure & flow rates", 'Interpreter', 'none')
-    scatter(expRawData.(filedataExp.Key(i)).pumpsData.TimeStamp,expRawData.(filedataExp.Key(i)).pumpsData.q_P1,10,'filled','MarkerFaceColor',[0.8500, 0.3250, 0.0980])
-    scatter(expRawData.(filedataExp.Key(i)).pumpsData.TimeStamp,expRawData.(filedataExp.Key(i)).pumpsData.q_P2,10,'filled','MarkerFaceColor',[0.9290, 0.6940, 0.1250])
-    %scatter(expRawData.(filedataExp.Key(i)).MFMData.TimeStamp,expRawData.(filedataExp.Key(i)).MFMData.q_MFM2,10,'filled','MarkerFaceColor','r')
-    legend('P_{pump1}','P_{pump2}','q_{pump1}','q_{pump2}','q_{MFM2}', 'Location','southeast');
-    grid on;
-    saveas(f1,pathExportAll + filedataExp.Key(i) + "_P_Qs",'png')
-end
-
-%% Plotting for analysis
-
-%Densities and temperatures
-for i = 1:length(fields(expRawData))
-    f2 = figure;
-    yyaxis left
-    ax = gca;
-    ax.YColor = [0 0 0];
-    scatter(expRawData.(filedataExp.Key(i)).MFMData.TimeStamp,expRawData.(filedataExp.Key(i)).MFMData.dens_MFM2,10,'filled','MarkerFaceColor','r')
-    xlabel('Time MM/dd/uuuu HH:mm');
-    ylabel('Density (kg/m^{3})');
-    yyaxis right
-    ax = gca;
-    ax.YColor = [0 0 0];
-    ylabel('Temperature (°C)');
-    title(filedataExp.Key(i) + "density & temperatures", 'Interpreter', 'none')
-    scatter(expRawData.(filedataExp.Key(i)).MFMData.TimeStamp,expRawData.(filedataExp.Key(i)).MFMData.T_MFM2,10,'filled', 'MarkerFaceColor',[0.9290, 0.6940, 0.1250])
-    legend('density_{MFM2}','T_{MFM2}', 'Location','southeast');
-    grid on;
-    saveas(f2,pathExportAll + filedataExp.Key(i) + "_dens_temp",'png')
-end
-
-%% Plotting for analysis
-
-% Densities & Pressures
-for i = 1:length(fields(expRawData))
-    f3 = figure;
-    yyaxis left
-    ax = gca;
-    ax.YColor = [0 0 0];
-    scatter(expRawData.(filedataExp.Key(i)).MFMData.TimeStamp,expRawData.(filedataExp.Key(i)).MFMData.dens_MFM2,10,'filled','MarkerFaceColor','r')
-    hold on
-    xlabel('Time MM/dd/uuuu HH:mm');
-    ylabel('Density (kg/m^{3})');
-    yyaxis right
-    ax = gca;
-    ax.YColor = [0 0 0];
-    ylabel('Pressure (psig)');
-    title(filedataExp.Key(i) + "density & temperatures", 'Interpreter', 'none')
-    scatter(expRawData.(filedataExp.Key(i)).pumpsData.TimeStamp,expRawData.(filedataExp.Key(i)).pumpsData.P_P1,10,'filled','MarkerFaceColor',[0, 0.4470, 0.7410])
-    scatter(expRawData.(filedataExp.Key(i)).pumpsData.TimeStamp,expRawData.(filedataExp.Key(i)).pumpsData.P_P2,10,'filled','MarkerFaceColor',[0.4660, 0.6740, 0.1880])
-    legend('density_{MFM2}','P_{pump1}','P_{pump2}', 'Location','southeast');
-    grid on;
-    saveas(f3,pathExportAll + filedataExp.Key(i) + "_dens_press",'png')
-end
-
-%% Plotting for analysis
 % Subplot all in 4 panels
 aux_idx = find(ismissing(filedataExp.P))';
 for i = aux_idx
@@ -275,69 +203,7 @@ for i = aux_idx
     title(filedataExp.Key(i) + "Concentration PGDs", 'Interpreter', 'none')
     grid on;
     
-    saveas(f4,pathExportAll + filedataExp.Key(i) + "_All_PGDs",'png')
-end
-
-%% Plotting for analysis
-% Subplot all in 3 panels
-aux_idx = find(ismissing(filedataExp.P))';
-for i = aux_idx
-    f5 = figure('Position', [100, 100, 600, 900]); % [left, bottom, width, height];
-    subplot(3,1,1);
-    yyaxis left
-    ax = gca;
-    ax.YColor = [0 0 0];
-    scatter(expRawData.(filedataExp.Key(i)).pumpsData.TimeStamp,expRawData.(filedataExp.Key(i)).pumpsData.P_P1,10,'filled','MarkerFaceColor',[0, 0.4470, 0.7410])
-    hold on
-    scatter(expRawData.(filedataExp.Key(i)).pumpsData.TimeStamp,expRawData.(filedataExp.Key(i)).pumpsData.P_P2,10,'filled','MarkerFaceColor',[0.4660, 0.6740, 0.1880])
-    %xlabel('Time [MM/dd/uuuu HH:mm]');
-    ylabel('Pressure (psig)');
-    yyaxis right
-    ax = gca;
-    ax.YColor = [0 0 0];
-    ylabel('Flow rate [ml/min]');
-    scatter(expRawData.(filedataExp.Key(i)).pumpsData.TimeStamp,expRawData.(filedataExp.Key(i)).pumpsData.q_P1,10,'filled','MarkerFaceColor',[0.8500, 0.3250, 0.0980])
-    scatter(expRawData.(filedataExp.Key(i)).pumpsData.TimeStamp,expRawData.(filedataExp.Key(i)).pumpsData.q_P2,10,'filled','MarkerFaceColor',[0.9290, 0.6940, 0.1250])
-    scatter(expRawData.(filedataExp.Key(i)).MFMData.TimeStamp,expRawData.(filedataExp.Key(i)).MFMData.q_MFM2,5,'filled','MarkerFaceColor',[0.4940 0.1840 0.5560])
-    legend('P_{pump1}','P_{pump2}','q_{pump1}','q_{pump2}','q_{MFM2}', 'Location','southwest');
-    title(filedataExp.Key(i) + " pressure & flow rates", 'Interpreter', 'none')
-    grid on;
-    
-    subplot(3,1,2);
-    yyaxis left
-    ax = gca;
-    ax.YColor = [0 0 0];
-    scatter(expRawData.(filedataExp.Key(i)).MFMData.TimeStamp,expRawData.(filedataExp.Key(i)).MFMData.dens_MFM2,10,'filled','MarkerFaceColor','r')
-    %xlabel('Time (MM/dd/uuuu HH:mm)');
-    ylabel('Density [kg/m^{3}]');
-    yyaxis right
-    ax = gca;
-    ax.YColor = [0 0 0];
-    ylabel('Temperature [°C]');
-    scatter(expRawData.(filedataExp.Key(i)).MFMData.TimeStamp,expRawData.(filedataExp.Key(i)).MFMData.T_MFM2,10,'filled', 'MarkerFaceColor',[0.9290, 0.6940, 0.1250])
-    legend('density_{MFM2}','T_{MFM2}', 'Location','southwest');
-    title(filedataExp.Key(i) + "density & temperatures", 'Interpreter', 'none')
-    grid on;
-
-    subplot(3,1,3);
-    yyaxis left
-    ax = gca;
-    ax.YColor = [0 0 0];
-    scatter(expRawData.(filedataExp.Key(i)).MFMData.TimeStamp,expRawData.(filedataExp.Key(i)).MFMData.dens_MFM2,10,'filled','MarkerFaceColor','r')
-    hold on
-    xlabel('Time [MM/dd/uuuu HH:mm]');
-    ylabel('Density [kg/m^{3}]');
-    yyaxis right
-    ax = gca;
-    ax.YColor = [0 0 0];
-    ylabel('Pressure [psig]');
-    scatter(expRawData.(filedataExp.Key(i)).pumpsData.TimeStamp,expRawData.(filedataExp.Key(i)).pumpsData.P_P1,10,'filled','MarkerFaceColor',[0, 0.4470, 0.7410])
-    scatter(expRawData.(filedataExp.Key(i)).pumpsData.TimeStamp,expRawData.(filedataExp.Key(i)).pumpsData.P_P2,10,'filled','MarkerFaceColor',[0.4660, 0.6740, 0.1880])
-    legend('density_{MFM2}','P_{pump1}','P_{pump2}', 'Location','southwest');
-    title(filedataExp.Key(i) + "density & pressures", 'Interpreter', 'none')
-    grid on;
-    
-    saveas(f5,pathExportAll + filedataExp.Key(i) + "_All",'png')
+    saveas(f4,pathExportAll + filedataExp.Key(i) + "_All_vars",'png')
 end
 
 % After this, manually select st and et to put in input cal file per
