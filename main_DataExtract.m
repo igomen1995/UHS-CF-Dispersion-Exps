@@ -35,9 +35,9 @@ addpath('functions/');
 
 filenameExp = 'input/input_exp_H2-CO2-T32-P1500.xlsx';
 pathImportCal = 'results/cal_250725_PR/';
-pathImportPR = 'results/PR-H2CO2-32C-1500psig/';
-mkdir('results/H2CO2_T32_P1500_H');
-pathExportAll = 'results/H2CO2_T32_P1500_H/';
+pathImportPR = 'results/PR_H2-CO2-T32-P1500/';
+mkdir('results/exp_H2-CO2-T32-P1500-H');
+pathExportAll = 'results/exp_H2-CO2-T32-P1500-H/';
 
 %% IMPORT data
 
