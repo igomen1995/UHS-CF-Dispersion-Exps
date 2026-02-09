@@ -359,7 +359,7 @@ aux_idx = find(ismissing(filedataExp.P) == 0)';
 mean_vals = table();
 std_vals = table();
 fluid_NIST_row_vals = table();
-cal_results = table();
+calResults = table();
 
 for i = aux_idx(1):aux_idx(end)
     for j = 1:length(fluids)
@@ -424,12 +424,12 @@ for i = 1:height(filedataNIST)
     end
 end
 
-cal_results = [fluid_NIST_row_vals,mean_vals,std_vals];
-writetable(cal_results,pathExportAll + "calResults.xlsx");
-save(pathExportAll + "cal_results.mat",'cal_results')
+calResults = [fluid_NIST_row_vals,mean_vals,std_vals];
+writetable(calResults,pathExportAll + "calResults.xlsx");
+save(pathExportAll + "calResults.mat",'calResults')
 
 for j = 1:length(fluids)
-    cal_vals.(fluids(j)) = cal_results(cal_results.Fluid == fluids(j),:);
+    cal_vals.(fluids(j)) = calResults(calResults.Fluid == fluids(j),:);
 end
 
 %% Calibration curve
