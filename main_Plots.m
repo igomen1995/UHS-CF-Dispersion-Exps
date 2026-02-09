@@ -1,5 +1,5 @@
 % main_Plots.m
-% version: v01_Sept2025
+% version: v02_Feb2026
 % Author: Ianna Gomez Mendez
 %
 % Objective: Plot BT curves together
@@ -18,31 +18,29 @@
 %
 %% IMPORT
 
-addpath('Functions/');
+addpath('functions/');
 
 % Introduce name of input and desired output folder name
 
-filenameExp = 'Input/input-exp-setup_all_error.xlsx';
-mkdir('Results/all_error');
-pathImportAll = 'Results/all_error/';
+filenameExp = 'input/input_exp_H2-CO2-T32-P1500.xlsx';
+mkdir('results/exp_H2-CO2-T32-P1500-H');
+pathImportAll = 'results/exp_H2-CO2-T32-P1500-H/';
 
 %% IMPORT variables
 
 % Do not change unless input excel format changed
 
-opts = spreadsheetImportOptions("NumVariables", 35);
+opts = spreadsheetImportOptions("NumVariables", 29);
 % Specify sheet and range
 opts.Sheet = "Sheet1";
 opts.DataRange = [3,Inf];
 % Specify column names and types
 opts.VariableNames = ["Key", "Date", "Type","Fluid1", "Fluid2", ...
-    "T", "P", "Q", "Run", "rho1sat", "drho1", "rho2sat", ...
-    "drho2", "PGD1sat", "PGD2sat", "D", "L", "phi", "K", "Vcore", ...
+    "T", "P", "Q", "Run", "D", "L", "phi", "K", "Vcore", ...
     "setupVersion", "Vlinesbefore", "Vlinesafter", "Vtotal", "Comments", "st", "et", "dt", ...
     "path", "pumps_data_name", "trans_data_name", "MFM_data_name", "PGD1_data_name", "PGD2_data_name","GMT_PGD"];
 opts.VariableTypes = ["string", "string","string", "string", "string", ...
-    "double", "double", "double", "double", "double", "double", "double", ...
-    "double", "double", "double", "double", "double", "double", "double", "double", ...
+    "double", "double", "double", "double", "double", "double", "double", "double", "double", ...
     "string", "double", "double", "double","string", "datetime", "datetime", "double", ...
     "string", "string", "string", "string", "string", "string", "string"];
 filedataExp = readtable(filenameExp,opts);
@@ -73,10 +71,10 @@ for i = 1:length(Fluid1_unique)
                         if filedataExp.P(l) == P_unique(k)
                             for m = 1:length(Q_unique)
                                 if filedataExp.Q(l) == Q_unique(m)
-                                    scatter(expProcData.(filedataExp.Key(l)).MFMData.TimeElapsed,expProcData.(filedataExp.Key(l)).MFMData.C1,10,'filled',"DisplayName"," q = " +filedataExp.Q(l)+" ml/min")
+                                    scatter(expProcData.(filedataExp.Key(l)).BT.TimeElapsed,expProcData.(filedataExp.Key(l)).BT.Ci_corr_mean,10,'filled',"DisplayName"," q = " +filedataExp.Q(l)+" ml/min")
                                     xlabel('Time elapsed [hh:mm:ss]');
                                     xtickformat('hh:mm:ss')
-                                    ylabel('C_{1}(%)');
+                                    ylabel('C_{1}[mol %]');
                                     ylim([0,100]);
                                     title(filedataExp.Key(l) + " concentrations", 'Interpreter', 'none')
                                     grid on;
@@ -101,47 +99,15 @@ end
 figure
 c = parula(length(filedataExp.Key));
 for i = 1:length(filedataExp.Key)
-    scatter(expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed,expProcData.(filedataExp.Key(i)).MFMData.C1,10,c(i,:),'filled',"DisplayName",filedataExp.Key(i))
+    scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.Ci_corr_mean,10,c(i,:),'filled',"DisplayName",filedataExp.Key(i))
     xlabel('Time elapsed [hh:mm:ss]');
     xtickformat('hh:mm:ss')
-    ylabel('C_{1}(%)');
+    ylabel('C_{1}[mol %]');
     ylim([0,100]);
     title(filedataExp.Key(l) + " concentrations", 'Interpreter', 'none')
     grid on;
     legend('Location','southeast', 'Interpreter','none');
     hold on
 end
-saveas(gcf,pathImportAll + "all",'png')
-savefig(gcf,pathImportAll + "all")
-
-%% To fix
-    
-%     % All H2 curves (Q 1, 2 and 5 ml/min)
-%     f5 = figure; 
-% for i = 2:length(filedataExp.Key)
-%     scatter(expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed,expProcData.(filedataExp.Key(i)).MFMData.C1,10,'filled',"DisplayName"," q = " +filedataExp.Q(i)+" ml/min")
-%     xlabel('Time elapsed [hh:mm:ss]');
-%     xtickformat('hh:mm:ss')
-%     ylabel('C_{1}(%)');
-%     ylim([0,100]);
-%     title("H2-CO2_T32_P1500_H MFM concentrations", 'Interpreter', 'none')
-%     grid on;
-%     hold on;
-%     legend('Location','southeast');
-% end
-%     saveas(f5,pathExportAll + "CF-conc_all",'png')
-% 
-%     % He & H2 curves (Q 1 ml/min)
-%     f6 = figure; 
-% for i = 1:2
-%     scatter(expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed,expProcData.(filedataExp.Key(i)).MFMData.C1,10,'filled',"DisplayName",filedataExp.Fluid1(i) + " " +filedataExp.Q(i)+" ml/min")
-%     xlabel('Time elapsed [hh:mm:ss]');
-%     xtickformat('hh:mm:ss')
-%     ylabel('C_{1}(%)');
-%     ylim([0,100]);
-%     title("H2&HeCO2_T32_P1500_H MFM concentrations", 'Interpreter', 'none')
-%     grid on;
-%     hold on;
-%     legend('Location','southeast');
-% end
-%     saveas(f6,pathExportAll + "CF-conc_H2-CO2vsHe-CO2",'png')
+saveas(gcf,pathImportAll + "all_fluids_T_P_Q",'png')
+savefig(gcf,pathImportAll + "all_fluids_T_P_Q")
