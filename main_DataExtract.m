@@ -187,7 +187,7 @@ end
 
 %% Plots for analysis
 
-% Subplot all in 4 panels
+% Subplot all in 5 panels
 for i = 1:length(filedataExp.Key)
     figure('Position', [100, 100, 600, 900]); % [left, bottom, width, height];
     subplot(5,1,1);
