@@ -135,8 +135,8 @@ for i = 1:length(filedataExp.Key)
     v = q./A; % Darcy velocity m/s
     u = v./filedataExp.phi(i); % Interstitil velocity
 
-    exp_setup_params = table(A,L,q,v,u,'VariableNames',{'A_SI','L_SI','q_SI','v_SI','u_SI'});
-    expProcData.(filedataExp.Key(i)).exp_setup_params = exp_setup_params;
+    exp_params = table(A,L,q,v,u,'VariableNames',{'A_SI','L_SI','q_SI','v_SI','u_SI'});
+    expProcData.(filedataExp.Key(i)).exp_params = exp_params;
 
 end
 
