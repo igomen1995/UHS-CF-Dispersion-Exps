@@ -1,11 +1,11 @@
 % main_Processing.m
-% version: v05_Oct2025
+% version: v06_Feb2025
 % Author: Ianna Gomez Mendez
 %
 % Objective: Find KL and other fitting params
 % 
 % Functions:
-% fitting_dispersion6, Cj and Ci fitted
+% fit_dispersion, Cj and Ci fitted
 %
 % Input (use Import Data tool in Matlab):
 % 1 - filedataExp
@@ -13,38 +13,36 @@
 % 
 % Procedure:
 % 1 - Load input
-% 2 - Use fitting dispersionaccording to goal
+% 2 - Use fitting dispersion according to goal
 % 
 % Output: 
 % Figures
-%
+% Ditting results
 
 %% INPUT
 
-addpath('Functions/');
+addpath('functions/');
 
-filenameExp = 'Input/input-exp-setup_all_error.xlsx';
-pathImportAll = 'Results/all_error/';
-pathExportAll = 'Results/all_error/';
+filenameExp = 'input/input_exp_H2-CO2-T32-P1500.xlsx';
+pathImportAll = 'results/exp_H2-CO2-T32-P1500-H/';
+pathExportAll = 'results/exp_H2-CO2-T32-P1500-H/';
 
 
 %% IMPORT variables
 
 % Do not change unless input excel format changed
 
-opts = spreadsheetImportOptions("NumVariables", 35);
+opts = spreadsheetImportOptions("NumVariables", 29);
 % Specify sheet and range
 opts.Sheet = "Sheet1";
 opts.DataRange = [3,Inf];
 % Specify column names and types
 opts.VariableNames = ["Key", "Date", "Type","Fluid1", "Fluid2", ...
-    "T", "P", "Q", "Run", "rho1sat", "drho1", "rho2sat", ...
-    "drho2", "PGD1sat", "PGD2sat", "D", "L", "phi", "K", "Vcore", ...
+    "T", "P", "Q", "Run", "D", "L", "phi", "K", "Vcore", ...
     "setupVersion", "Vlinesbefore", "Vlinesafter", "Vtotal", "Comments", "st", "et", "dt", ...
     "path", "pumps_data_name", "trans_data_name", "MFM_data_name", "PGD1_data_name", "PGD2_data_name","GMT_PGD"];
 opts.VariableTypes = ["string", "string","string", "string", "string", ...
-    "double", "double", "double", "double", "double", "double", "double", ...
-    "double", "double", "double", "double", "double", "double", "double", "double", ...
+    "double", "double", "double", "double", "double", "double", "double", "double", "double", ...
     "string", "double", "double", "double","string", "datetime", "datetime", "double", ...
     "string", "string", "string", "string", "string", "string", "string"];
 filedataExp = readtable(filenameExp,opts);
@@ -57,108 +55,97 @@ load(pathImportAll+"expProcData.mat")
 
 %% Fittingt short equation CF
 
+Cj_guess = 1;
+Ci_guess = 0;
+p_guess = 1; % Kl = p^2 in fitting function fit_dispersion
+
 for i = 1:length(filedataExp.Key)
     if filedataExp.Type(i) == "CF"
-        if filedataExp.Fluid1(i) == "H2"
-            C1_vals = expProcData.(filedataExp.Key(i)).BT.C1;
-            t_vals = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
-            u_vals = expProcData.(filedataExp.Key(i)).exp_setup_params.u_SI;
-            L_vals = expProcData.(filedataExp.Key(i)).exp_setup_params.L_SI;
-            [KL,u_fit, Cj_fit, Ci_fit, C_fit] = fitting_dispersion6(C1_vals(C1_vals<60 | C1_vals>98)/100,...
-            t_vals(C1_vals<60 | C1_vals>98), u_vals, 1, L_vals,1,0);
-            expProcData.(filedataExp.Key(i)).exp_setup_params.KL1 = KL;
-            expProcData.(filedataExp.Key(i)).exp_setup_params.u_fit = u_fit;
-            expProcData.(filedataExp.Key(i)).exp_setup_params.Cj_fit = Cj_fit;
-            expProcData.(filedataExp.Key(i)).exp_setup_params.Ci_fit = Ci_fit;
-            expProcData.(filedataExp.Key(i)).exp_setup_params.C_fit1 = C_fit;
-        end
+        C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci_corr_mean;
+        t_vals = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed;
+        u_vals = expProcData.(filedataExp.Key(i)).exp_setup_params.u_SI;
+        L_vals = expProcData.(filedataExp.Key(i)).exp_setup_params.L_SI;
+        [KL,u_fit, Cj_fit, Ci_fit, C_fit] = fit_dispersion(C1_vals/100,...
+        t_vals, u_vals, Cj_guess,Ci_guess,L_vals,p_guess);
+        expProcData.(filedataExp.Key(i)).exp_setup_params.KL1 = KL;
+        expProcData.(filedataExp.Key(i)).exp_setup_params.u_fit = u_fit;
+        expProcData.(filedataExp.Key(i)).exp_setup_params.Cj_fit = Cj_fit;
+        expProcData.(filedataExp.Key(i)).exp_setup_params.Ci_fit = Ci_fit;
+        expProcData.(filedataExp.Key(i)).exp_setup_params.C_fit = C_fit;
     end
 end
 
 %% Fittingt short equation BP
-D_lines_SI = 0.00317; %m2
+D_lines_SI = 0.00240; %m2 %average 1/4in and 1/8in diameter tubing
 A_lines_SI = pi*((D_lines_SI/2)^2);
 L_lines_SI = 0.850; %m
 
 for i = 1:length(filedataExp.Key)
     if filedataExp.Type(i) == "BP"
-        if filedataExp.Fluid1(i) == "H2"
-            C1_vals = expProcData.(filedataExp.Key(i)).BT.C1;
-            t_vals = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
-            q_vals = expProcData.(filedataExp.Key(i)).exp_setup_params.q_SI;
-            u_vals = expProcData.(filedataExp.Key(i)).exp_setup_params.u_SI;
-            L_vals = expProcData.(filedataExp.Key(i)).exp_setup_params.L_SI;
-            [KL,u_fit, Cj_fit, Ci_fit, C_fit] = fitting_dispersion6(C1_vals(C1_vals<60 | C1_vals>98)/100,...
-            t_vals(C1_vals<60 | C1_vals>98), q_vals/A_lines_SI,1,L_lines_SI,1,0);
-            expProcData.(filedataExp.Key(i)).exp_setup_params.KL1 = KL;
-            expProcData.(filedataExp.Key(i)).exp_setup_params.u_fit = u_fit;
-            expProcData.(filedataExp.Key(i)).exp_setup_params.Cj_fit = Cj_fit;
-            expProcData.(filedataExp.Key(i)).exp_setup_params.Ci_fit = Ci_fit;
-            expProcData.(filedataExp.Key(i)).exp_setup_params.C_fit1 = C_fit;
-        end
+        C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci_corr_mean;
+        t_vals = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed;
+        q_vals = expProcData.(filedataExp.Key(i)).exp_setup_params.q_SI;
+        u_vals = expProcData.(filedataExp.Key(i)).exp_setup_params.u_SI;
+        L_vals = expProcData.(filedataExp.Key(i)).exp_setup_params.L_SI;
+        [KL,u_fit, Cj_fit, Ci_fit, C_fit] = fit_dispersion(C1_vals/100,...
+        t_vals, q_vals/A_lines_SI,Cj_guess,Ci_guess,L_lines_SI,p_guees);
+        expProcData.(filedataExp.Key(i)).exp_setup_params.KL1 = KL;
+        expProcData.(filedataExp.Key(i)).exp_setup_params.u_fit = u_fit;
+        expProcData.(filedataExp.Key(i)).exp_setup_params.Cj_fit = Cj_fit;
+        expProcData.(filedataExp.Key(i)).exp_setup_params.Ci_fit = Ci_fit;
+        expProcData.(filedataExp.Key(i)).exp_setup_params.C_fit = C_fit;
     end
 end
 
 %% Table with fitting results
 
-fitting_results = table();
+fitting_results_v = table();
 for i = 1:length(filedataExp.Key)
     if filedataExp.Type(i) == "CF"
-        if filedataExp.Fluid1(i) == "H2"
-            u_SI = expProcData.(filedataExp.Key(i)).exp_setup_params.u_SI;
-            u_lines_SI = expProcData.(filedataExp.Key(i)).exp_setup_params.q_SI/A_lines_SI;
-            u_fit_SI = expProcData.(filedataExp.Key(i)).exp_setup_params.u_fit;
-            KL_SI = expProcData.(filedataExp.Key(i)).exp_setup_params.KL1;
-            L_SI = expProcData.(filedataExp.Key(i)).exp_setup_params.L_SI;
-            Cj_fit_SI = expProcData.(filedataExp.Key(i)).exp_setup_params.Cj_fit;
-            Ci_fit_SI = expProcData.(filedataExp.Key(i)).exp_setup_params.Ci_fit;
-            RMSE = expProcData.(filedataExp.Key(i)).exp_setup_params.C_fit1.RMSE;
-            R2 = expProcData.(filedataExp.Key(i)).exp_setup_params.C_fit1.Rsquared.Adjusted;
-            p = expProcData.(filedataExp.Key(i)).exp_setup_params.C_fit1.Coefficients.Estimate;
-            SE_p = expProcData.(filedataExp.Key(i)).exp_setup_params.C_fit1.Coefficients.SE;
-            SE_KL = (((2*p)^2)*(SE_p^2))^(1/2);
-            T_mean = mean(expProcData.(filedataExp.Key(i)).MFMData.T_MFM2,'omitnan');
-            T_std = std(expProcData.(filedataExp.Key(i)).MFMData.T_MFM2,'omitnan');
-            % BT time
-            C1_vals = expProcData.(filedataExp.Key(i)).BT.C1;
-            t_vals = expProcData.(filedataExp.Key(i)).BT.Time;
-            t_elapsed_vals = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
-            C1_fit_vals = expProcData.(filedataExp.Key(i)).exp_setup_params.C_fit1.feval(t_elapsed_vals);
-            row_temp = table(filedataExp.Key(i),u_SI,u_SI*60*100,u_lines_SI, ...
-                u_lines_SI*60*100,u_fit_SI, u_fit_SI*60*100, ...
-                KL_SI,KL_SI* 60 * 10^4, p, SE_p, SE_KL, (SE_KL)* 60 * 10^4, ...
-                L_SI,L_SI*100,Cj_fit_SI,Ci_fit_SI, RMSE,R2,T_mean,T_std, ...
-                'VariableNames',{'Key','u_SI','u_cmmin','ulines_SI','ulines_cmmin', ...
-                'u_fit_SI','u_fit_cmmin','KL_SI','KL_cm2min', 'p','SE_p', 'SE_KL_SI','SE_KL_cm2min', ...
-                'L_SI', 'L_cm','Cj_fit','Ci_fit','RMSE','R2','T_mean','T_std'});
-            fitting_results = [fitting_results;row_temp];
-        end
+        % fitting parameters results
+        u_SI = expProcData.(filedataExp.Key(i)).exp_setup_params.u_SI;
+        u_lines_SI = expProcData.(filedataExp.Key(i)).exp_setup_params.q_SI/A_lines_SI;
+        u_fit_SI = expProcData.(filedataExp.Key(i)).exp_setup_params.u_fit;
+        KL_SI = expProcData.(filedataExp.Key(i)).exp_setup_params.KL1;
+        L_SI = expProcData.(filedataExp.Key(i)).exp_setup_params.L_SI;
+        Cj_fit_SI = expProcData.(filedataExp.Key(i)).exp_setup_params.Cj_fit;
+        Ci_fit_SI = expProcData.(filedataExp.Key(i)).exp_setup_params.Ci_fit;
+        RMSE = expProcData.(filedataExp.Key(i)).exp_setup_params.C_fit.RMSE;
+        R2 = expProcData.(filedataExp.Key(i)).exp_setup_params.C_fit.Rsquared.Adjusted;
+        p = expProcData.(filedataExp.Key(i)).exp_setup_params.C_fit.Coefficients.Estimate;
+        SE_p = expProcData.(filedataExp.Key(i)).exp_setup_params.C_fit.Coefficients.SE;
+        SE_KL = (((2*p)^2)*(SE_p^2))^(1/2);
+        T_mean = mean(expProcData.(filedataExp.Key(i)).BT.T_MFM);
+        T_std = std(expProcData.(filedataExp.Key(i)).BT.T_MFM);
+        % creating table
+        row_temp = table(filedataExp.Key(i),u_SI,u_SI*60*100,u_lines_SI, ...
+            u_lines_SI*60*100,u_fit_SI, u_fit_SI*60*100, ...
+            KL_SI,KL_SI* 60 * 10^4, p, SE_p, SE_KL, (SE_KL)* 60 * 10^4, ...
+            L_SI,L_SI*100,Cj_fit_SI,Ci_fit_SI, RMSE,R2,T_mean,T_std, ...
+            'VariableNames',{'Key','u_SI','u_cmmin','ulines_SI','ulines_cmmin', ...
+            'u_fit_SI','u_fit_cmmin','KL_SI','KL_cm2min', 'p','SE_p', 'SE_KL_SI','SE_KL_cm2min', ...
+            'L_SI', 'L_cm','Cj_fit','Ci_fit','RMSE','R2','T_mean','T_std'});
+        fitting_results_v = [fitting_results_v;row_temp];
     end
 end
-writetable(fitting_results,pathExportAll + "fittingResults-Ci-Cj.xlsx");
-save(pathExportAll + "fitting_results-Ci-Cj.mat",'fitting_results')
+writetable(fitting_results_v,pathExportAll + "fittingResults_v.xlsx");
+save(pathExportAll + "fitting_results_v.mat",'fitting_results_v')
 
-%% Fitting and experimental data all CF
+%% Fitting and experimental data all CF plot
+
 for i = 1:length(filedataExp.Key)
-    if filedataExp.Fluid1(i) == "H2"
-        % if filedataExp.Type(i) == "BP"
-            figure
-            scatter(expProcData.(filedataExp.Key(i)).BT.Time,expProcData.(filedataExp.Key(i)).BT.C1,10,'filled','MarkerFaceColor','red')
-            hold on
-            plot(expProcData.(filedataExp.Key(i)).BT.Time,100*expProcData.(filedataExp.Key(i)).exp_setup_params.C_fit1.feval(expProcData.(filedataExp.Key(i)).BT.TimeElapsed),'LineWidth',1.5,'Color', 'k')
-            % if i ~= [5,6]
-            %     plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).exp_setup_params.C_fit2.feval(expProcData.(filedataExp.Key(i)).BT.TimeElapsed),'LineWidth',1.5,'Color', 'b')
-            % end
-            xlabel('Time elapsed [hh:mm:ss]');
-            xtickformat('hh:mm:ss')
-            ylabel('Concentration C_1 [%]');
-            title(filedataExp.Key(i) + " fitting", 'Interpreter', 'none')
-            grid on;
-            legend(["Experimental data", "BT model fitting short","BT model fitting long"],'Location','southeast');
-            saveas(gcf,pathImportAll + filedataExp.Key(i) + "_fitting",'png')
-            savefig(gcf,pathImportAll + filedataExp.Key(i) + "_fitting")
-        % end
-    end
+        figure
+        scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.Ci_corr_mean,10,'filled','MarkerFaceColor','red')
+        hold on
+        plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,100*expProcData.(filedataExp.Key(i)).exp_setup_params.C_fit.feval(expProcData.(filedataExp.Key(i)).BT.SecondsElapsed),'LineWidth',1.5,'Color', 'k')
+        xlabel('Time elapsed [hh:mm:ss]');
+        xtickformat('hh:mm:ss')
+        ylabel('Molar concentration C_1 [mol %]');
+        title(filedataExp.Key(i) + " fitting", 'Interpreter', 'none')
+        grid on;
+        legend(["Experimental data", "BT model fitting"],'Location','southeast');
+        saveas(gcf,pathImportAll + filedataExp.Key(i) + "_fitting",'png')
+        savefig(gcf,pathImportAll + filedataExp.Key(i) + "_fitting")
 end
 
 %%
