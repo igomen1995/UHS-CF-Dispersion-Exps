@@ -16,10 +16,10 @@ function [KL,u_fit, Cj_fit, Ci_fit, C_fit] = fit_dispersion(C,t,u,Cj,Ci,L,p)
         % C_fit = fitnlm(t,C,C_function1,Ci);
         % Ci = C_fit.Coefficients.Estimate;
     
-        % u, p, Ci not fitting, fitting Cj
-        C_function3 = @(Cj,t)(Ci + (Cj(1)/2)*erfc(((L-u.*t).*((t).^(1/2)))./(2*t.*p)));
-        C_fit = fitnlm(t,C,C_function3,Cj);
-        Cj = C_fit.Coefficients.Estimate;
+        % % u, p, Ci not fitting, fitting Cj
+        % C_function3 = @(Cj,t)(Ci + (Cj(1)/2)*erfc(((L-u.*t).*((t).^(1/2)))./(2*t.*p)));
+        % C_fit = fitnlm(t,C,C_function3,Cj);
+        % Cj = C_fit.Coefficients.Estimate;
 
         % % Cj, p, Ci not fitting, fitting u
         % C_function2 = @(u,t)(Ci + (Cj/2)*erfc(((L-u(1).*t).*((t).^(1/2)))./(2*t.*p)));
