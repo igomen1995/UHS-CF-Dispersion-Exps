@@ -133,9 +133,15 @@ for i = 1:length(filedataExp.Key)
     L = filedataExp.L(i)*0.0254; % m
     q = filedataExp.Q(i)*(10^(-6))/60; %m3/s
     v = q./A; % Darcy velocity m/s
-    u = v./filedataExp.phi(i); % Interstitil velocity
-
-    exp_params = table(A,L,q,v,u,'VariableNames',{'A_SI','L_SI','q_SI','v_SI','u_SI'});
+    u = v./filedataExp.phi(i); % Interstitial velocity
+    
+    exp_params = table(filedataExp.Key(i), filedataExp.Date(i), filedataExp.Type(i), filedataExp.Fluid1(i), ...
+        filedataExp.Fluid2(i), filedataExp.T(i), filedataExp.P(i), filedataExp.Q(i), filedataExp.Run(i), ...
+        filedataExp.D(i), filedataExp.L(i), filedataExp.phi(i), filedataExp.K(i), filedataExp.Vcore(i), ...
+        filedataExp.setupVersion(i), filedataExp.Vlinesbefore(i), filedataExp.Vlinesafter(i), ... 
+        filedataExp.Vtotal(i), A,L,q,v,u, 'VariableNames', {'Key', 'Date', 'Type','Fluid1', 'Fluid2', ...
+        'T_C', 'P_C', 'Q_mlmin', 'Run', 'D_in', 'L_in', 'phi', 'K_mD', 'Vcore_cc', ...
+        'setupVersion', 'Vlinesbefore_cc', 'Vlinesafter_cc', 'Vtotal_cc','A_SI','L_SI','q_SI','v_SI','u_SI'});
     expProcData.(filedataExp.Key(i)).exp_params = exp_params;
 
 end
@@ -181,6 +187,7 @@ for i = 1:length(filedataExp.Key)
     writetable(expProcData.(filedataExp.Key(i)).MFMData,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'MFM_data');
     writetable(expProcData.(filedataExp.Key(i)).PGD1Data,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'PGD1_data');
     writetable(expProcData.(filedataExp.Key(i)).PGD2Data,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'PGD2_data');
+    writetable(expProcData.(filedataExp.Key(i)).exp_params,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'exp_params');
     writetable(expProcData.(filedataExp.Key(i)).BT,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'BT_curve');
     save(pathExportAll + "expProcData.mat",'expProcData')
 end
