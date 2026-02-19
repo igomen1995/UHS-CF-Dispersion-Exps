@@ -468,3 +468,76 @@ ylim([748,777])
 title('CO_2 (32°C, 10.4 MPa)')
 grid on
 saveas(gcf,pathExportAll + "Cal-curve-zoom-in",'png')
+
+%% correction due tue temperature or Q
+
+% P, T and density arrays for a fixed time and fluid
+
+fluids = unique(filedataExp.Fluid1);
+P_unique = unique(filedataExp.P);
+P_unique = P_unique(~isnan(P_unique));
+P_unique_field = "P"+ string(P_unique);
+T_unique = unique(filedataExp.T);
+T_unique = T_unique(~isnan(T_unique));
+
+aux_idx = find(ismissing(filedataExp.P) == 0)';
+
+mean_vals = table();
+std_vals = table();
+fluid_NIST_row_vals = table();
+calResults = table();
+
+for i = aux_idx(1):aux_idx(end)
+    for j = 1:length(fluids)
+        for k = 1:length(P_unique)
+            for l = 1:length(T_unique)
+                if fluids(j) == filedataExp.Fluid1(i)
+                    if P_unique(k) == filedataExp.P(i)
+                        if T_unique(l) == filedataExp.T(i)
+                            calProcData1.(fluids(j)).(P_unique_field(k)).dens_array = expRawData.(filedataExp.Key(i)).MFMData.dens_MFM2((expRawData.(filedataExp.Key(i)).MFMData.TimeStamp>=filedataExp.st(i))&(expRawData.(filedataExp.Key(i)).MFMData.TimeStamp<=filedataExp.et(i)),:);
+                            calProcData1.(fluids(j)).(P_unique_field(k)).T_array = expRawData.(filedataExp.Key(i)).MFMData.T_MFM2((expRawData.(filedataExp.Key(i)).MFMData.TimeStamp>=filedataExp.st(i))&(expRawData.(filedataExp.Key(i)).MFMData.TimeStamp<=filedataExp.et(i)),:);
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+
+for i = 1:height(filedataNIST)
+    for j = 1:length(fluids)
+        for k = 1:length(P_unique)
+            for l = 1:length(T_unique)
+                if fluids(j) == filedataNIST.Fluid(i)
+                    if P_unique(k) == filedataNIST.P_psig(i)
+                        if T_unique(l) == filedataNIST.Temp(i)
+                            calProcData1.(fluids(j)).(P_unique_field(k)).dens_arraynorm = calProcData1.(fluids(j)).(P_unique_field(k)).dens_array/filedataNIST.dens(i);
+                            calProcData1.(fluids(j)).(P_unique_field(k)).T_arraynorm = calProcData1.(fluids(j)).(P_unique_field(k)).T_array/filedataNIST.Temp(i);
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+calResults1 = [calProcData1.(fluids(j)).(P_unique_field(k)).dens_arraynorm,calProcData1.(fluids(j)).(P_unique_field(k)).T_arraynorm];
+
+for j = 1:length(fluids)
+    cal_vals1.(fluids(j)) = calResults1(calResults1.Fluid == fluids(j),:);
+end
+
+%%
+% Calibration curve
+figure
+for j = 1:length(fluids)
+    scatter(calProcData1.(fluids(j)).P1500.T_arraynorm,calProcData1.(fluids(j)).P1500.dens_arraynorm,'DisplayName',fluids{j})
+    hold on
+    grid on
+    legend()
+    ylabel('rho MFM / rho ref')
+    xlabel('T MFM / T ref')
+end
+
+
