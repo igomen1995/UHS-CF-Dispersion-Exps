@@ -346,6 +346,12 @@ for i = aux_idx
                 calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).calResults = calResults_temp;
                 calResults = [calResults;calResults_temp];
 
+                dens_array = calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.dens_MFM2;
+                T_array = calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.T_MFM2;
+                % freq and Q MFMF could be added too
+                calData_temp = table(dens_array, repmat(dens_ref,length(dens_array),1), T_array, ...
+                    'VariableNames',{'dens_MFM','dens_ref','T_MFM'});
+                calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).calData = calData_temp;
             end
 
         end
@@ -415,9 +421,17 @@ for i = aux_idx
         calResultsQAll_temp.dens_ref = dens_ref;
         calResultsQAll_temp.Z_ref = Z_ref;
         calResultsQAll_temp.phase_ref = phase_ref;
-
+        
         calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).QAll.calResults = calResultsQAll_temp;
         calResultsQAll = [calResultsQAll;calResultsQAll_temp];
+        
+        dens_array = calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).QAll.MFMData.dens_MFM2;
+        T_array = calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).QAll.MFMData.T_MFM2;
+        % freq and Q MFMF could be added too
+        calDataQAll_temp = table(dens_array, repmat(dens_ref,length(dens_array),1), T_array, ...
+            'VariableNames',{'dens_MFM','dens_ref','T_MFM'});
+        calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).QAll.calData = calDataQAll_temp;
+
     end
     % save table for each key but trimmed
     writetable(expTrimData.(filedataExp.Key(i)).pumpsData,xlsx_name  + '.xlsx', 'Sheet', 'pumps_data');
