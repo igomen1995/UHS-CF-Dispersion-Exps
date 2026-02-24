@@ -148,18 +148,24 @@ clear calProcData;
 clear expTrimData;
 calResults = table();
 calResultsQAll = table();
+calData = table();
+calDataQAll = table();
 
-cal_xlsx_name = pathExportAll + "calResults";
-cal_mat_name = pathExportAll + "calResults";
-cal_QAll_mat_name = pathExportAll + "calResultsQAll";
-cal_proc_mat_name = pathExportAll + "calProcData";
-trim_mat_name = pathExportAll + "expTrimData";
+calResults_name = pathExportAll + "calResults";
+calResultsQAll_name = pathExportAll + "calResultsQAll";
+calData_name = pathExportAll + "calData";
+calDataQAll_name = pathExportAll + "calDataQAll";
+calProcData_name = pathExportAll + "calProcData";
+expTrimData_name = pathExportAll + "expTrimData";
 
-delete(cal_xlsx_name + '.xlsx');
-delete(cal_mat_name + '.mat');
-delete(cal_QAll_mat_name + '.mat');
-delete(cal_proc_mat_name + '.mat');
-delete(trim_mat_name + '.mat');
+delete(calResults_name + '.xlsx');
+delete(calResults_name + '.mat');
+delete(calResultsQAll_name + '.mat');
+delete(calData_name + '.xlsx');
+delete(calData_name + '.mat');
+delete(calDataQAll_name + '.mat');
+delete(calProcData_name + '.mat');
+delete(expTrimData_name + '.mat');
 
 for i = aux_idx
 
@@ -338,10 +344,16 @@ for i = aux_idx
                 dens_ref = filedataRef.dens((filedataExp.Fluid1(i)==filedataRef.Fluid)&(filedataExp.T_C(i)==filedataRef.T_C)&(P_unique(j)==filedataRef.P_psig));
                 Z_ref = filedataRef.Z((filedataExp.Fluid1(i)==filedataRef.Fluid)&(filedataExp.T_C(i)==filedataRef.T_C)&(P_unique(j)==filedataRef.P_psig));
                 phase_ref = filedataRef.Phase((filedataExp.Fluid1(i)==filedataRef.Fluid)&(filedataExp.T_C(i)==filedataRef.T_C)&(P_unique(j)==filedataRef.P_psig));
-                
+                fluid_ref = filedataRef.Fluid((filedataExp.Fluid1(i)==filedataRef.Fluid)&(filedataExp.T_C(i)==filedataRef.T_C)&(P_unique(j)==filedataRef.P_psig));
+                T_ref = filedataRef.T_C((filedataExp.Fluid1(i)==filedataRef.Fluid)&(filedataExp.T_C(i)==filedataRef.T_C)&(P_unique(j)==filedataRef.P_psig));
+                Ppsig_ref = filedataRef.P_psig((filedataExp.Fluid1(i)==filedataRef.Fluid)&(filedataExp.T_C(i)==filedataRef.T_C)&(P_unique(j)==filedataRef.P_psig));
+
                 calResults_temp.dens_ref = dens_ref;
                 calResults_temp.Z_ref = Z_ref;
-                calResults_temp.phase_ref = phase_ref;
+                calResults_temp.fluid_ref = phase_ref;
+                calResults_temp.fluid_ref = fluid_ref;
+                calResults_temp.T_ref = T_ref;
+                calResults_temp.Ppsig_ref = Ppsig_ref;
     
                 calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).calResults = calResults_temp;
                 calResults = [calResults;calResults_temp];
@@ -349,9 +361,11 @@ for i = aux_idx
                 dens_array = calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.dens_MFM2;
                 T_array = calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.T_MFM2;
                 % freq and Q MFMF could be added too
-                calData_temp = table(dens_array, repmat(dens_ref,length(dens_array),1), T_array, ...
-                    'VariableNames',{'dens_MFM','dens_ref','T_MFM'});
+                calData_temp = table(repmat(fluid_ref,length(dens_array),1),dens_array, repmat(dens_ref,length(dens_array),1), ...
+                    T_array, repmat(T_ref,length(dens_array),1),repmat(P_mean,length(dens_array),1), repmat(Ppsig_ref,length(dens_array),1), repmat(Q_mean,length(dens_array),1),...
+                    'VariableNames',{'fluid_ref','dens_MFM','dens_ref','T_MFM','T_ref','Ppsig_mean','Ppsig_ref','Q_mean'});
                 calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).calData = calData_temp;
+                calData = [calData;calData_temp];
             end
 
         end
@@ -425,13 +439,13 @@ for i = aux_idx
         calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).QAll.calResults = calResultsQAll_temp;
         calResultsQAll = [calResultsQAll;calResultsQAll_temp];
         
-        dens_array = calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).QAll.MFMData.dens_MFM2;
-        T_array = calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).QAll.MFMData.T_MFM2;
-        % freq and Q MFMF could be added too
-        calDataQAll_temp = table(dens_array, repmat(dens_ref,length(dens_array),1), T_array, ...
-            'VariableNames',{'dens_MFM','dens_ref','T_MFM'});
-        calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).QAll.calData = calDataQAll_temp;
-
+        % dens_array = calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).QAll.MFMData.dens_MFM2;
+        % T_array = calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).QAll.MFMData.T_MFM2;
+        % % freq and Q MFMF could be added too
+        % calDataQAll_temp = table(dens_array, repmat(dens_ref,length(dens_array),1), T_array, ...
+        %     'VariableNames',{'dens_MFM','dens_ref','T_MFM'});
+        % calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).QAll.calData = calDataQAll_temp;
+        % calDataQAll = [calDataQAll;calDataQAll_temp];
     end
     % save table for each key but trimmed
     writetable(expTrimData.(filedataExp.Key(i)).pumpsData,xlsx_name  + '.xlsx', 'Sheet', 'pumps_data');
@@ -451,10 +465,12 @@ for i = aux_idx
 
 end
 
-save(cal_mat_name + '.mat','calResults')
-save(cal_QAll_mat_name + '.mat','calResultsQAll')
-save(cal_proc_mat_name + '.mat','calProcData')
-save(trim_mat_name + '.mat','expTrimData')
+save(calResults_name + '.mat','calResults')
+save(calResultsQAll_name + '.mat','calResultsQAll')
+save(calData_name + '.mat','calData')
+save(calDataQAll_name + '.mat','calDataQAll')
+save(calProcData_name + '.mat','calProcData')
+save(expTrimData_name + '.mat','expTrimData')
 
 % save in excel, with timestamp as string joins
 calResults_xlsx = calResults;
@@ -464,8 +480,11 @@ for m = 1:height(calResults)
     calResults_xlsx.st(m) = strjoin(string(calResults.st{m}),", ");
     calResults_xlsx.et(m) = strjoin(string(calResults.et{m}),", ");
 end
-writetable(calResults_xlsx,cal_xlsx_name + '.xlsx','Sheet', 'calResultsQx');
-writetable(calResultsQAll,cal_xlsx_name + '.xlsx','Sheet', 'calResultsQAll');
+writetable(calResults_xlsx,calResults_name + '.xlsx','Sheet', 'calResultsQx');
+writetable(calResultsQAll,calResults_name + '.xlsx','Sheet', 'calResultsQAll');
+
+writetable(calData,calData_name + '.xlsx','Sheet', 'calDataQx');
+writetable(calDataQAll,calData_name + '.xlsx','Sheet', 'calDataQAll');
 
 %% Plotting for analysis Raw Data
 % Subplot all in 4 panels
@@ -615,247 +634,247 @@ for i = aux_idx
     saveas(gcf,pathExportAll + filedataExp.Key(i) + "_All_vars_Trim",'png')
 end
 
-% %% Calibration curve
-% 
-% aux_idx = find(cellfun(@length,filedataExp.P_psig)>1)';
-% 
-% for i = aux_idx
-%     for j = 1:length(fluids)
-%         if fluids(j) == filedataExp.Fluid1(i)
-%             dens_cal_vals = table();
-%             for k = 1:length(P_unique)
-%                 dens_cal_Ref = repmat(cal_vals.(fluids(j)).dens(k),length(calProcData.(fluids(j)).(P_unique_field(k)).dens_array),1);
-%                 P_cal_ref = repmat(cal_vals.(fluids(j)).P_psig(k),length(calProcData.(fluids(j)).(P_unique_field(k)).dens_array),1);
-%                 fluid_cal_ref = repmat(cal_vals.(fluids(j)).Fluid(k),length(calProcData.(fluids(j)).(P_unique_field(k)).dens_array),1);
-%                 dens_cal_MFM = calProcData.(fluids(j)).(P_unique_field(k)).dens_array;
-%                 T_cal_MFM = calProcData.(fluids(j)).(P_unique_field(k)).T_array;
-%                 % take out Nan values
-%                 dens_cal_Ref_clean = dens_cal_Ref(~isnan(dens_cal_MFM));
-%                 P_cal_ref_clean = P_cal_ref(~isnan(dens_cal_MFM));
-%                 fluid_cal_ref_clean = fluid_cal_ref(~isnan(dens_cal_MFM));
-%                 dens_cal_MFM_clean = dens_cal_MFM(~isnan(dens_cal_MFM));
-%                 T_cal_MFM_clean = T_cal_MFM(~isnan(dens_cal_MFM));
-%                 dens_cal_vals_temp = table(dens_cal_Ref_clean,dens_cal_MFM_clean,T_cal_MFM_clean, P_cal_ref_clean,fluid_cal_ref_clean,'VariableNames',{'dens_cal_Ref','dens_cal_MFM','T_cal_MFM','P_cal_ref','Fluid_cal_ref'});
-%                 dens_cal_vals = [dens_cal_vals;dens_cal_vals_temp];
-%             end
-%             calProcData.(fluids(j)).dens_cal_all = dens_cal_vals;
-%         end
-%     end
-% end
-% 
-% %% Rho Cal curve
-% 
-% dens_cal_vals_all = table();
-% for i = 1:length(fluids)
-%     dens_cal_vals_all = [dens_cal_vals_all;calProcData.(fluids(i)).dens_cal_all];
-% end
-% 
-% calProcData.dens_cal_vals_all = dens_cal_vals_all;
-% 
-% % fit linear
-% % all
-% rho_cal_fit_lin = fitlm(dens_cal_vals_all(:,1:2)); 
-% % high pressure cal only
-% dens_cal_vals_HP = dens_cal_vals_all(dens_cal_vals_all.P_cal_ref==1500,:);
-% rho_cal_HP_fit_lin = fitlm(dens_cal_vals_HP(:,1:2)); 
-% 
-% % save fit model params
-% fittingRhoResultsAll = table('Size',[0 4],'VariableTypes',{'string','double','double','double'},'VariableNames',{'model','p1','p2','RMSE'});
-% calProcData.rho_cal_fit_lin = rho_cal_fit_lin;
-% fittingRhoResultsAll(1,:) = {"all_lin",rho_cal_fit_lin.Coefficients.Estimate(1),rho_cal_fit_lin.Coefficients.Estimate(2),rho_cal_fit_lin.RMSE};
-% calProcData.rho_cal_HP_fit_lin = rho_cal_HP_fit_lin;
-% fittingRhoResultsAll(2,:) = {"HP_lin",rho_cal_HP_fit_lin.Coefficients.Estimate(1),rho_cal_HP_fit_lin.Coefficients.Estimate(2),rho_cal_HP_fit_lin.RMSE};
-% 
-% calProcData.fittingRhoResultsAll = fittingRhoResultsAll;
-% writetable(fittingRhoResultsAll,pathExportAll + "fittingRhoResultsAll.xlsx");
-% save(pathExportAll + "calProcData.mat",'calProcData')
-% 
-% %% Density cal plot all densitites (all fluids, temperatures and pressures)
-% figure
-% set(gcf, 'Position', [100, 100, 700, 550])
-% scatter(dens_cal_vals_all.dens_cal_Ref,dens_cal_vals_all.dens_cal_MFM,20,dens_cal_vals_all.T_cal_MFM,'filled')
-% hold on
-% plot(0:1:800,feval(rho_cal_fit_lin,0:1:800),"Color",'k')
-% xlabel('\rho_{ref} [kg/m^{3}]');
-% ylabel('\rho_{MFM} [kg/m^{3}]');
-% xlim([0 800]);
-% ylim([0 800]);
-% xticks(0:100:800)
-% yticks(0:100:800)
-% c=colorbar;
-% c.Title.String = 'Temperature [°C]';
-% c.Title.Rotation = 90;
-% c.Title.Units = 'normalized';
-% c.Title.Position = [3.55, 0.5, 0];
-% c.Title.FontSize = 14;
-% cTicks = c.Ticks;
-% cTicks = cTicks(mod(cTicks,1) == 0);
-% c.Ticks = cTicks;
-% grid on
-% title("Calibration curve - all cal fluids P and T")
-% saveas(gcf,pathExportAll + "Cal-all",'png')
-% 
-% % save figs, add colours, add mean val and symbol per substance tested
-% %% All fluids, only high pressure - cal curves
-% figure
-% scatter(dens_cal_vals_HP.dens_cal_Ref,dens_cal_vals_HP.dens_cal_MFM,20,dens_cal_vals_HP.T_cal_MFM,'filled')
-% hold on
-% plot(0:1:800,feval(rho_cal_HP_fit_lin,0:1:800),"Color",'k')
-% xlabel('\rho_{ref} [kg/m^{3}]');
-% ylabel('\rho_{MFM} [kg/m^{3}]');
-% xlim([0 800]);
-% ylim([0 800]);
-% xticks(0:100:800)
-% yticks(0:100:800)
-% c=colorbar;
-% c.Title.String = 'Temperature [°C]';
-% c.Title.Rotation = 90;
-% c.Title.Units = 'normalized';
-% c.Title.Position = [3.55, 0.5, 0];
-% c.Title.FontSize = 14;
-% cTicks = c.Ticks;
-% cTicks = cTicks(mod(cTicks,1) == 0);
-% c.Ticks = cTicks;
-% grid on
-% title("Calibration curve - all cal fluids and T at HP")
-% saveas(gcf,pathExportAll + "Cal-all_HP",'png')
-% 
-% %% All fluids, only high pressure, cal curves, zoom in
-% 
-% % three different fluids H2, He, CO2 for paper! High pressure = 1500 psig,
-% % Tref = 32C
-% 
-% figure;
-% set(gcf, 'Position', [100, 100, 700, 550])
-% ax1 = axes;
-% scatter(dens_cal_vals_HP.dens_cal_Ref,dens_cal_vals_HP.dens_cal_MFM,15,dens_cal_vals_HP.T_cal_MFM,'filled')
-% hold on
-% plot(0:1:800,feval(rho_cal_HP_fit_lin,0:1:800),"Color",'k')
-% x1 = xlabel('\rho_{ref} [kg/m^{3}]', 'FontSize', 14);
-% ylabel('\rho_{MFM} [kg/m^{3}]', 'FontSize', 14);
-% xlim([0 800]);
-% ylim([0 800]);
-% xticks(0:100:800)
-% yticks(0:100:800)
-% numTicks = 6;
-% ax1.FontSize = 14;
-% c=colorbar;
-% c.Title.String = 'Temperature [°C]';
-% c.Title.Rotation = 90;
-% c.Title.Units = 'normalized';
-% c.Title.Position = [3.55, 0.5, 0];
-% c.Title.FontSize = 14;
-% cTicks = c.Ticks;
-% cTicks = cTicks(mod(cTicks,1) == 0);
-% c.Ticks = cTicks;
-% grid on
-% legend({'Measured density','Calibration curve'},'Location','southeast')
-% % cal curve formula annotation
-% coeffs = calProcData.rho_cal_HP_fit_lin.Coefficients.Estimate;
-% annotText = sprintf('\\rho_{MFM} = %.1f \\cdot \\rho_{Ref} + %.1f', coeffs(2), coeffs(1));
-% annotation('textbox', [0.2, 0.12, 0.3, 0.1], 'String', annotText, ...
-%     'Interpreter', 'tex', 'FontSize', 11, 'EdgeColor', 'none');
-% % H2
-% insetAx = axes('Position', [0.19 0.70 0.1 0.15]);  % [x y width height]
-% box(insetAx, 'on');  % Add border to inset
-% scatter(insetAx,dens_cal_vals_HP.dens_cal_Ref,dens_cal_vals_HP.dens_cal_MFM,15,dens_cal_vals_HP.T_cal_MFM,'filled')
-% hold on
-% plot(insetAx,0:1:800,feval(rho_cal_HP_fit_lin,0:1:800),"Color",'k')
-% grid on
-% xlim([4,12])
-% ylim([17,27])
-% title('H_2 (32°C, 10.4 MPa)')
-% % He
-% insetAx = axes('Position', [0.36 0.70 0.1 0.15]);  % [x y width height]
-% box(insetAx, 'on');  % Add border to inset
-% scatter(insetAx,dens_cal_vals_HP.dens_cal_Ref,dens_cal_vals_HP.dens_cal_MFM,15,dens_cal_vals_HP.T_cal_MFM,'filled')
-% hold on
-% plot(insetAx,0:1:800,feval(rho_cal_HP_fit_lin,0:1:800),"Color",'k')
-% xlim([11,19])
-% ylim([24,34])
-% title('He_  (32°C, 10.4 MPa)')
-% grid on
-% % CO2
-% insetAx = axes('Position', [0.19 0.47 0.1 0.15]);  % [x y width height]
-% box(insetAx, 'on');  % Add border to inset
-% scatter(insetAx,dens_cal_vals_HP.dens_cal_Ref,dens_cal_vals_HP.dens_cal_MFM,15,dens_cal_vals_HP.T_cal_MFM,'filled')
-% hold on
-% plot(insetAx,0:1:800,feval(rho_cal_HP_fit_lin,0:1:800),"Color",'k')
-% xlim([696,720])
-% ylim([748,777])
-% title('CO_2 (32°C, 10.4 MPa)')
-% grid on
-% saveas(gcf,pathExportAll + "Cal-curve-zoom-in",'png')
-% 
-% %% correction due tue temperature or Q
-% 
-% % P, T and density arrays for a fixed time and fluid
-% 
-% fluids = unique(filedataExp.Fluid1);
-% P_unique = unique(filedataExp.P_psig);
-% P_unique = P_unique(~isnan(P_unique));
-% P_unique_field = "P"+ string(P_unique);
-% T_unique = unique(filedataExp.T);
-% T_unique = T_unique(~isnan(T_unique));
-% 
-% aux_idx = find(ismissing(filedataExp.P_psig) == 0)';
-% 
-% mean_vals = table();
-% std_vals = table();
-% fluid_Ref_row_vals = table();
-% calResults = table();
-% 
-% for i = aux_idx(1):aux_idx(end)
-%     for j = 1:length(fluids)
-%         for k = 1:length(P_unique)
-%             for l = 1:length(T_unique)
-%                 if fluids(j) == filedataExp.Fluid1(i)
-%                     if P_unique(k) == filedataExp.P_psig(i)
-%                         if T_unique(l) == filedataExp.T(i)
-%                             calProcData1.(fluids(j)).(P_unique_field(k)).dens_array = expRawData.(filedataExp.Key(i)).MFMData.dens_MFM2((expRawData.(filedataExp.Key(i)).MFMData.TimeStamp>=filedataExp.st(i))&(expRawData.(filedataExp.Key(i)).MFMData.TimeStamp<=filedataExp.et(i)),:);
-%                             calProcData1.(fluids(j)).(P_unique_field(k)).T_array = expRawData.(filedataExp.Key(i)).MFMData.T_MFM2((expRawData.(filedataExp.Key(i)).MFMData.TimeStamp>=filedataExp.st(i))&(expRawData.(filedataExp.Key(i)).MFMData.TimeStamp<=filedataExp.et(i)),:);
-%                         end
-%                     end
-%                 end
-%             end
-%         end
-%     end
-% end
-% 
-% 
-% for i = 1:height(filedataRef)
-%     for j = 1:length(fluids)
-%         for k = 1:length(P_unique)
-%             for l = 1:length(T_unique)
-%                 if fluids(j) == filedataRef.Fluid(i)
-%                     if P_unique(k) == filedataRef.P_psig(i)
-%                         if T_unique(l) == filedataRef.Temp(i)
-%                             calProcData1.(fluids(j)).(P_unique_field(k)).dens_arraynorm = calProcData1.(fluids(j)).(P_unique_field(k)).dens_array/filedataRef.dens(i);
-%                             calProcData1.(fluids(j)).(P_unique_field(k)).T_arraynorm = calProcData1.(fluids(j)).(P_unique_field(k)).T_array/filedataRef.Temp(i);
-%                         end
-%                     end
-%                 end
-%             end
-%         end
-%     end
-% end
-% 
-% calResults1 = [calProcData1.(fluids(j)).(P_unique_field(k)).dens_arraynorm,calProcData1.(fluids(j)).(P_unique_field(k)).T_arraynorm];
-% 
-% for j = 1:length(fluids)
-%     cal_vals1.(fluids(j)) = calResults1(calResults1.Fluid == fluids(j),:);
-% end
-% 
-% %%
-% % Calibration curve
-% figure
-% for j = 1:length(fluids)
-%     scatter(calProcData1.(fluids(j)).P1500.T_arraynorm,calProcData1.(fluids(j)).P1500.dens_arraynorm,'DisplayName',fluids{j})
-%     hold on
-%     grid on
-%     legend()
-%     ylabel('rho MFM / rho ref')
-%     xlabel('T MFM / T ref')
-% end
-% 
-% 
+%% Calibration curve
+
+
+
+for i = aux_idx
+    for j = 1:length(fluids)
+        if fluids(j) == filedataExp.Fluid1(i)
+            dens_cal_vals = table();
+            for k = 1:length(P_unique)
+                dens_cal_Ref = repmat(cal_vals.(fluids(j)).dens(k),length(calProcData.(fluids(j)).(P_unique_field(k)).dens_array),1);
+                P_cal_ref = repmat(cal_vals.(fluids(j)).P_psig(k),length(calProcData.(fluids(j)).(P_unique_field(k)).dens_array),1);
+                fluid_cal_ref = repmat(cal_vals.(fluids(j)).Fluid(k),length(calProcData.(fluids(j)).(P_unique_field(k)).dens_array),1);
+                dens_cal_MFM = calProcData.(fluids(j)).(P_unique_field(k)).dens_array;
+                T_cal_MFM = calProcData.(fluids(j)).(P_unique_field(k)).T_array;
+                % take out Nan values
+                dens_cal_Ref_clean = dens_cal_Ref(~isnan(dens_cal_MFM));
+                P_cal_ref_clean = P_cal_ref(~isnan(dens_cal_MFM));
+                fluid_cal_ref_clean = fluid_cal_ref(~isnan(dens_cal_MFM));
+                dens_cal_MFM_clean = dens_cal_MFM(~isnan(dens_cal_MFM));
+                T_cal_MFM_clean = T_cal_MFM(~isnan(dens_cal_MFM));
+                dens_cal_vals_temp = table(dens_cal_Ref_clean,dens_cal_MFM_clean,T_cal_MFM_clean, P_cal_ref_clean,fluid_cal_ref_clean,'VariableNames',{'dens_cal_Ref','dens_cal_MFM','T_cal_MFM','P_cal_ref','Fluid_cal_ref'});
+                dens_cal_vals = [dens_cal_vals;dens_cal_vals_temp];
+            end
+            calProcData.(fluids(j)).dens_cal_all = dens_cal_vals;
+        end
+    end
+end
+
+%% Rho Cal curve
+
+dens_cal_vals_all = table();
+for i = 1:length(fluids)
+    dens_cal_vals_all = [dens_cal_vals_all;calProcData.(fluids(i)).dens_cal_all];
+end
+
+calProcData.dens_cal_vals_all = dens_cal_vals_all;
+
+% fit linear
+% all
+rho_cal_fit_lin = fitlm(dens_cal_vals_all(:,1:2)); 
+% high pressure cal only
+dens_cal_vals_HP = dens_cal_vals_all(dens_cal_vals_all.P_cal_ref==1500,:);
+rho_cal_HP_fit_lin = fitlm(dens_cal_vals_HP(:,1:2)); 
+
+% save fit model params
+fittingRhoResultsAll = table('Size',[0 4],'VariableTypes',{'string','double','double','double'},'VariableNames',{'model','p1','p2','RMSE'});
+calProcData.rho_cal_fit_lin = rho_cal_fit_lin;
+fittingRhoResultsAll(1,:) = {"all_lin",rho_cal_fit_lin.Coefficients.Estimate(1),rho_cal_fit_lin.Coefficients.Estimate(2),rho_cal_fit_lin.RMSE};
+calProcData.rho_cal_HP_fit_lin = rho_cal_HP_fit_lin;
+fittingRhoResultsAll(2,:) = {"HP_lin",rho_cal_HP_fit_lin.Coefficients.Estimate(1),rho_cal_HP_fit_lin.Coefficients.Estimate(2),rho_cal_HP_fit_lin.RMSE};
+
+calProcData.fittingRhoResultsAll = fittingRhoResultsAll;
+writetable(fittingRhoResultsAll,pathExportAll + "fittingRhoResultsAll.xlsx");
+save(pathExportAll + "calProcData.mat",'calProcData')
+
+%% Density cal plot all densitites (all fluids, temperatures and pressures)
+figure
+set(gcf, 'Position', [100, 100, 700, 550])
+scatter(dens_cal_vals_all.dens_cal_Ref,dens_cal_vals_all.dens_cal_MFM,20,dens_cal_vals_all.T_cal_MFM,'filled')
+hold on
+plot(0:1:800,feval(rho_cal_fit_lin,0:1:800),"Color",'k')
+xlabel('\rho_{ref} [kg/m^{3}]');
+ylabel('\rho_{MFM} [kg/m^{3}]');
+xlim([0 800]);
+ylim([0 800]);
+xticks(0:100:800)
+yticks(0:100:800)
+c=colorbar;
+c.Title.String = 'Temperature [°C]';
+c.Title.Rotation = 90;
+c.Title.Units = 'normalized';
+c.Title.Position = [3.55, 0.5, 0];
+c.Title.FontSize = 14;
+cTicks = c.Ticks;
+cTicks = cTicks(mod(cTicks,1) == 0);
+c.Ticks = cTicks;
+grid on
+title("Calibration curve - all cal fluids P and T")
+saveas(gcf,pathExportAll + "Cal-all",'png')
+
+% save figs, add colours, add mean val and symbol per substance tested
+%% All fluids, only high pressure - cal curves
+figure
+scatter(dens_cal_vals_HP.dens_cal_Ref,dens_cal_vals_HP.dens_cal_MFM,20,dens_cal_vals_HP.T_cal_MFM,'filled')
+hold on
+plot(0:1:800,feval(rho_cal_HP_fit_lin,0:1:800),"Color",'k')
+xlabel('\rho_{ref} [kg/m^{3}]');
+ylabel('\rho_{MFM} [kg/m^{3}]');
+xlim([0 800]);
+ylim([0 800]);
+xticks(0:100:800)
+yticks(0:100:800)
+c=colorbar;
+c.Title.String = 'Temperature [°C]';
+c.Title.Rotation = 90;
+c.Title.Units = 'normalized';
+c.Title.Position = [3.55, 0.5, 0];
+c.Title.FontSize = 14;
+cTicks = c.Ticks;
+cTicks = cTicks(mod(cTicks,1) == 0);
+c.Ticks = cTicks;
+grid on
+title("Calibration curve - all cal fluids and T at HP")
+saveas(gcf,pathExportAll + "Cal-all_HP",'png')
+
+%% All fluids, only high pressure, cal curves, zoom in
+
+% three different fluids H2, He, CO2 for paper! High pressure = 1500 psig,
+% Tref = 32C
+
+figure;
+set(gcf, 'Position', [100, 100, 700, 550])
+ax1 = axes;
+scatter(dens_cal_vals_HP.dens_cal_Ref,dens_cal_vals_HP.dens_cal_MFM,15,dens_cal_vals_HP.T_cal_MFM,'filled')
+hold on
+plot(0:1:800,feval(rho_cal_HP_fit_lin,0:1:800),"Color",'k')
+x1 = xlabel('\rho_{ref} [kg/m^{3}]', 'FontSize', 14);
+ylabel('\rho_{MFM} [kg/m^{3}]', 'FontSize', 14);
+xlim([0 800]);
+ylim([0 800]);
+xticks(0:100:800)
+yticks(0:100:800)
+numTicks = 6;
+ax1.FontSize = 14;
+c=colorbar;
+c.Title.String = 'Temperature [°C]';
+c.Title.Rotation = 90;
+c.Title.Units = 'normalized';
+c.Title.Position = [3.55, 0.5, 0];
+c.Title.FontSize = 14;
+cTicks = c.Ticks;
+cTicks = cTicks(mod(cTicks,1) == 0);
+c.Ticks = cTicks;
+grid on
+legend({'Measured density','Calibration curve'},'Location','southeast')
+% cal curve formula annotation
+coeffs = calProcData.rho_cal_HP_fit_lin.Coefficients.Estimate;
+annotText = sprintf('\\rho_{MFM} = %.1f \\cdot \\rho_{Ref} + %.1f', coeffs(2), coeffs(1));
+annotation('textbox', [0.2, 0.12, 0.3, 0.1], 'String', annotText, ...
+    'Interpreter', 'tex', 'FontSize', 11, 'EdgeColor', 'none');
+% H2
+insetAx = axes('Position', [0.19 0.70 0.1 0.15]);  % [x y width height]
+box(insetAx, 'on');  % Add border to inset
+scatter(insetAx,dens_cal_vals_HP.dens_cal_Ref,dens_cal_vals_HP.dens_cal_MFM,15,dens_cal_vals_HP.T_cal_MFM,'filled')
+hold on
+plot(insetAx,0:1:800,feval(rho_cal_HP_fit_lin,0:1:800),"Color",'k')
+grid on
+xlim([4,12])
+ylim([17,27])
+title('H_2 (32°C, 10.4 MPa)')
+% He
+insetAx = axes('Position', [0.36 0.70 0.1 0.15]);  % [x y width height]
+box(insetAx, 'on');  % Add border to inset
+scatter(insetAx,dens_cal_vals_HP.dens_cal_Ref,dens_cal_vals_HP.dens_cal_MFM,15,dens_cal_vals_HP.T_cal_MFM,'filled')
+hold on
+plot(insetAx,0:1:800,feval(rho_cal_HP_fit_lin,0:1:800),"Color",'k')
+xlim([11,19])
+ylim([24,34])
+title('He_  (32°C, 10.4 MPa)')
+grid on
+% CO2
+insetAx = axes('Position', [0.19 0.47 0.1 0.15]);  % [x y width height]
+box(insetAx, 'on');  % Add border to inset
+scatter(insetAx,dens_cal_vals_HP.dens_cal_Ref,dens_cal_vals_HP.dens_cal_MFM,15,dens_cal_vals_HP.T_cal_MFM,'filled')
+hold on
+plot(insetAx,0:1:800,feval(rho_cal_HP_fit_lin,0:1:800),"Color",'k')
+xlim([696,720])
+ylim([748,777])
+title('CO_2 (32°C, 10.4 MPa)')
+grid on
+saveas(gcf,pathExportAll + "Cal-curve-zoom-in",'png')
+
+%% correction due tue temperature or Q
+
+% P, T and density arrays for a fixed time and fluid
+
+fluids = unique(filedataExp.Fluid1);
+P_unique = unique(filedataExp.P_psig);
+P_unique = P_unique(~isnan(P_unique));
+P_unique_field = "P"+ string(P_unique);
+T_unique = unique(filedataExp.T);
+T_unique = T_unique(~isnan(T_unique));
+
+aux_idx = find(ismissing(filedataExp.P_psig) == 0)';
+
+mean_vals = table();
+std_vals = table();
+fluid_Ref_row_vals = table();
+calResults = table();
+
+for i = aux_idx(1):aux_idx(end)
+    for j = 1:length(fluids)
+        for k = 1:length(P_unique)
+            for l = 1:length(T_unique)
+                if fluids(j) == filedataExp.Fluid1(i)
+                    if P_unique(k) == filedataExp.P_psig(i)
+                        if T_unique(l) == filedataExp.T(i)
+                            calProcData1.(fluids(j)).(P_unique_field(k)).dens_array = expRawData.(filedataExp.Key(i)).MFMData.dens_MFM2((expRawData.(filedataExp.Key(i)).MFMData.TimeStamp>=filedataExp.st(i))&(expRawData.(filedataExp.Key(i)).MFMData.TimeStamp<=filedataExp.et(i)),:);
+                            calProcData1.(fluids(j)).(P_unique_field(k)).T_array = expRawData.(filedataExp.Key(i)).MFMData.T_MFM2((expRawData.(filedataExp.Key(i)).MFMData.TimeStamp>=filedataExp.st(i))&(expRawData.(filedataExp.Key(i)).MFMData.TimeStamp<=filedataExp.et(i)),:);
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+
+for i = 1:height(filedataRef)
+    for j = 1:length(fluids)
+        for k = 1:length(P_unique)
+            for l = 1:length(T_unique)
+                if fluids(j) == filedataRef.Fluid(i)
+                    if P_unique(k) == filedataRef.P_psig(i)
+                        if T_unique(l) == filedataRef.Temp(i)
+                            calProcData1.(fluids(j)).(P_unique_field(k)).dens_arraynorm = calProcData1.(fluids(j)).(P_unique_field(k)).dens_array/filedataRef.dens(i);
+                            calProcData1.(fluids(j)).(P_unique_field(k)).T_arraynorm = calProcData1.(fluids(j)).(P_unique_field(k)).T_array/filedataRef.Temp(i);
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+calResults1 = [calProcData1.(fluids(j)).(P_unique_field(k)).dens_arraynorm,calProcData1.(fluids(j)).(P_unique_field(k)).T_arraynorm];
+
+for j = 1:length(fluids)
+    cal_vals1.(fluids(j)) = calResults1(calResults1.Fluid == fluids(j),:);
+end
+
+%%
+% Calibration curve
+figure
+for j = 1:length(fluids)
+    scatter(calProcData1.(fluids(j)).P1500.T_arraynorm,calProcData1.(fluids(j)).P1500.dens_arraynorm,'DisplayName',fluids{j})
+    hold on
+    grid on
+    legend()
+    ylabel('rho MFM / rho ref')
+    xlabel('T MFM / T ref')
+end
+
+
