@@ -116,7 +116,7 @@ PR_results = table(x1',Z',rho','VariableNames',{'x1','Z','rho'});
 
 delete(pathExportAll + filenameOutput + ".xlsx")
 
-writetable(PR_results,pathExportAll + filenameOutput + ".xlsx", 'Sheet', 'PR_input');
+writetable(PR_input,pathExportAll + filenameOutput + ".xlsx", 'Sheet', 'PR_input');
 writetable(PR_results,pathExportAll + filenameOutput + ".xlsx", 'Sheet', filenameOutput);
 save(pathExportAll + filenameOutput + ".mat",filenameOutput)
 
