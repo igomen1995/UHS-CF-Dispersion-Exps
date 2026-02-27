@@ -149,12 +149,10 @@ clear expTrimData;
 calResults = table();
 calResultsQAll = table();
 calData = table();
-calDataQAll = table();
 
 calResults_name = pathExportAll + "calResults";
 calResultsQAll_name = pathExportAll + "calResultsQAll";
 calData_name = pathExportAll + "calData";
-calDataQAll_name = pathExportAll + "calDataQAll";
 calProcData_name = pathExportAll + "calProcData";
 expTrimData_name = pathExportAll + "expTrimData";
 
@@ -163,7 +161,6 @@ delete(calResults_name + '.mat');
 delete(calResultsQAll_name + '.mat');
 delete(calData_name + '.xlsx');
 delete(calData_name + '.mat');
-delete(calDataQAll_name + '.mat');
 delete(calProcData_name + '.mat');
 delete(expTrimData_name + '.mat');
 
@@ -172,7 +169,9 @@ for i = aux_idx
     xlsx_name = pathExportAll + filedataExp.Key(i) + '_Trim';
     delete(xlsx_name + '.xlsx');
 
-    T_unique_field = "T" + string(filedataExp.T_C(i));
+    T_cal = filedataExp.T_C(i);
+    % dT_cal = 4; % to trim array when T is meaningful automatically, it will take out values when T has not reached th right conditions
+    T_unique_field = "T" + string(T_cal);
         
     pumps_data_name = filedataExp.path(i) + filedataExp.pumps_data_name(i);    
     MFM_data_name = filedataExp.path(i) + filedataExp.MFM_data_name(i);
@@ -257,28 +256,29 @@ for i = aux_idx
                 for l = 1:length(idx_st)
 
                     % MFM data
-                    MFM_data_aux_idx = MFM_data((MFM_data.TimeStamp>=TimeStamp_st(l))&(MFM_data.TimeStamp<=TimeStamp_et(l)),:);
-                    MFM_data_aux = [MFM_data_aux; MFM_data_aux_idx];  % all P and all Q
+                    MFM_data_trim_aux = MFM_data((MFM_data.TimeStamp>=TimeStamp_st(l))&(MFM_data.TimeStamp<=TimeStamp_et(l)),:);
+                    % MFM_data_trim_aux = MFM_data_trim_aux((MFM_data_trim_aux.T_MFM2>=T_cal-dT_cal),:);
+                    MFM_data_aux = [MFM_data_aux; MFM_data_trim_aux];  % all P and all Q
                     MFM_data_trim_Punique_QAll = [MFM_data_trim_Punique_QAll; MFM_data_aux]; % Unique P and all Q
 
                     % trans data
                     if ismissing(trans_data_name) == 0
-                        trans_data_aux_idx = trans_data((PGD1_data.TimeStamp>=TimeStamp_st(l))&(PGD1_data.TimeStamp<=TimeStamp_et(l)),:);
-                        trans_data_aux = [trans_data_aux; trans_data_aux_idx]; % all P and all Q
+                        trans_data_trim_aux = trans_data((PGD1_data.TimeStamp>=TimeStamp_st(l))&(PGD1_data.TimeStamp<=TimeStamp_et(l)),:);
+                        trans_data_aux = [trans_data_aux; trans_data_trim_aux]; % all P and all Q
                         trans_data_trim_Punique_QAll = [trans_data_trim_Punique_QAll; trans_data_aux]; % Unique P and all Q
                     end
 
                     % PGD1 data
                     if ismissing(PGD1_data_name) == 0                    
-                        PGD1_data_aux_idx = PGD1_data((PGD1_data.TimeStamp>=TimeStamp_st(l))&(PGD1_data.TimeStamp<=TimeStamp_et(l)),:);
-                        PGD1_data_aux = [PGD1_data_aux; PGD1_data_aux_idx]; % all P and all Q
+                        PGD1_data_trim_aux = PGD1_data((PGD1_data.TimeStamp>=TimeStamp_st(l))&(PGD1_data.TimeStamp<=TimeStamp_et(l)),:);
+                        PGD1_data_aux = [PGD1_data_aux; PGD1_data_trim_aux]; % all P and all Q
                         PGD1_data_trim_Punique_QAll = [PGD1_data_trim_Punique_QAll; PGD1_data_aux]; % Unique P and all Q
                     end
 
                     % PGD2 data
                     if ismissing(PGD2_data_name) == 0                    
-                        PGD2_data_aux_idx = PGD2_data((PGD2_data.TimeStamp>=TimeStamp_st(l))&(PGD2_data.TimeStamp<=TimeStamp_et(l)),:);
-                        PGD2_data_aux = [PGD2_data_aux; PGD2_data_aux_idx]; % all P and all Q
+                        PGD2_data_trim_aux = PGD2_data((PGD2_data.TimeStamp>=TimeStamp_st(l))&(PGD2_data.TimeStamp<=TimeStamp_et(l)),:);
+                        PGD2_data_aux = [PGD2_data_aux; PGD2_data_trim_aux]; % all P and all Q
                         PGD2_data_trim_Punique_QAll = [PGD2_data_trim_Punique_QAll; PGD2_data_aux]; % Unique P and all Q
                     end  
 
@@ -361,9 +361,9 @@ for i = aux_idx
                 dens_array = calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.dens_MFM2;
                 T_array = calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.T_MFM2;
                 % freq and Q MFMF could be added too
-                calData_temp = table(repmat(fluid_ref,length(dens_array),1),dens_array, repmat(dens_ref,length(dens_array),1), ...
-                    T_array, repmat(T_ref,length(dens_array),1),repmat(P_mean,length(dens_array),1), repmat(Ppsig_ref,length(dens_array),1), repmat(Q_mean,length(dens_array),1),...
-                    'VariableNames',{'fluid_ref','dens_MFM','dens_ref','T_MFM','T_ref','Ppsig_mean','Ppsig_ref','Q_mean'});
+                calData_temp = table(repmat(fluid_ref,length(dens_array),1),dens_array, repmat(dens_mean,length(dens_array),1), repmat(dens_ref,length(dens_array),1), ...
+                    T_array, repmat(T_mean,length(dens_array),1), repmat(T_ref,length(dens_array),1),repmat(P_mean,length(dens_array),1), repmat(Ppsig_ref,length(dens_array),1), repmat(Q_mean,length(dens_array),1),...
+                    'VariableNames',{'fluid_ref','dens_MFM','dens_mean', 'dens_ref','T_MFM','T_mean','T_ref','Ppsig_mean','Ppsig_ref','Q_mean'});
                 calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).calData = calData_temp;
                 calData = [calData;calData_temp];
             end
@@ -439,13 +439,6 @@ for i = aux_idx
         calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).QAll.calResults = calResultsQAll_temp;
         calResultsQAll = [calResultsQAll;calResultsQAll_temp];
         
-        % dens_array = calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).QAll.MFMData.dens_MFM2;
-        % T_array = calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).QAll.MFMData.T_MFM2;
-        % % freq and Q MFMF could be added too
-        % calDataQAll_temp = table(dens_array, repmat(dens_ref,length(dens_array),1), T_array, ...
-        %     'VariableNames',{'dens_MFM','dens_ref','T_MFM'});
-        % calProcData.(filedataExp.Fluid1(i)).(T_unique_field).(P_unique_field(j)).QAll.calData = calDataQAll_temp;
-        % calDataQAll = [calDataQAll;calDataQAll_temp];
     end
     % save table for each key but trimmed
     writetable(expTrimData.(filedataExp.Key(i)).pumpsData,xlsx_name  + '.xlsx', 'Sheet', 'pumps_data');
@@ -468,7 +461,6 @@ end
 save(calResults_name + '.mat','calResults')
 save(calResultsQAll_name + '.mat','calResultsQAll')
 save(calData_name + '.mat','calData')
-save(calDataQAll_name + '.mat','calDataQAll')
 save(calProcData_name + '.mat','calProcData')
 save(expTrimData_name + '.mat','expTrimData')
 
@@ -483,8 +475,7 @@ end
 writetable(calResults_xlsx,calResults_name + '.xlsx','Sheet', 'calResultsQx');
 writetable(calResultsQAll,calResults_name + '.xlsx','Sheet', 'calResultsQAll');
 
-writetable(calData,calData_name + '.xlsx','Sheet', 'calDataQx');
-writetable(calDataQAll,calData_name + '.xlsx','Sheet', 'calDataQAll');
+writetable(calData,calData_name + '.xlsx','Sheet', 'calDataQAll');
 
 %% Plotting for analysis Raw Data
 % Subplot all in 4 panels
