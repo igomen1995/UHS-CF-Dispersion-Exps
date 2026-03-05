@@ -27,6 +27,7 @@ opts = setvaropts(opts, "Time_PT2", "InputFormat", "yyyy-MM-dd hh:mm:ss.SSS aa")
 
 % Import the data
 trans_data = readtable(filename, opts);
+trans_data = rmmissing(trans_data); % remove NaN
 
 % Preparing time data
 trans_data.Time_PT1.Format = 'MM/dd/uuuu HH:mm:ss.SSS';
