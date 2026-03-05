@@ -27,6 +27,7 @@ opts = setvaropts(opts, "Time", "InputFormat", "HH:mm:ss");
 
 % Import the data
 pumps_data = readtable(filename, opts);
+pumps_data = rmmissing(pumps_data); % Remove NaN values
 
 % Preparing time data
 pumps_data.Date.Format = 'MM/dd/uuuu';
