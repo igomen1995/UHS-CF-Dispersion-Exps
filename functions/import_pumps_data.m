@@ -1,5 +1,5 @@
 function pumps_data = import_pumps_data(filename, dataLines)
-%  Import data from a text file given opts
+%  Import pumps data from a text file given opts
 
 % If dataLines is not specified, define defaults
 if nargin < 2
