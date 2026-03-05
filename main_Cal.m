@@ -55,9 +55,13 @@ for i = 1:length(filedataExp.Key)
     MFM_data_name = filedataExp.path(i) + filedataExp.MFM_data_name(i);
     PGD1_data_name = filedataExp.path(i) + filedataExp.PGD1_data_name(i);
     PGD2_data_name = filedataExp.path(i) + filedataExp.PGD2_data_name(i);
+    
+    workingPump = filedataExp.workingPump(i);
+    confPump = 0;
+    cushionPump = 0;
 
     if ismissing(pumps_data_name) == 0 % if pumps data exist (name is stated in input file)
-        pumps_data = import_pumps_data(pumps_data_name); % import pumps data to local variable
+        pumps_data = import_pumps_data(pumps_data_name, workingPump, confPump, cushionPump); % import pumps data to local variable
         expRawData.(filedataExp.Key(i)).pumpsData = pumps_data ...
             ((pumps_data.TimeStamp>=filedataExp.st(i))& ...
             (pumps_data.TimeStamp<=filedataExp.et(i)),:); % import pumps data from st (start time) to et (end time) to struct.Key
@@ -208,72 +212,63 @@ for i = aux_idx
             Q_P2_aux = pumps_data.q_P2;
             Q_total = Q_P1_aux + Q_P2_aux; % if only one pumps is used while recording
             Q_tol = 0.01; %absolute IMPORTANT parameter to change, changes sensitivity of analysis
-
+            
+            % Store in local variable st and et to trim according to P and Q
             [TimeStamp_st,TimeStamp_et] = trim_time_P_Q(P_total,P_unique(j),P_tol,pumps_data.TimeStamp,Q_total,Q_unique(k),Q_tol);
             
-            % % takes idx of P and Q matching only with unique values for the given P and Q
-            % % this condition is taken from PUMPS DATA ONLY
-            % idx_P_Q = (abs(P_total - P_unique(j))/(P_unique(j)+14.7)<P_tol)&(abs(Q_total - Q_unique(k))<Q_tol);
+            pumps_data_aux = [];
+            MFM_data_aux = [];
+            trans_data_aux = [];
+            PGD1_data_aux = [];
+            PGD2_data_aux = [];
+
+            for l = 1:length(TimeStamp_st) % different subparts with same P, Q, T and fluid 
+            % if length(TimeStamp_st) = 0, then this for won't start, but not error raised
+                
+                % pumps data
+                % Trim according to time st and et
+                pumps_data_trim_aux = pumps_data((pumps_data.TimeStamp>=TimeStamp_st(l))&(pumps_data.TimeStamp<=TimeStamp_et(l)),:);
+                pumps_data_aux.P12 
+                % Add specific subpart to full pumps_data_aux for that P and Q
+                pumps_data_aux = [pumps_data_aux; pumps_data_trim_aux];  % all P and all Q
+
+
+
+
+            pumps_data_aux = pumps_data(idx_P_Q,:);
+            % pumps_data_aux.P12 = P_total(idx_P_Q);
+            % pumps_data_aux.Q12 = Q_total(idx_P_Q);
             % 
-            % if any(idx_P_Q ~= 0) % if that interval exists
-            % if ~isempty(TimeStamp_st)
-            % 
-            %     idx_P_Q_aux1 = [0;idx_P_Q(1:end-1)];
-            %     idx_P_Q_aux2 = [idx_P_Q(2:end);0;];
-            %     idx_diff1 = idx_P_Q - idx_P_Q_aux1; % outputs 1 in st
-            %     idx_diff2 = idx_P_Q - idx_P_Q_aux2; % outputs 1 in et
-            % 
-            %     % find time stap to trim
-            %     TimeStamp_aux = pumps_data.TimeStamp;
-            %     idx_st = find(idx_diff1 == 1);
-            %     idx_et = find(idx_diff2 == 1);
-            %     TimeStamp_st = TimeStamp_aux(idx_st);
-            %     TimeStamp_et = TimeStamp_aux(idx_et);
+            % % pumps_data_trim is feeded with pumps_data_aux
+            % pumps_data_trim = [pumps_data_trim; pumps_data_aux]; % all P and all Q   
 
-                % % pumps data
-                % % directly from idx_P_Q since the condition comes from this type of data
-                % pumps_data_aux = pumps_data(idx_P_Q,:);
-                % pumps_data_aux.P12 = P_total(idx_P_Q);
-                % pumps_data_aux.Q12 = Q_total(idx_P_Q);
-                % 
-                % % pumps_data_trim is feeded with pumps_data_aux
-                % pumps_data_trim = [pumps_data_trim; pumps_data_aux]; % all P and all Q               
-
-                MFM_data_aux = [];
-                trans_data_aux = [];
-                PGD1_data_aux = [];
-                PGD2_data_aux = [];
-
-                for l = 1:length(TimeStamp_st) % different subparts with same P, Q, T and fluid 
-                    % if length(TimeStamp_st) = 0, then this for won't start, but not error raised
-
-                    % MFM data
+                % MFM data
+                % Trim according to time st and et
+                MFM_data_trim_aux = MFM_data((MFM_data.TimeStamp>=TimeStamp_st(l))&(MFM_data.TimeStamp<=TimeStamp_et(l)),:);
+                % Add specific subpart to full MFM_data_aux for that P and Q
+                MFM_data_aux = [MFM_data_aux; MFM_data_trim_aux];  % all P and all Q
+                
+                % trans data
+                if ismissing(trans_data_name) == 0 % if trans data exists
                     % Trim according to time st and et
-                    MFM_data_trim_aux = MFM_data((MFM_data.TimeStamp>=TimeStamp_st(l))&(MFM_data.TimeStamp<=TimeStamp_et(l)),:);
+                    trans_data_trim_aux = trans_data((PGD1_data.TimeStamp>=TimeStamp_st(l))&(PGD1_data.TimeStamp<=TimeStamp_et(l)),:);
                     % Add specific subpart to full MFM_data_aux for that P and Q
-                    MFM_data_aux = [MFM_data_aux; MFM_data_trim_aux];  % all P and all Q
-                    
-                    % trans data
-                    if ismissing(trans_data_name) == 0 % if trans data exists
-                        % Trim according to time st and et
-                        trans_data_trim_aux = trans_data((PGD1_data.TimeStamp>=TimeStamp_st(l))&(PGD1_data.TimeStamp<=TimeStamp_et(l)),:);
-                        % Add specific subpart to full MFM_data_aux for that P and Q
-                        trans_data_aux = [trans_data_aux; trans_data_trim_aux]; % all P and all Q
-                    end
-
-                    % PGD1 data
-                    if ismissing(PGD1_data_name) == 0 % if PGD1 data exists                   
-                        PGD1_data_trim_aux = PGD1_data((PGD1_data.TimeStamp>=TimeStamp_st(l))&(PGD1_data.TimeStamp<=TimeStamp_et(l)),:);
-                        PGD1_data_aux = [PGD1_data_aux; PGD1_data_trim_aux]; % all P and all Q
-                    end
-
-                    % PGD2 data
-                    if ismissing(PGD2_data_name) == 0 % if PGD2 data exists                    
-                        PGD2_data_trim_aux = PGD2_data((PGD2_data.TimeStamp>=TimeStamp_st(l))&(PGD2_data.TimeStamp<=TimeStamp_et(l)),:);
-                        PGD2_data_aux = [PGD2_data_aux; PGD2_data_trim_aux]; % all P and all Q
-                    end  
-
+                    trans_data_aux = [trans_data_aux; trans_data_trim_aux]; % all P and all Q
                 end
+
+                % PGD1 data
+                if ismissing(PGD1_data_name) == 0 % if PGD1 data exists                   
+                    PGD1_data_trim_aux = PGD1_data((PGD1_data.TimeStamp>=TimeStamp_st(l))&(PGD1_data.TimeStamp<=TimeStamp_et(l)),:);
+                    PGD1_data_aux = [PGD1_data_aux; PGD1_data_trim_aux]; % all P and all Q
+                end
+
+                % PGD2 data
+                if ismissing(PGD2_data_name) == 0 % if PGD2 data exists                    
+                    PGD2_data_trim_aux = PGD2_data((PGD2_data.TimeStamp>=TimeStamp_st(l))&(PGD2_data.TimeStamp<=TimeStamp_et(l)),:);
+                    PGD2_data_aux = [PGD2_data_aux; PGD2_data_trim_aux]; % all P and all Q
+                end  
+
+            end
 
                 % % xxx_data_trim_Punique_QAll is feeded with xxx_data_aux
                 % pumps_data_trim_Punique_QAll = [pumps_data_trim_Punique_QAll; pumps_data_aux]; % Unique P and all Q
