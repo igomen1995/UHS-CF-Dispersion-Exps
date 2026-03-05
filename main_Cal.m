@@ -49,6 +49,7 @@ filedataExp = import_inputCal(filenameExp); % import input to a local variable
 % filedataRef = import_inputRef(filenameRef);
 
 for i = 1:length(filedataExp.Key)
+
     pumps_data_name = filedataExp.path(i) + filedataExp.pumps_data_name(i);
     trans_data_name = filedataExp.path(i) + filedataExp.trans_data_name(i);
     MFM_data_name = filedataExp.path(i) + filedataExp.MFM_data_name(i);
@@ -93,79 +94,81 @@ for i = 1:length(filedataExp.Key)
 end
 %% Save raw data
 
+% Check that only data that has all P as an array is taken
 aux_idx = find(cellfun(@length,filedataExp.P_psig)>1)';
 
-mat_name = pathExportAll + "expRawData";
-delete(mat_name + '.mat');
+mat_name = pathExportAll + "expRawData"; % Name used for saving RawData comes from input pathExportAll
+delete(mat_name + '.mat'); % Delete previously saved .mat file
+save(mat_name + '.mat','expRawData') % Save .mat file
 
+% Save each key in xlsx file
 for i = aux_idx
 
-    xlsx_name = pathExportAll + filedataExp.Key(i) +'_Raw';
-    delete(xlsx_name + '.xlsx');
+    xlsx_name = pathExportAll + filedataExp.Key(i) +'_Raw'; % Name for each Key for saving RawData comes from input pathExportAll
+    delete(xlsx_name + '.xlsx'); % Delete old xlsx before creating it and saving it again
     
-    % pumps_data_name = filedataExp.path(i) + filedataExp.pumps_data_name(i);    
-    % MFM_data_name = filedataExp.path(i) + filedataExp.MFM_data_name(i);
+    % pumps_data_name & MFM_data_name are MANDATORY to run calibration;
     trans_data_name = filedataExp.path(i) + filedataExp.trans_data_name(i);
     PGD1_data_name = filedataExp.path(i) + filedataExp.PGD1_data_name(i);
     PGD2_data_name = filedataExp.path(i) + filedataExp.PGD2_data_name(i);
 
-    writetable(expRawData.(filedataExp.Key(i)).pumpsData,xlsx_name + '.xlsx', 'Sheet', 'pumps_data');
-    writetable(expRawData.(filedataExp.Key(i)).MFMData,xlsx_name + '.xlsx', 'Sheet', 'MFM_data');
+    writetable(expRawData.(filedataExp.Key(i)).pumpsData,xlsx_name + '.xlsx', 'Sheet', 'pumps_data'); % save sheet with pumps data
+    writetable(expRawData.(filedataExp.Key(i)).MFMData,xlsx_name + '.xlsx', 'Sheet', 'MFM_data'); % save sheet with MFM data
     
-    if ismissing(trans_data_name) == 0
-        writetable(expRawData.(filedataExp.Key(i)).transData,xlsx_name +'.xlsx', 'Sheet', 'trans_data');
+    if ismissing(trans_data_name) == 0 % if P trans exists
+        writetable(expRawData.(filedataExp.Key(i)).transData,xlsx_name +'.xlsx', 'Sheet', 'trans_data'); % save sheet with P trans data
     end
 
-    if ismissing(PGD1_data_name) == 0
-        writetable(expRawData.(filedataExp.Key(i)).PGD1Data,xlsx_name + '.xlsx', 'Sheet', 'PGD1_data');
+    if ismissing(PGD1_data_name) == 0 % if PGD1 exists
+        writetable(expRawData.(filedataExp.Key(i)).PGD1Data,xlsx_name + '.xlsx', 'Sheet', 'PGD1_data'); % save sheet with PGD1 data
     end
     
-    if ismissing(PGD2_data_name) == 0
-        writetable(expRawData.(filedataExp.Key(i)).PGD2Data,xlsx_name + '.xlsx', 'Sheet', 'PGD2_data');
+    if ismissing(PGD2_data_name) == 0 % if PGD2 exists
+        writetable(expRawData.(filedataExp.Key(i)).PGD2Data,xlsx_name + '.xlsx', 'Sheet', 'PGD2_data'); % save sheet with PGD2 data
     end
    
 end
 
-save(mat_name + '.mat','expRawData')
+%% Trim data
 
-%% Trim data & save
-
-% In a same cal exp run, there are variable P and Q and a "fixed"
-% approaximate Temperature, though this temperature can vary within a range
-% according to Q
-
+% Check that only data that has all P as an array is taken
 aux_idx = find(cellfun(@length,filedataExp.P_psig)>1)';
 
+% P and Q arrays unique to analyze
 P_unique = unique(vertcat(filedataExp.P_psig{aux_idx}));
 Q_unique = unique(vertcat(filedataExp.Q_mlmin{aux_idx}));
+
+% P and Q name arrays for struct and plots
 P_unique_field = "P"+ string(P_unique);
 Q_unique_field = "Q"+ string(Q_unique);
 
-clear calProcData;
-clear expTrimData;
-calResults = table();
-calResultsQAll = table();
-calData = table();
-
-expTrimData_name = pathExportAll + "expTrimData";
-delete(expTrimData_name + '.mat');
+% % Clear previous data
+% clear calProcData;
+% clear expTrimData;
+% 
+% % Start calResults as an empty table
+% calResults = table();
+% calResultsQAll = table();
+% calData = table();
+% 
+% expTrimData_name = pathExportAll + "expTrimData";  % Name used for saving TrimData comes from input pathExportAll
+% delete(expTrimData_name + '.mat');
 
 for i = aux_idx
 
-    xlsx_name = pathExportAll + filedataExp.Key(i) + '_Trim';
-    delete(xlsx_name + '.xlsx');
+    % xlsx_name = pathExportAll + filedataExp.Key(i) + '_Trim';
+    % delete(xlsx_name + '.xlsx');
     
-    fluid_cal = filedataExp.Fluid1(i);
-    T_cal = filedataExp.T_C(i);
-    % dT_cal = 4; % to trim array when T is meaningful automatically, it will take out values when T has not reached th right conditions
+    fluid_cal = filedataExp.Fluid1(i); % fluid cal reference
+    T_cal = filedataExp.T_C(i); % fluid T cal reference
     T_unique_field = "T" + string(T_cal);
         
-    % pumps_data_name = filedataExp.path(i) + filedataExp.pumps_data_name(i);    
-    % MFM_data_name = filedataExp.path(i) + filedataExp.MFM_data_name(i);
+    % names for rest of data types; pumps_data_name & MFM_data name are mandatory
     trans_data_name = filedataExp.path(i) + filedataExp.trans_data_name(i);
     PGD1_data_name = filedataExp.path(i) + filedataExp.PGD1_data_name(i);
     PGD2_data_name = filedataExp.path(i) + filedataExp.PGD2_data_name(i);
-
+    
+    % take pumps and MFM data to local variable in a struct
     pumps_data = expRawData.(filedataExp.Key(i)).pumpsData;
     MFM_data = expRawData.(filedataExp.Key(i)).MFMData;
 
@@ -173,21 +176,21 @@ for i = aux_idx
     MFM_data_trim = [];
 
     if ismissing(trans_data_name) == 0
-        trans_data = expRawData.(filedataExp.Key(i)).transData;
+        trans_data = expRawData.(filedataExp.Key(i)).transData; % take trans data to local variable in a struct
         trans_data_trim = [];
     end
 
     if ismissing(PGD1_data_name) == 0
-        PGD1_data = expRawData.(filedataExp.Key(i)).PGD1Data;
+        PGD1_data = expRawData.(filedataExp.Key(i)).PGD1Data; % take PGD1 data to local variable in a struct
         PGD1_data_trim = [];
     end
 
     if ismissing(PGD2_data_name) == 0
-        PGD2_data = expRawData.(filedataExp.Key(i)).PGD2Data;
+        PGD2_data = expRawData.(filedataExp.Key(i)).PGD2Data; % take PGD2 data to local variable in a struct
         PGD2_data_trim = [];
     end
 
-    for j = 1:length(P_unique)
+    for j = 1:length(P_unique) % trimming according to P
 
         pumps_data_trim_Punique_QAll = [];
         MFM_data_trim_Punique_QAll = [];
@@ -195,237 +198,259 @@ for i = aux_idx
         PGD1_data_trim_Punique_QAll = [];
         PGD2_data_trim_Punique_QAll = [];
 
-        for k = 1:length(Q_unique)
+        for k = 1:length(Q_unique) % trimming according to Q
 
             P_P1_aux = pumps_data.P_P1;
             P_P2_aux = pumps_data.P_P2;
             P_total = P_P1_aux + P_P2_aux; % if only one pumps is used while recording
-            P_tol = 0.05; %relative
+            P_tol = 0.05; %relative IMPORTANT parameter to change, changes sensitivity of analysis
             Q_P1_aux = pumps_data.q_P1;
             Q_P2_aux = pumps_data.q_P2;
             Q_total = Q_P1_aux + Q_P2_aux; % if only one pumps is used while recording
-            Q_tol = 0.01; %absolute
+            Q_tol = 0.01; %absolute IMPORTANT parameter to change, changes sensitivity of analysis
 
-            idx_P_Q = (abs(P_total - P_unique(j))/(P_unique(j)+14.7)<P_tol)&(abs(Q_total - Q_unique(k))<Q_tol);
+            [TimeStamp_st,TimeStamp_et] = trim_time_P_Q(P_total,P_unique(j),P_tol,pumps_data.TimeStamp,Q_total,Q_unique(k),Q_tol);
+            
+            % % takes idx of P and Q matching only with unique values for the given P and Q
+            % % this condition is taken from PUMPS DATA ONLY
+            % idx_P_Q = (abs(P_total - P_unique(j))/(P_unique(j)+14.7)<P_tol)&(abs(Q_total - Q_unique(k))<Q_tol);
+            % 
+            % if any(idx_P_Q ~= 0) % if that interval exists
+            % if ~isempty(TimeStamp_st)
+            % 
+            %     idx_P_Q_aux1 = [0;idx_P_Q(1:end-1)];
+            %     idx_P_Q_aux2 = [idx_P_Q(2:end);0;];
+            %     idx_diff1 = idx_P_Q - idx_P_Q_aux1; % outputs 1 in st
+            %     idx_diff2 = idx_P_Q - idx_P_Q_aux2; % outputs 1 in et
+            % 
+            %     % find time stap to trim
+            %     TimeStamp_aux = pumps_data.TimeStamp;
+            %     idx_st = find(idx_diff1 == 1);
+            %     idx_et = find(idx_diff2 == 1);
+            %     TimeStamp_st = TimeStamp_aux(idx_st);
+            %     TimeStamp_et = TimeStamp_aux(idx_et);
 
-            if any(idx_P_Q ~= 0)
-
-                idx_P_Q_aux1 = [0;idx_P_Q(1:end-1)];
-                idx_P_Q_aux2 = [idx_P_Q(2:end);0;];
-                idx_diff1 = idx_P_Q - idx_P_Q_aux1;
-                idx_diff2 = idx_P_Q - idx_P_Q_aux2;
-
-                % pumps data
-                pumps_data_aux = pumps_data(idx_P_Q,:);
-                pumps_data_aux.P12 = P_total(idx_P_Q);
-                pumps_data_aux.Q12 = Q_total(idx_P_Q);
-                P_mean = mean(pumps_data_aux.P12);
-                Q_mean = mean(pumps_data_aux.Q12);
-                P_std = std(pumps_data_aux.P12);
-                Q_std = std(pumps_data_aux.Q12);           
-                pumps_data_trim = [pumps_data_trim; pumps_data_aux]; % all P and all Q
-                pumps_data_trim_Punique_QAll = [pumps_data_trim_Punique_QAll; pumps_data_aux]; % Unique P and all Q
-                calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).pumpsData = pumps_data_aux;
-                expTrimData.(filedataExp.Key(i)).pumpsData = pumps_data_trim;
-
-                % find time stap to trim
-                TimeStamp_aux = pumps_data.TimeStamp;
-                idx_st = find(idx_diff1 == 1);
-                idx_et = find(idx_diff2 == 1);
-                TimeStamp_st = TimeStamp_aux(idx_st);
-                TimeStamp_et = TimeStamp_aux(idx_et);
+                % % pumps data
+                % % directly from idx_P_Q since the condition comes from this type of data
+                % pumps_data_aux = pumps_data(idx_P_Q,:);
+                % pumps_data_aux.P12 = P_total(idx_P_Q);
+                % pumps_data_aux.Q12 = Q_total(idx_P_Q);
+                % 
+                % % pumps_data_trim is feeded with pumps_data_aux
+                % pumps_data_trim = [pumps_data_trim; pumps_data_aux]; % all P and all Q               
 
                 MFM_data_aux = [];
                 trans_data_aux = [];
                 PGD1_data_aux = [];
                 PGD2_data_aux = [];
 
-                for l = 1:length(idx_st) % different subparts with same P, Q, T and fluid
+                for l = 1:length(TimeStamp_st) % different subparts with same P, Q, T and fluid 
+                    % if length(TimeStamp_st) = 0, then this for won't start, but not error raised
 
                     % MFM data
+                    % Trim according to time st and et
                     MFM_data_trim_aux = MFM_data((MFM_data.TimeStamp>=TimeStamp_st(l))&(MFM_data.TimeStamp<=TimeStamp_et(l)),:);
-                    % MFM_data_trim_aux = MFM_data_trim_aux((MFM_data_trim_aux.T_MFM2>=T_cal-dT_cal),:);
+                    % Add specific subpart to full MFM_data_aux for that P and Q
                     MFM_data_aux = [MFM_data_aux; MFM_data_trim_aux];  % all P and all Q
-                    MFM_data_trim_Punique_QAll = [MFM_data_trim_Punique_QAll; MFM_data_aux]; % Unique P and all Q
-
+                    
                     % trans data
-                    if ismissing(trans_data_name) == 0
+                    if ismissing(trans_data_name) == 0 % if trans data exists
+                        % Trim according to time st and et
                         trans_data_trim_aux = trans_data((PGD1_data.TimeStamp>=TimeStamp_st(l))&(PGD1_data.TimeStamp<=TimeStamp_et(l)),:);
+                        % Add specific subpart to full MFM_data_aux for that P and Q
                         trans_data_aux = [trans_data_aux; trans_data_trim_aux]; % all P and all Q
-                        trans_data_trim_Punique_QAll = [trans_data_trim_Punique_QAll; trans_data_aux]; % Unique P and all Q
                     end
 
                     % PGD1 data
-                    if ismissing(PGD1_data_name) == 0                    
+                    if ismissing(PGD1_data_name) == 0 % if PGD1 data exists                   
                         PGD1_data_trim_aux = PGD1_data((PGD1_data.TimeStamp>=TimeStamp_st(l))&(PGD1_data.TimeStamp<=TimeStamp_et(l)),:);
                         PGD1_data_aux = [PGD1_data_aux; PGD1_data_trim_aux]; % all P and all Q
-                        PGD1_data_trim_Punique_QAll = [PGD1_data_trim_Punique_QAll; PGD1_data_aux]; % Unique P and all Q
                     end
 
                     % PGD2 data
-                    if ismissing(PGD2_data_name) == 0                    
+                    if ismissing(PGD2_data_name) == 0 % if PGD2 data exists                    
                         PGD2_data_trim_aux = PGD2_data((PGD2_data.TimeStamp>=TimeStamp_st(l))&(PGD2_data.TimeStamp<=TimeStamp_et(l)),:);
                         PGD2_data_aux = [PGD2_data_aux; PGD2_data_trim_aux]; % all P and all Q
-                        PGD2_data_trim_Punique_QAll = [PGD2_data_trim_Punique_QAll; PGD2_data_aux]; % Unique P and all Q
                     end  
 
                 end
-                    
-                % statistics for same P, Q, T and fluid
-                dens_mean = mean(MFM_data_aux.dens_MFM2);
-                T_mean = mean(MFM_data_aux.T_MFM2);
-                Q_MFM_mean = mean(MFM_data_aux.q_MFM2);
-                freq_MFM_mean = mean(MFM_data_aux.freq_MFM2);
-                dens_std = std(MFM_data_aux.dens_MFM2);
-                T_std = std(MFM_data_aux.T_MFM2);
-                Q_MFM_std = std(MFM_data_aux.q_MFM2);
-                freq_MFM_std = std(MFM_data_aux.freq_MFM2);
 
-                MFM_data_trim = [MFM_data_trim; MFM_data_aux];
-                calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData = MFM_data_aux;
-                expTrimData.(filedataExp.Key(i)).MFMData = MFM_data_trim;
+                % % xxx_data_trim_Punique_QAll is feeded with xxx_data_aux
+                % pumps_data_trim_Punique_QAll = [pumps_data_trim_Punique_QAll; pumps_data_aux]; % Unique P and all Q
+                % MFM_data_trim_Punique_QAll = [MFM_data_trim_Punique_QAll; MFM_data_aux]; % Unique P and all Q
+                % trans_data_trim_Punique_QAll = [trans_data_trim_Punique_QAll; trans_data_aux]; % Unique P and all Q
+                % PGD1_data_trim_Punique_QAll = [PGD1_data_trim_Punique_QAll; PGD1_data_aux]; % Unique P and all Q
+                % PGD2_data_trim_Punique_QAll = [PGD2_data_trim_Punique_QAll; PGD2_data_aux]; % Unique P and all Q
+                % 
+                % % statistics for same P, Q, T and fluid
+                % 
+                % % mean for a specific P and Q
+                % P_mean = mean(pumps_data_aux.P12);
+                % Q_mean = mean(pumps_data_aux.Q12);
+                % % std for a specific P and Q
+                % P_std = std(pumps_data_aux.P12);
+                % Q_std = std(pumps_data_aux.Q12); 
+                % 
+                % dens_mean = mean(MFM_data_aux.dens_MFM2);
+                % T_mean = mean(MFM_data_aux.T_MFM2);
+                % Q_MFM_mean = mean(MFM_data_aux.q_MFM2);
+                % freq_MFM_mean = mean(MFM_data_aux.freq_MFM2);
+                % dens_std = std(MFM_data_aux.dens_MFM2);
+                % T_std = std(MFM_data_aux.T_MFM2);
+                % Q_MFM_std = std(MFM_data_aux.q_MFM2);
+                % freq_MFM_std = std(MFM_data_aux.freq_MFM2);
+                % 
+                % 
+                %                 % calProcData struct is created and pumps data is added. Structure is calProcData.fluid.T.P.Q.pumpsData
+                % calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).pumpsData = pumps_data_aux;
+                % % expTrimData struct for each Key is created and trimmed pumps data is saved
+                % expTrimData.(filedataExp.Key(i)).pumpsData = pumps_data_trim;
+                % 
+                % MFM_data_trim = [MFM_data_trim; MFM_data_aux];
+                % calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData = MFM_data_aux;
+                % expTrimData.(filedataExp.Key(i)).MFMData = MFM_data_trim;
+                % 
+                % % cal results main
+                % calResults_temp = table(fluid_cal,T_cal,P_mean,P_std,Q_mean,Q_std, ...
+                % dens_mean,dens_std, T_mean,T_std,Q_MFM_mean,Q_MFM_std,freq_MFM_mean,freq_MFM_std, ...
+                % {TimeStamp_st},{TimeStamp_et},'VariableNames',{'Fluid','T_C','P_psig_mean','P_psig_std','Q_mean','Q_std', ...
+                % 'dens_mean','dens_std','T_mean','T_std','Q_MFM_mean', 'Q_MFM_std', ...
+                % 'freq_MFM_mean','freq_MFM_std','st','et'});
+                % 
+                % dens_array = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.dens_MFM2;
+                % T_array = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.T_MFM2;
+                % % freq and Q MFMF could be added too
+                % calData_temp = table(repmat(fluid_cal,length(dens_array),1),dens_array, repmat(dens_mean,length(dens_array),1), ...
+                %     T_array, repmat(T_mean,length(dens_array),1),repmat(P_mean,length(dens_array),1), repmat(Q_mean,length(dens_array),1),...
+                %     'VariableNames',{'fluid_cal','dens_MFM','dens_mean','T_MFM','T_mean','Ppsig_mean','Q_mean'});
+                % calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).calData = calData_temp;
+                % calData = [calData;calData_temp];
+                % 
+                % % trans data
+                % if ismissing(trans_data_name) == 0
+                %     PT1_mean = mean(trans_data_aux.PT1);
+                %     PT2_mean = mean(trans_data_aux.PT2);
+                %     PT1_std = std(trans_data_aux.PT1);
+                %     PT2_std = std(trans_data_aux.PT2);
+                %     trans_data_trim = [trans_data_trim; trans_data_aux];
+                %     calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).transData = trans_data_aux;
+                %     expTrimData.(filedataExp.Key(i)).transData = trans_data_trim;
+                %     calResults_temp.PT1_mean = PT1_mean;
+                %     calResults_temp.PT1_std = PT1_std;
+                %     calResults_temp.PT2_mean = PT2_mean;
+                %     calResults_temp.PT2_std = PT2_std;                       
+                % end
+                % 
+                % % PGD1 data
+                % if ismissing(PGD1_data_name) == 0
+                %     PGD1_mean = mean(PGD1_data_aux.H2GasConcentration);
+                %     PGD1_std = std(PGD1_data_aux.H2GasConcentration);
+                %     PGD1_data_trim = [PGD1_data_trim; PGD1_data_aux];
+                %     calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).PGD1Data = PGD1_data_aux;
+                %     expTrimData.(filedataExp.Key(i)).PGD1Data = PGD1_data_trim;
+                %     calResults_temp.PGD1_mean = PGD1_mean;
+                %     calResults_temp.PGD1_std = PGD1_std;
+                % end
+                % 
+                % % PGD2 data
+                % if ismissing(PGD2_data_name) == 0
+                %     PGD2_mean = mean(PGD2_data_aux.CO2GasConcentration);
+                %     PGD2_std = std(PGD2_data_aux.CO2GasConcentration);
+                %     PGD2_data_trim = [PGD2_data_trim; PGD2_data_aux];
+                %     calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).PGD2Data = PGD2_data_aux;
+                %     expTrimData.(filedataExp.Key(i)).PGD2Data = PGD2_data_trim;
+                %     calResults_temp.PGD2_mean = PGD2_mean;
+                %     calResults_temp.PGD2_std = PGD2_std;                
+                % end
+                % 
+                % calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).calResults = calResults_temp;
+                % calResults = [calResults;calResults_temp];
 
-                % cal results main
-                calResults_temp = table(fluid_cal,T_cal,P_mean,P_std,Q_mean,Q_std, ...
-                dens_mean,dens_std, T_mean,T_std,Q_MFM_mean,Q_MFM_std,freq_MFM_mean,freq_MFM_std, ...
-                {TimeStamp_st},{TimeStamp_et},'VariableNames',{'Fluid','T_C','P_psig_mean','P_psig_std','Q_mean','Q_std', ...
-                'dens_mean','dens_std','T_mean','T_std','Q_MFM_mean', 'Q_MFM_std', ...
-                'freq_MFM_mean','freq_MFM_std','st','et'});
-
-                dens_array = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.dens_MFM2;
-                T_array = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.T_MFM2;
-                % freq and Q MFMF could be added too
-                calData_temp = table(repmat(fluid_cal,length(dens_array),1),dens_array, repmat(dens_mean,length(dens_array),1), ...
-                    T_array, repmat(T_mean,length(dens_array),1),repmat(P_mean,length(dens_array),1), repmat(Q_mean,length(dens_array),1),...
-                    'VariableNames',{'fluid_cal','dens_MFM','dens_mean','T_MFM','T_mean','Ppsig_mean','Q_mean'});
-                calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).calData = calData_temp;
-                calData = [calData;calData_temp];
-
-                % trans data
-                if ismissing(trans_data_name) == 0
-                    PT1_mean = mean(trans_data_aux.PT1);
-                    PT2_mean = mean(trans_data_aux.PT2);
-                    PT1_std = std(trans_data_aux.PT1);
-                    PT2_std = std(trans_data_aux.PT2);
-                    trans_data_trim = [trans_data_trim; trans_data_aux];
-                    calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).transData = trans_data_aux;
-                    expTrimData.(filedataExp.Key(i)).transData = trans_data_trim;
-                    calResults_temp.PT1_mean = PT1_mean;
-                    calResults_temp.PT1_std = PT1_std;
-                    calResults_temp.PT2_mean = PT2_mean;
-                    calResults_temp.PT2_std = PT2_std;                       
-                end
-
-                % PGD1 data
-                if ismissing(PGD1_data_name) == 0
-                    PGD1_mean = mean(PGD1_data_aux.H2GasConcentration);
-                    PGD1_std = std(PGD1_data_aux.H2GasConcentration);
-                    PGD1_data_trim = [PGD1_data_trim; PGD1_data_aux];
-                    calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).PGD1Data = PGD1_data_aux;
-                    expTrimData.(filedataExp.Key(i)).PGD1Data = PGD1_data_trim;
-                    calResults_temp.PGD1_mean = PGD1_mean;
-                    calResults_temp.PGD1_std = PGD1_std;
-                end
-
-                % PGD2 data
-                if ismissing(PGD2_data_name) == 0
-                    PGD2_mean = mean(PGD2_data_aux.CO2GasConcentration);
-                    PGD2_std = std(PGD2_data_aux.CO2GasConcentration);
-                    PGD2_data_trim = [PGD2_data_trim; PGD2_data_aux];
-                    calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).PGD2Data = PGD2_data_aux;
-                    expTrimData.(filedataExp.Key(i)).PGD2Data = PGD2_data_trim;
-                    calResults_temp.PGD2_mean = PGD2_mean;
-                    calResults_temp.PGD2_std = PGD2_std;                
-                end
-                
-                calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).calResults = calResults_temp;
-                calResults = [calResults;calResults_temp];
-
-            end
+            % end
 
         end
 
-        % block for all Q
-        P_mean = mean(pumps_data_trim_Punique_QAll.P12);
-        Q_mean = mean(pumps_data_trim_Punique_QAll.Q12);
-        P_std = std(pumps_data_trim_Punique_QAll.P12);
-        Q_std = std(pumps_data_trim_Punique_QAll.Q12);  
-        dens_mean = mean(MFM_data_trim_Punique_QAll.dens_MFM2);
-        T_mean = mean(MFM_data_trim_Punique_QAll.T_MFM2);
-        Q_MFM_mean = mean(MFM_data_trim_Punique_QAll.q_MFM2);
-        freq_MFM_mean = mean(MFM_data_trim_Punique_QAll.freq_MFM2);
-        dens_std = std(MFM_data_trim_Punique_QAll.dens_MFM2);
-        T_std = std(MFM_data_trim_Punique_QAll.T_MFM2);
-        Q_MFM_std = std(MFM_data_trim_Punique_QAll.q_MFM2);
-        freq_MFM_std = std(MFM_data_trim_Punique_QAll.freq_MFM2);
-
-        calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.pumpsData = pumps_data_trim_Punique_QAll;
-        calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.MFMData = MFM_data_trim_Punique_QAll;
-
-        % cal results main Q all
-        calResultsQAll_temp = table(fluid_cal,T_cal,P_mean,P_std,Q_mean,Q_std, ...
-        dens_mean,dens_std, T_mean,T_std,Q_MFM_mean,Q_MFM_std,freq_MFM_mean,freq_MFM_std, ...
-        NaN,NaN,'VariableNames',{'Fluid','T_C','P_psig_mean','P_psig_std','Q_mean','Q_std', ...
-        'dens_mean','dens_std','T_mean','T_std','Q_MFM_mean', 'Q_MFM_std', ...
-        'freq_MFM_mean','freq_MFM_std','st','et'});
-
-        if ismissing(trans_data_name) == 0
-            PT1_mean = mean(trans_data_trim_Punique_QAll.PT1);
-            PT2_mean = mean(trans_data_trim_Punique_QAll.PT2);
-            PT1_std = std(trans_data_trim_Punique_QAll.PT1);
-            PT2_std = std(trans_data_trim_Punique_QAll.PT2);
-
-            calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.transData = trans_data_trim_Punique_QAll;
-
-            calResultsQAll_temp.PT1_mean = PT1_mean;
-            calResultsQAll_temp.PT1_std = PT1_std;
-            calResultsQAll_temp.PT2_mean = PT2_mean;
-            calResultsQAll_temp.PT2_std = PT2_std; 
-        end
-
-        if ismissing(PGD1_data_name) == 0
-            PGD1_mean = mean(PGD1_data_trim_Punique_QAll.H2GasConcentration);
-            PGD1_std = std(PGD1_data_trim_Punique_QAll.H2GasConcentration);
-
-            calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.PGD1Data = PGD1_data_trim_Punique_QAll;
-
-            calResultsQAll_temp.PGD1_mean = PGD1_mean;
-            calResultsQAll_temp.PGD1_std = PGD1_std;
-        end
-
-        if ismissing(PGD2_data_name) == 0
-            PGD2_mean = mean(PGD2_data_trim_Punique_QAll.CO2GasConcentration);
-            PGD2_std = std(PGD2_data_trim_Punique_QAll.CO2GasConcentration);
-
-            calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.PGD2Data = PGD2_data_trim_Punique_QAll;
-
-            calResultsQAll_temp.PGD2_mean = PGD2_mean;
-            calResultsQAll_temp.PGD2_std = PGD2_std;
-        end
+        % % block for all Q
+        % P_mean = mean(pumps_data_trim_Punique_QAll.P12);
+        % Q_mean = mean(pumps_data_trim_Punique_QAll.Q12);
+        % P_std = std(pumps_data_trim_Punique_QAll.P12);
+        % Q_std = std(pumps_data_trim_Punique_QAll.Q12);  
+        % dens_mean = mean(MFM_data_trim_Punique_QAll.dens_MFM2);
+        % T_mean = mean(MFM_data_trim_Punique_QAll.T_MFM2);
+        % Q_MFM_mean = mean(MFM_data_trim_Punique_QAll.q_MFM2);
+        % freq_MFM_mean = mean(MFM_data_trim_Punique_QAll.freq_MFM2);
+        % dens_std = std(MFM_data_trim_Punique_QAll.dens_MFM2);
+        % T_std = std(MFM_data_trim_Punique_QAll.T_MFM2);
+        % Q_MFM_std = std(MFM_data_trim_Punique_QAll.q_MFM2);
+        % freq_MFM_std = std(MFM_data_trim_Punique_QAll.freq_MFM2);
+        % 
+        % calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.pumpsData = pumps_data_trim_Punique_QAll;
+        % calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.MFMData = MFM_data_trim_Punique_QAll;
+        % 
+        % % cal results main Q all
+        % calResultsQAll_temp = table(fluid_cal,T_cal,P_mean,P_std,Q_mean,Q_std, ...
+        % dens_mean,dens_std, T_mean,T_std,Q_MFM_mean,Q_MFM_std,freq_MFM_mean,freq_MFM_std, ...
+        % NaN,NaN,'VariableNames',{'Fluid','T_C','P_psig_mean','P_psig_std','Q_mean','Q_std', ...
+        % 'dens_mean','dens_std','T_mean','T_std','Q_MFM_mean', 'Q_MFM_std', ...
+        % 'freq_MFM_mean','freq_MFM_std','st','et'});
+        % 
+        % if ismissing(trans_data_name) == 0
+        %     PT1_mean = mean(trans_data_trim_Punique_QAll.PT1);
+        %     PT2_mean = mean(trans_data_trim_Punique_QAll.PT2);
+        %     PT1_std = std(trans_data_trim_Punique_QAll.PT1);
+        %     PT2_std = std(trans_data_trim_Punique_QAll.PT2);
+        % 
+        %     calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.transData = trans_data_trim_Punique_QAll;
+        % 
+        %     calResultsQAll_temp.PT1_mean = PT1_mean;
+        %     calResultsQAll_temp.PT1_std = PT1_std;
+        %     calResultsQAll_temp.PT2_mean = PT2_mean;
+        %     calResultsQAll_temp.PT2_std = PT2_std; 
+        % end
+        % 
+        % if ismissing(PGD1_data_name) == 0
+        %     PGD1_mean = mean(PGD1_data_trim_Punique_QAll.H2GasConcentration);
+        %     PGD1_std = std(PGD1_data_trim_Punique_QAll.H2GasConcentration);
+        % 
+        %     calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.PGD1Data = PGD1_data_trim_Punique_QAll;
+        % 
+        %     calResultsQAll_temp.PGD1_mean = PGD1_mean;
+        %     calResultsQAll_temp.PGD1_std = PGD1_std;
+        % end
+        % 
+        % if ismissing(PGD2_data_name) == 0
+        %     PGD2_mean = mean(PGD2_data_trim_Punique_QAll.CO2GasConcentration);
+        %     PGD2_std = std(PGD2_data_trim_Punique_QAll.CO2GasConcentration);
+        % 
+        %     calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.PGD2Data = PGD2_data_trim_Punique_QAll;
+        % 
+        %     calResultsQAll_temp.PGD2_mean = PGD2_mean;
+        %     calResultsQAll_temp.PGD2_std = PGD2_std;
+        % end
+        % 
+        % calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.calResults = calResultsQAll_temp;
+        % calResultsQAll = [calResultsQAll;calResultsQAll_temp];
         
-        calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.calResults = calResultsQAll_temp;
-        calResultsQAll = [calResultsQAll;calResultsQAll_temp];
-        
     end
-    % save table for each key but trimmed
-    writetable(expTrimData.(filedataExp.Key(i)).pumpsData,xlsx_name  + '.xlsx', 'Sheet', 'pumps_data');
-    writetable(expTrimData.(filedataExp.Key(i)).MFMData,xlsx_name  + '.xlsx', 'Sheet', 'MFM_data');
-
-    if ismissing(trans_data_name) == 0
-        writetable(expTrimData.(filedataExp.Key(i)).transData,xlsx_name +'.xlsx', 'Sheet', 'trans_data');
-    end
-
-    if ismissing(PGD1_data_name) == 0
-        writetable(expTrimData.(filedataExp.Key(i)).PGD1Data,xlsx_name + '.xlsx', 'Sheet', 'PGD1_data');
-    end
-
-    if ismissing(PGD2_data_name) == 0
-        writetable(expTrimData.(filedataExp.Key(i)).PGD2Data,xlsx_name + '.xlsx', 'Sheet', 'PGD2_data');
-    end
+    % % save table for each key but trimmed
+    % writetable(expTrimData.(filedataExp.Key(i)).pumpsData,xlsx_name  + '.xlsx', 'Sheet', 'pumps_data');
+    % writetable(expTrimData.(filedataExp.Key(i)).MFMData,xlsx_name  + '.xlsx', 'Sheet', 'MFM_data');
+    % 
+    %     if ismissing(trans_data_name) == 0
+    %         writetable(expTrimData.(filedataExp.Key(i)).transData,xlsx_name +'.xlsx', 'Sheet', 'trans_data');
+    %     end
+    % 
+    %     if ismissing(PGD1_data_name) == 0
+    %         writetable(expTrimData.(filedataExp.Key(i)).PGD1Data,xlsx_name + '.xlsx', 'Sheet', 'PGD1_data');
+    %     end
+    % 
+    %     if ismissing(PGD2_data_name) == 0
+    %         writetable(expTrimData.(filedataExp.Key(i)).PGD2Data,xlsx_name + '.xlsx', 'Sheet', 'PGD2_data');
+    %     end
 
 end
 
-save(expTrimData_name + '.mat','expTrimData')
+% save(expTrimData_name + '.mat','expTrimData')
 
 %% Take reference from PR model
 % instead of taking reference from input, estimate rho from PR and mean T
@@ -762,6 +787,308 @@ writetable(calResults_xlsx,calResults_name + '.xlsx','Sheet', 'calResultsQx');
 writetable(calResultsQAll,calResults_name + '.xlsx','Sheet', 'calResultsQAll');
 
 writetable(calData,calData_name + '.xlsx','Sheet', 'calDataQAll');
+
+%% save trim and reference data
+
+%% Trim data & save
+
+% In a same cal exp run, there are variable P and Q and a "fixed"
+% approaximate Temperature, though this temperature can vary within a range
+% according to Q
+
+aux_idx = find(cellfun(@length,filedataExp.P_psig)>1)';
+
+P_unique = unique(vertcat(filedataExp.P_psig{aux_idx}));
+Q_unique = unique(vertcat(filedataExp.Q_mlmin{aux_idx}));
+P_unique_field = "P"+ string(P_unique);
+Q_unique_field = "Q"+ string(Q_unique);
+
+clear calProcData;
+clear expTrimData;
+calResults = table();
+calResultsQAll = table();
+calData = table();
+
+expTrimData_name = pathExportAll + "expTrimData";
+delete(expTrimData_name + '.mat');
+
+for i = aux_idx
+
+    xlsx_name = pathExportAll + filedataExp.Key(i) + '_Trim';
+    delete(xlsx_name + '.xlsx');
+    
+    fluid_cal = filedataExp.Fluid1(i);
+    T_cal = filedataExp.T_C(i);
+    % dT_cal = 4; % to trim array when T is meaningful automatically, it will take out values when T has not reached th right conditions
+    T_unique_field = "T" + string(T_cal);
+        
+    % pumps_data_name = filedataExp.path(i) + filedataExp.pumps_data_name(i);    
+    % MFM_data_name = filedataExp.path(i) + filedataExp.MFM_data_name(i);
+    trans_data_name = filedataExp.path(i) + filedataExp.trans_data_name(i);
+    PGD1_data_name = filedataExp.path(i) + filedataExp.PGD1_data_name(i);
+    PGD2_data_name = filedataExp.path(i) + filedataExp.PGD2_data_name(i);
+
+    pumps_data = expRawData.(filedataExp.Key(i)).pumpsData;
+    MFM_data = expRawData.(filedataExp.Key(i)).MFMData;
+
+    pumps_data_trim = [];
+    MFM_data_trim = [];
+
+    if ismissing(trans_data_name) == 0
+        trans_data = expRawData.(filedataExp.Key(i)).transData;
+        trans_data_trim = [];
+    end
+
+    if ismissing(PGD1_data_name) == 0
+        PGD1_data = expRawData.(filedataExp.Key(i)).PGD1Data;
+        PGD1_data_trim = [];
+    end
+
+    if ismissing(PGD2_data_name) == 0
+        PGD2_data = expRawData.(filedataExp.Key(i)).PGD2Data;
+        PGD2_data_trim = [];
+    end
+
+    for j = 1:length(P_unique)
+
+        pumps_data_trim_Punique_QAll = [];
+        MFM_data_trim_Punique_QAll = [];
+        trans_data_trim_Punique_QAll = [];
+        PGD1_data_trim_Punique_QAll = [];
+        PGD2_data_trim_Punique_QAll = [];
+
+        for k = 1:length(Q_unique)
+
+            P_P1_aux = pumps_data.P_P1;
+            P_P2_aux = pumps_data.P_P2;
+            P_total = P_P1_aux + P_P2_aux; % if only one pumps is used while recording
+            P_tol = 0.05; %relative
+            Q_P1_aux = pumps_data.q_P1;
+            Q_P2_aux = pumps_data.q_P2;
+            Q_total = Q_P1_aux + Q_P2_aux; % if only one pumps is used while recording
+            Q_tol = 0.01; %absolute
+
+            idx_P_Q = (abs(P_total - P_unique(j))/(P_unique(j)+14.7)<P_tol)&(abs(Q_total - Q_unique(k))<Q_tol);
+
+            if any(idx_P_Q ~= 0)
+
+                idx_P_Q_aux1 = [0;idx_P_Q(1:end-1)];
+                idx_P_Q_aux2 = [idx_P_Q(2:end);0;];
+                idx_diff1 = idx_P_Q - idx_P_Q_aux1;
+                idx_diff2 = idx_P_Q - idx_P_Q_aux2;
+
+                % pumps data
+                pumps_data_aux = pumps_data(idx_P_Q,:);
+                pumps_data_aux.P12 = P_total(idx_P_Q);
+                pumps_data_aux.Q12 = Q_total(idx_P_Q);
+                P_mean = mean(pumps_data_aux.P12);
+                Q_mean = mean(pumps_data_aux.Q12);
+                P_std = std(pumps_data_aux.P12);
+                Q_std = std(pumps_data_aux.Q12);           
+                pumps_data_trim = [pumps_data_trim; pumps_data_aux]; % all P and all Q
+                pumps_data_trim_Punique_QAll = [pumps_data_trim_Punique_QAll; pumps_data_aux]; % Unique P and all Q
+                calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).pumpsData = pumps_data_aux;
+                expTrimData.(filedataExp.Key(i)).pumpsData = pumps_data_trim;
+
+                % find time stap to trim
+                TimeStamp_aux = pumps_data.TimeStamp;
+                idx_st = find(idx_diff1 == 1);
+                idx_et = find(idx_diff2 == 1);
+                TimeStamp_st = TimeStamp_aux(idx_st);
+                TimeStamp_et = TimeStamp_aux(idx_et);
+
+                MFM_data_aux = [];
+                trans_data_aux = [];
+                PGD1_data_aux = [];
+                PGD2_data_aux = [];
+
+                for l = 1:length(idx_st) % different subparts with same P, Q, T and fluid
+
+                    % MFM data
+                    MFM_data_trim_aux = MFM_data((MFM_data.TimeStamp>=TimeStamp_st(l))&(MFM_data.TimeStamp<=TimeStamp_et(l)),:);
+                    % MFM_data_trim_aux = MFM_data_trim_aux((MFM_data_trim_aux.T_MFM2>=T_cal-dT_cal),:);
+                    MFM_data_aux = [MFM_data_aux; MFM_data_trim_aux];  % all P and all Q
+                    MFM_data_trim_Punique_QAll = [MFM_data_trim_Punique_QAll; MFM_data_aux]; % Unique P and all Q
+
+                    % trans data
+                    if ismissing(trans_data_name) == 0
+                        trans_data_trim_aux = trans_data((PGD1_data.TimeStamp>=TimeStamp_st(l))&(PGD1_data.TimeStamp<=TimeStamp_et(l)),:);
+                        trans_data_aux = [trans_data_aux; trans_data_trim_aux]; % all P and all Q
+                        trans_data_trim_Punique_QAll = [trans_data_trim_Punique_QAll; trans_data_aux]; % Unique P and all Q
+                    end
+
+                    % PGD1 data
+                    if ismissing(PGD1_data_name) == 0                    
+                        PGD1_data_trim_aux = PGD1_data((PGD1_data.TimeStamp>=TimeStamp_st(l))&(PGD1_data.TimeStamp<=TimeStamp_et(l)),:);
+                        PGD1_data_aux = [PGD1_data_aux; PGD1_data_trim_aux]; % all P and all Q
+                        PGD1_data_trim_Punique_QAll = [PGD1_data_trim_Punique_QAll; PGD1_data_aux]; % Unique P and all Q
+                    end
+
+                    % PGD2 data
+                    if ismissing(PGD2_data_name) == 0                    
+                        PGD2_data_trim_aux = PGD2_data((PGD2_data.TimeStamp>=TimeStamp_st(l))&(PGD2_data.TimeStamp<=TimeStamp_et(l)),:);
+                        PGD2_data_aux = [PGD2_data_aux; PGD2_data_trim_aux]; % all P and all Q
+                        PGD2_data_trim_Punique_QAll = [PGD2_data_trim_Punique_QAll; PGD2_data_aux]; % Unique P and all Q
+                    end  
+
+                end
+                    
+                % statistics for same P, Q, T and fluid
+                dens_mean = mean(MFM_data_aux.dens_MFM2);
+                T_mean = mean(MFM_data_aux.T_MFM2);
+                Q_MFM_mean = mean(MFM_data_aux.q_MFM2);
+                freq_MFM_mean = mean(MFM_data_aux.freq_MFM2);
+                dens_std = std(MFM_data_aux.dens_MFM2);
+                T_std = std(MFM_data_aux.T_MFM2);
+                Q_MFM_std = std(MFM_data_aux.q_MFM2);
+                freq_MFM_std = std(MFM_data_aux.freq_MFM2);
+
+                MFM_data_trim = [MFM_data_trim; MFM_data_aux];
+                calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData = MFM_data_aux;
+                expTrimData.(filedataExp.Key(i)).MFMData = MFM_data_trim;
+
+                % cal results main
+                calResults_temp = table(fluid_cal,T_cal,P_mean,P_std,Q_mean,Q_std, ...
+                dens_mean,dens_std, T_mean,T_std,Q_MFM_mean,Q_MFM_std,freq_MFM_mean,freq_MFM_std, ...
+                {TimeStamp_st},{TimeStamp_et},'VariableNames',{'Fluid','T_C','P_psig_mean','P_psig_std','Q_mean','Q_std', ...
+                'dens_mean','dens_std','T_mean','T_std','Q_MFM_mean', 'Q_MFM_std', ...
+                'freq_MFM_mean','freq_MFM_std','st','et'});
+
+                dens_array = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.dens_MFM2;
+                T_array = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.T_MFM2;
+                % freq and Q MFMF could be added too
+                calData_temp = table(repmat(fluid_cal,length(dens_array),1),dens_array, repmat(dens_mean,length(dens_array),1), ...
+                    T_array, repmat(T_mean,length(dens_array),1),repmat(P_mean,length(dens_array),1), repmat(Q_mean,length(dens_array),1),...
+                    'VariableNames',{'fluid_cal','dens_MFM','dens_mean','T_MFM','T_mean','Ppsig_mean','Q_mean'});
+                calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).calData = calData_temp;
+                calData = [calData;calData_temp];
+
+                % trans data
+                if ismissing(trans_data_name) == 0
+                    PT1_mean = mean(trans_data_aux.PT1);
+                    PT2_mean = mean(trans_data_aux.PT2);
+                    PT1_std = std(trans_data_aux.PT1);
+                    PT2_std = std(trans_data_aux.PT2);
+                    trans_data_trim = [trans_data_trim; trans_data_aux];
+                    calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).transData = trans_data_aux;
+                    expTrimData.(filedataExp.Key(i)).transData = trans_data_trim;
+                    calResults_temp.PT1_mean = PT1_mean;
+                    calResults_temp.PT1_std = PT1_std;
+                    calResults_temp.PT2_mean = PT2_mean;
+                    calResults_temp.PT2_std = PT2_std;                       
+                end
+
+                % PGD1 data
+                if ismissing(PGD1_data_name) == 0
+                    PGD1_mean = mean(PGD1_data_aux.H2GasConcentration);
+                    PGD1_std = std(PGD1_data_aux.H2GasConcentration);
+                    PGD1_data_trim = [PGD1_data_trim; PGD1_data_aux];
+                    calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).PGD1Data = PGD1_data_aux;
+                    expTrimData.(filedataExp.Key(i)).PGD1Data = PGD1_data_trim;
+                    calResults_temp.PGD1_mean = PGD1_mean;
+                    calResults_temp.PGD1_std = PGD1_std;
+                end
+
+                % PGD2 data
+                if ismissing(PGD2_data_name) == 0
+                    PGD2_mean = mean(PGD2_data_aux.CO2GasConcentration);
+                    PGD2_std = std(PGD2_data_aux.CO2GasConcentration);
+                    PGD2_data_trim = [PGD2_data_trim; PGD2_data_aux];
+                    calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).PGD2Data = PGD2_data_aux;
+                    expTrimData.(filedataExp.Key(i)).PGD2Data = PGD2_data_trim;
+                    calResults_temp.PGD2_mean = PGD2_mean;
+                    calResults_temp.PGD2_std = PGD2_std;                
+                end
+                
+                calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).calResults = calResults_temp;
+                calResults = [calResults;calResults_temp];
+
+            end
+
+        end
+
+        % block for all Q
+        P_mean = mean(pumps_data_trim_Punique_QAll.P12);
+        Q_mean = mean(pumps_data_trim_Punique_QAll.Q12);
+        P_std = std(pumps_data_trim_Punique_QAll.P12);
+        Q_std = std(pumps_data_trim_Punique_QAll.Q12);  
+        dens_mean = mean(MFM_data_trim_Punique_QAll.dens_MFM2);
+        T_mean = mean(MFM_data_trim_Punique_QAll.T_MFM2);
+        Q_MFM_mean = mean(MFM_data_trim_Punique_QAll.q_MFM2);
+        freq_MFM_mean = mean(MFM_data_trim_Punique_QAll.freq_MFM2);
+        dens_std = std(MFM_data_trim_Punique_QAll.dens_MFM2);
+        T_std = std(MFM_data_trim_Punique_QAll.T_MFM2);
+        Q_MFM_std = std(MFM_data_trim_Punique_QAll.q_MFM2);
+        freq_MFM_std = std(MFM_data_trim_Punique_QAll.freq_MFM2);
+
+        calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.pumpsData = pumps_data_trim_Punique_QAll;
+        calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.MFMData = MFM_data_trim_Punique_QAll;
+
+        % cal results main Q all
+        calResultsQAll_temp = table(fluid_cal,T_cal,P_mean,P_std,Q_mean,Q_std, ...
+        dens_mean,dens_std, T_mean,T_std,Q_MFM_mean,Q_MFM_std,freq_MFM_mean,freq_MFM_std, ...
+        NaN,NaN,'VariableNames',{'Fluid','T_C','P_psig_mean','P_psig_std','Q_mean','Q_std', ...
+        'dens_mean','dens_std','T_mean','T_std','Q_MFM_mean', 'Q_MFM_std', ...
+        'freq_MFM_mean','freq_MFM_std','st','et'});
+
+        if ismissing(trans_data_name) == 0
+            PT1_mean = mean(trans_data_trim_Punique_QAll.PT1);
+            PT2_mean = mean(trans_data_trim_Punique_QAll.PT2);
+            PT1_std = std(trans_data_trim_Punique_QAll.PT1);
+            PT2_std = std(trans_data_trim_Punique_QAll.PT2);
+
+            calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.transData = trans_data_trim_Punique_QAll;
+
+            calResultsQAll_temp.PT1_mean = PT1_mean;
+            calResultsQAll_temp.PT1_std = PT1_std;
+            calResultsQAll_temp.PT2_mean = PT2_mean;
+            calResultsQAll_temp.PT2_std = PT2_std; 
+        end
+
+        if ismissing(PGD1_data_name) == 0
+            PGD1_mean = mean(PGD1_data_trim_Punique_QAll.H2GasConcentration);
+            PGD1_std = std(PGD1_data_trim_Punique_QAll.H2GasConcentration);
+
+            calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.PGD1Data = PGD1_data_trim_Punique_QAll;
+
+            calResultsQAll_temp.PGD1_mean = PGD1_mean;
+            calResultsQAll_temp.PGD1_std = PGD1_std;
+        end
+
+        if ismissing(PGD2_data_name) == 0
+            PGD2_mean = mean(PGD2_data_trim_Punique_QAll.CO2GasConcentration);
+            PGD2_std = std(PGD2_data_trim_Punique_QAll.CO2GasConcentration);
+
+            calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.PGD2Data = PGD2_data_trim_Punique_QAll;
+
+            calResultsQAll_temp.PGD2_mean = PGD2_mean;
+            calResultsQAll_temp.PGD2_std = PGD2_std;
+        end
+        
+        calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.calResults = calResultsQAll_temp;
+        calResultsQAll = [calResultsQAll;calResultsQAll_temp];
+        
+    end
+    % save table for each key but trimmed
+    writetable(expTrimData.(filedataExp.Key(i)).pumpsData,xlsx_name  + '.xlsx', 'Sheet', 'pumps_data');
+    writetable(expTrimData.(filedataExp.Key(i)).MFMData,xlsx_name  + '.xlsx', 'Sheet', 'MFM_data');
+
+    if ismissing(trans_data_name) == 0
+        writetable(expTrimData.(filedataExp.Key(i)).transData,xlsx_name +'.xlsx', 'Sheet', 'trans_data');
+    end
+
+    if ismissing(PGD1_data_name) == 0
+        writetable(expTrimData.(filedataExp.Key(i)).PGD1Data,xlsx_name + '.xlsx', 'Sheet', 'PGD1_data');
+    end
+
+    if ismissing(PGD2_data_name) == 0
+        writetable(expTrimData.(filedataExp.Key(i)).PGD2Data,xlsx_name + '.xlsx', 'Sheet', 'PGD2_data');
+    end
+
+end
+
+save(expTrimData_name + '.mat','expTrimData')
+
 
 %% Plotting for analysis Raw Data
 % Subplot all in 4 panels
