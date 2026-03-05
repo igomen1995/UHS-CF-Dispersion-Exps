@@ -30,7 +30,6 @@ MFM_data = readtable(filename, opts);
 MFM_data = rmmissing(MFM_data); % Remove Nan values
 
 % Preparing time data
-
 MFM_data.TimeStamp.Format = 'MM/dd/uuuu HH:mm:ss.SSS';
 
 end
