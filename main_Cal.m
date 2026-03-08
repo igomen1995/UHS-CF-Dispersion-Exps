@@ -36,17 +36,27 @@
 %Cal Experimental data
 filenameExp = 'input/input_cal_exp.xlsx';
 
-% % Reference data
-% filenameRef = 'input/input_cal_PR.xlsx';
+% PR parameters
+% INTRODUCE THE INPUT HERE
+% file containing pure components NIST data: Tc, Pc and acentric factor w
+filenamePure = 'input/input_PR_pure.xlsx';
+% file containing mixture compoents A12 B12 factor to estimate BIP
+filenameBIP = 'input/input_PR_BIP.xlsx';
 
 mkdir('results/cal_250725_PR'); % Create directory for output
 pathExportAll = 'results/cal_250725_PR/'; % Path for OUTPUT
 
+
 %% Import data
 
 addpath('functions/');
+
 filedataExp = import_inputCal(filenameExp); % import input to a local variable
-% filedataRef = import_inputRef(filenameRef);
+
+% import pure components NIST data: Tc, Pc and acentric factor w
+filedataPure = import_inputPR_params_pure(filenamePure);
+% import mixture components A12 and B12 factor to estimate BIP (kij)
+filedataBIP = import_inputPR_params_BIP(filenameBIP);
 
 for i = 1:length(filedataExp.Key)
 
@@ -98,15 +108,12 @@ for i = 1:length(filedataExp.Key)
 end
 %% Save raw data
 
-% Check that only data that has all P as an array is taken
-aux_idx = find(cellfun(@length,filedataExp.P_psig)>1)';
-
 mat_name = pathExportAll + "expRawData"; % Name used for saving RawData comes from input pathExportAll
 delete(mat_name + '.mat'); % Delete previously saved .mat file
 save(mat_name + '.mat','expRawData') % Save .mat file
 
 % Save each key in xlsx file
-for i = aux_idx
+for i = 1:length(filedataExp.Key)
 
     xlsx_name = pathExportAll + filedataExp.Key(i) +'_Raw'; % Name for each Key for saving RawData comes from input pathExportAll
     delete(xlsx_name + '.xlsx'); % Delete old xlsx before creating it and saving it again
@@ -135,17 +142,6 @@ end
 
 %% Trim data
 
-% Check that only data that has all P as an array is taken
-aux_idx = find(cellfun(@length,filedataExp.P_psig)>1)';
-
-% P and Q arrays unique to analyze
-P_unique = unique(vertcat(filedataExp.P_psig{aux_idx}));
-Q_unique = unique(vertcat(filedataExp.Q_mlmin{aux_idx}));
-
-% P and Q name arrays for struct and plots
-P_unique_field = "P"+ string(P_unique);
-Q_unique_field = "Q"+ string(Q_unique);
-
 % Clear previous data
 clear calProcData;
 clear expTrimData;
@@ -154,11 +150,7 @@ clear expTrimData;
 calResults = table();
 calData = table();
 
-for i = aux_idx
-    
-    fluid_cal = filedataExp.Fluid1(i); % fluid cal reference
-    T_cal = filedataExp.T_C(i); % fluid T cal reference
-    T_unique_field = "T" + string(T_cal);
+for i = 1:length(filedataExp.Key)
         
     % names for rest of data types; pumps_data_name & MFM_data name are mandatory
     trans_data_name = filedataExp.path(i) + filedataExp.trans_data_name(i);
@@ -168,6 +160,19 @@ for i = aux_idx
     % take pumps and MFM data to local variable in a struct
     pumps_data = expRawData.(filedataExp.Key(i)).pumpsData;
     MFM_data = expRawData.(filedataExp.Key(i)).MFMData;
+    
+    % Cal experiment references
+    P_unique = unique(vertcat(filedataExp.P_psig{i}));
+    P_unique_MPa = (P_unique + 14.7)*0.00689476; % P in MPa for PR model
+    Q_unique = unique(vertcat(filedataExp.Q_mlmin{i}));
+
+    % P and Q name arrays for struct and plots
+    P_unique_field = "P"+ string(P_unique);
+    Q_unique_field = "Q"+ string(Q_unique);
+
+    fluid_cal = filedataExp.Fluid1(i); % fluid cal reference
+    T_cal = filedataExp.T_C(i); % fluid T cal reference
+    T_unique_field = "T" + string(T_cal);
 
     pumps_data_trim = [];
     MFM_data_trim = [];
@@ -263,8 +268,8 @@ for i = aux_idx
                     (P_unique_field(j)).(Q_unique_field(k)).MFMData = MFM_data_aux; %MFM data is added. Structure is calProcData.fluid.T.P.Q.pumpsData   
     
                 % MFM main data arrays for cal data for cal curve, freq and Q MFMF could be added too
-                dens_array = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.dens_MFM2;
-                T_array = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.T_MFM2;       
+                dens_MFM = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.dens_MFM2;
+                T_MFM = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.T_MFM2;       
     
                 % statistics for same P, Q, T and fluid
                     % mean for a specific P and Q
@@ -285,25 +290,46 @@ for i = aux_idx
                 Q_MFM_std = std(MFM_data_aux.q_MFM2);
                 dens_std = std(MFM_data_aux.dens_MFM2);
                 freq_MFM_std = std(MFM_data_aux.freq_MFM2);
-    
+
+                % Reference density from Peng Robinson model  
+
+                    % at mean values
+                [PR_input_T_mean,PR_results_T_mean] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean,filedataPure,filedataBIP);
+                [PR_input_T_max,PR_results_T_max] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean+T_std, filedataPure,filedataBIP); % at Tmax
+                [PR_input_T_min,PR_results_T_min] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean-T_std, filedataPure,filedataBIP); % at Tmin
+                    % Compressibility factor from Peng Robinson at T_MFM and T_mean
+                Z_PR_T_mean = PR_results_T_mean.Z;
+                Z_PR_T_max = PR_results_T_max.Z;
+                Z_PR_T_min = PR_results_T_min.Z;
+                Z_PR_T_mean_std = abs(Z_PR_T_max-Z_PR_T_min); % error of Z depending on T
+                    % density from Peng Robinson at T_MFM and T_mean
+                dens_PR_T_mean = PR_results_T_mean.rho;
+                dens_PR_T_max = PR_results_T_max.rho;
+                dens_PR_T_min = PR_results_T_min.rho;
+                dens_PR_T_mean_std = abs(dens_PR_T_max-dens_PR_T_min); % error of dens depending on T
+              
                 % cal results gathers mean and std
                 calResults_temp = table(fluid_cal,T_cal,P_unique(j), Q_unique(k), ...
                     T_mean,T_std, P_mean,P_std, Q_mean,Q_std, Q_MFM_mean,Q_MFM_std, ...
                     dens_mean,dens_std,freq_MFM_mean,freq_MFM_std, ...
                     {TimeStamp_st},{TimeStamp_et}, ...
+                    Z_PR_T_mean , Z_PR_T_mean_std, dens_PR_T_mean , dens_PR_T_mean_std, ...
                     'VariableNames',{'Fluid_cal','T_cal_C','P_cal_psig', 'Q_cal_mlmin', ...
                     'T_mean','T_std','P_psig_mean','P_psig_std','Q_mean','Q_std', 'Q_MFM_mean', 'Q_MFM_std', ...
                     'dens_mean','dens_std','freq_MFM_mean','freq_MFM_std', ...
-                    'st','et'});
+                    'st','et','Z_PR_T_mean','Z_PR_T_mean_std','dens_PR_T_mean','dens_PR_T_mean_std'});
     
                 % cal data gathers all punctual data and its mean and cal experiment ref value
-                calData_temp = table(repmat(fluid_cal,length(dens_array),1), ...
-                    repmat(T_cal,length(dens_array),1), repmat(P_unique(j),length(dens_array),1), ...
-                    repmat(Q_unique(k),length(dens_array),1), ...
-                    T_array, repmat(T_mean,length(dens_array),1), repmat(T_std,length(dens_array),1), ...
-                    dens_array, repmat(dens_mean,length(dens_array),1), repmat(dens_std,length(dens_array),1), ...
+                calData_temp = table(repmat(fluid_cal,length(dens_MFM),1), ...
+                    repmat(T_cal,length(dens_MFM),1), repmat(P_unique(j),length(dens_MFM),1), ...
+                    repmat(Q_unique(k),length(dens_MFM),1), ...
+                    T_MFM, repmat(T_mean,length(dens_MFM),1), repmat(T_std,length(dens_MFM),1), ...
+                    dens_MFM, repmat(dens_mean,length(dens_MFM),1), repmat(dens_std,length(dens_MFM),1), ...
+                    repmat(Z_PR_T_mean,length(dens_MFM),1), repmat(Z_PR_T_mean_std,length(dens_MFM),1), ...
+                    repmat(dens_PR_T_mean,length(dens_MFM),1), repmat(dens_PR_T_mean_std,length(dens_MFM),1), ...
                     'VariableNames',{'Fluid_cal','T_cal_C', 'P_cal_psig', 'Q_cal_mlmin', ...
-                    'T_MFM','T_mean','T_std','dens_MFM','dens_mean','dens_std'});
+                    'T_MFM','T_mean','T_std','dens_MFM','dens_mean','dens_std', ...
+                    'Z_PR_T_mean','Z_PR_T_mean_std','dens_PR_T_mean','dens_PR_T_mean_std'});
                 
                 % calProcData struct collects calResults_temp and calData_temp
                 calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).calResults = calResults_temp;
@@ -413,6 +439,119 @@ for i = aux_idx
     expTrimData.(filedataExp.Key(i)).PGD2Data = PGD2_data_trim;
 
 end
+
+%% Peng Robinson 
+
+
+                % % Reference density from Peng Robinson model               
+                %     % at mean values
+                % [PR_input_T_mean,PR_results_T_mean] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean,filedataPure,filedataBIP);
+                % [PR_input_T_max,PR_results_T_max] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean+T_std, filedataPure,filedataBIP); % at Tmax
+                % [PR_input_T_min,PR_results_T_min] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean-T_std, filedataPure,filedataBIP); % at Tmin
+                %     % Compressibility factor from Peng Robinson at T_MFM and T_mean
+                % Z_PR_T_mean = PR_results_T_mean.Z;
+                % Z_PR_T_max = PR_results_T_max.Z;
+                % Z_PR_T_min = PR_results_T_min.Z;
+                % Z_PR_T_mean_std = abs(Z_PR_T_max-Z_PR_T_min); % error of Z depending on T
+                %     % density from Peng Robinson at T_MFM and T_mean
+                % dens_PR_T_mean = PR_results_T_mean.rho;
+                % dens_PR_T_max = PR_results_T_max.rho;
+                % dens_PR_T_min = PR_results_T_min.rho;
+                % dens_PR_T_mean_std = abs(dens_PR_T_max-dens_PR_T_min); % error of dens depending on T
+
+                % Intention is to have a rho for each T that is more
+                % efficient than colling PR function x10000 and more
+
+fluid_unique = fieldnames(calProcData);
+
+for i = 1:length(fields(calProcData)) % for each fluid
+    T_unique_field = fieldnames(calProcData.(fluid_unique{i}));
+    for ii = 1:length(T_unique_field) % for each cal temperature average  
+        P_unique_field = fieldnames(calProcData.(fluid_unique{i}).(T_unique_field{ii}));
+        for j = 1:length(P_unique_field) % for each P
+            x1 = 1;
+            Tmin = floor(min(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.T_MFM)*10)/10;
+            Tmax = ceil(max(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.T_MFM)*10)/10;
+            T_PR_aux = Tmin:0.1:Tmax;
+            P_psig = str2double(P_unique_field{j}(2:end));
+            P_MPa = (P_psig + 14.7)*0.00689476;
+            Z_PR_T_PR = [];
+            dens_PR_T_PR = [];
+            for m = 1:length(T_PR_aux)
+                [PR_input_T_PR_aux,PR_results_T_PR_aux] = densZ_PR(string(fluid_unique{i}),x1,P_MPa,T_PR_aux(m),filedataPure,filedataBIP);
+                % Compressibility factor from Peng Robinson at T_MFM and T_mean
+                Z_PR_T_PR_aux = PR_results_T_PR_aux.Z;
+                % density from Peng Robinson at T_MFM and T_mean
+                dens_PR_T_PR_aux = PR_results_T_PR_aux.rho;        
+                % Z and rho arrays for each fluid, P, Q and T
+                Z_PR_T_PR = [Z_PR_T_PR;Z_PR_T_PR_aux];
+                dens_PR_T_PR = [dens_PR_T_PR;dens_PR_T_PR_aux];
+            end
+            PTXrho_PR_ref = table(repmat(fluid_unique{i},length(T_PR_aux),1), ...
+                repmat(P_psig,length(T_PR_aux),1), T_PR_aux', repmat(x1,length(T_PR_aux),1), ...
+                Z_PR_T_PR, dens_PR_T_PR, 'VariableNames',{'Fluid_cal', ...
+                'P_cal_psig','T_PR', 'x_PR','Z_PR_T_PR', 'dens_PR_T_PR'});
+            calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.PTXrho_PR_ref = PTXrho_PR_ref;
+            calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.dens_PR_T_MFM = ...
+            interp1(PTXrho_PR_ref.T_PR, PTXrho_PR_ref.dens_PR_T_PR, ...
+            calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.T_MFM, 'linear');
+        end
+    end
+end
+
+%%
+
+% Check that only data that has all P as an array is taken
+aux_idx = find(cellfun(@length,filedataExp.P_psig)>1)';
+
+% P and Q arrays unique to analyze
+P_unique = unique(vertcat(filedataExp.P_psig{aux_idx}));
+P_unique_MPa = (P_unique + 14.7)*0.00689476; % P in MPa for PR model
+Q_unique = unique(vertcat(filedataExp.Q_mlmin{aux_idx}));
+
+% P and Q name arrays for struct and plots
+P_unique_field = "P"+ string(P_unique);
+Q_unique_field = "Q"+ string(Q_unique);
+
+for i = aux_idx
+
+end
+           
+    % Cal experiment references
+    fluid_cal = filedataExp.Fluid1(i); % fluid cal reference
+    T_cal = filedataExp.T_C(i); % fluid T cal reference
+    T_unique_field = "T" + string(T_cal);
+
+
+
+
+% Reference density from Peng Robinson model
+
+    % at mean values
+[PR_input_T_mean,PR_results_T_mean] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean,filedataPure,filedataBIP);
+[PR_input_T_max,PR_results_T_max] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean+T_std, filedataPure,filedataBIP); % at Tmax
+[PR_input_T_min,PR_results_T_min] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean-T_std, filedataPure,filedataBIP); % at Tmin
+    % Compressibility factor from Peng Robinson at T_MFM and T_mean
+Z_PR_T_mean = PR_results_T_mean.Z;
+Z_PR_T_max = PR_results_T_max.Z;
+Z_PR_T_min = PR_results_T_min.Z;
+Z_PR_T_mean_std = abs(Z_PR_T_max-Z_PR_T_min); % error of Z depending on T
+    % density from Peng Robinson at T_MFM and T_mean
+dens_PR_T_mean = PR_results_T_mean.rho;
+dens_PR_T_max = PR_results_T_max.rho;
+dens_PR_T_min = PR_results_T_min.rho;
+dens_PR_T_mean_std = abs(dens_PR_T_max-dens_PR_T_min); % error of dens depending on T
+
+    % at punctual T_MFM values
+Z_PR_T_MFM = [];
+dens_PR_T_MFM = [];
+Z_PR_T_PR = [];
+dens_PR_T_PR = [];
+
+% T array for PR look up table
+T_PR_aux = (floor(min(MFM_data.T_MFM2)*10)/10):0.1:(ceil(max(MFM_data.T_MFM2)*10)/10);
+
+
 
 %% Save trimmed and processed data
 
