@@ -1,27 +1,12 @@
-function [PR_input,PR_results] = densZ_PR(fl,x1,P_MPa,T_C)
+function [PR_input,PR_results] = densZ_PR(fl,x1,P_MPa,T_C,filedataPure,filedataBIP)
 
 addpath('functions/');
-
-% ------------------------------------------------------------------------
-
-% INTRODUCE THE INPUT HERE
-% file containing pure components NIST data: Tc, Pc and acentric factor w
-filenamePure = 'input_PR_pure.xlsx';
-% file containing mixture compoents A12 B12 factor to estimate BIP
-filenameBIP = 'input_PR_BIP.xlsx';
 
 % % Variables of interest for this mixture
 % fl = {"H2", "CO2"}; % fluids in the mixture
 % x1 = 0:0.001:1; %string molar fraction component 1
 % P_MPa = 10.4; % MPa
 % T_C = 32; % C
-
-% ------------------------------------------------------------------------
-
-% import pure components NIST data: Tc, Pc and acentric factor w
-filedataPure = import_inputPR_params_pure(filenamePure);
-% import mixture components A12 and B12 factor to estimate BIP (kij)
-filedataBIP = import_inputPR_params_BIP(filenameBIP);
 
 P = P_MPa*(10^6); % Pa
 T = T_C +273.15; %K
