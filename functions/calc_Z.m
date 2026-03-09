@@ -8,7 +8,11 @@
 function [Zall, Zvap, rhomix] = calc_Z(P, T, amix, bmix, x1, M)
 
 R = 8.314; %Jmol-1K-1
-xi = [x1;(1-x1)];
+if length(M) > 1
+    xi = [x1;(1-x1)];
+else
+    xi = x1;
+end
 
 % Calculate A and B
 A = amix*P/((R^2)*(T^2));
