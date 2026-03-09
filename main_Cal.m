@@ -93,6 +93,9 @@ for i = 1:length(filedataExp.Key)
 
     if ismissing(PGD1_data_name) == 0 % if PGD1 exist (name is stated in input file)
         PGD1_data = import_PGD1_data(PGD1_data_name); % import PGD1 data to local variable
+        if filedataExp.GMT_PGD{i} == "GMT9"
+            PGD1_data.TimeStamp = PGD1_data.TimeStamp - hours(13); %ONLY if PGD in Japan time GMT+9    
+        end
         expRawData.(filedataExp.Key(i)).PGD1Data = PGD1_data ...
             ((PGD1_data.TimeStamp>=filedataExp.st(i))& ...
             (PGD1_data.TimeStamp<=filedataExp.et(i)),:); % import PGD1 data from st (start time) to et (end time) to struct.Key
@@ -100,6 +103,9 @@ for i = 1:length(filedataExp.Key)
 
     if ismissing(PGD2_data_name) == 0 % if PGD2 exist (name is stated in input file)
         PGD2_data = import_PGD2_data(PGD2_data_name); % import PGD1 data to local variable
+        if filedataExp.GMT_PGD{i} == "GMT9"
+            PGD2_data.TimeStamp = PGD2_data.TimeStamp - hours(13); %ONLY if PGD in Japan time GMT+9    
+        end
         expRawData.(filedataExp.Key(i)).PGD2Data = PGD2_data ...
             ((PGD2_data.TimeStamp>=filedataExp.st(i))& ...
             (PGD2_data.TimeStamp<=filedataExp.et(i)),:); % import PGD2 data from st (start time) to et (end time) to struct.Key
