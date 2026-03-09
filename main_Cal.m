@@ -453,7 +453,7 @@ for i = 1:length(fields(calProcData)) % for each fluid
     for ii = 1:length(T_unique_field) % for each cal temperature average  
         P_unique_field = fieldnames(calProcData.(fluid_unique{i}).(T_unique_field{ii}));
         for j = 1:length(P_unique_field) % for each P
-            x1 = 1;
+            x1 = filedataExp.x1(filedataExp.Fluid1 == string(fluid_unique{i}));
             Tmin = floor(min(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.T_MFM)*10)/10;
             Tmax = ceil(max(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.T_MFM)*10)/10;
             T_PR_aux = Tmin:0.1:Tmax;
