@@ -171,7 +171,7 @@ load(pathImportCal + "cal_curve_params.mat")
 rho_corr_lin = @(p,y) (y-p(1))/p(2);
 
 for i = 1:length(filedataExp.Key)
-    % Extrat measured density vs time & remove missing
+    % Extrat measured density vs time
     BTaux = table(expProcData.(filedataExp.Key(i)).MFMData.TimeStamp, ...
         expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed, ...
         seconds(expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed), ...
@@ -179,18 +179,57 @@ for i = 1:length(filedataExp.Key)
         expProcData.(filedataExp.Key(i)).MFMData.T_MFM2, ...
         expProcData.(filedataExp.Key(i)).MFMData.q_MFM2, ...
         'VariableNames',{'TimeStamp','TimeElapsed', 'SecondsElapsed', 'rho_MFM','T_MFM','q_MFM'});
-    expProcData.(filedataExp.Key(i)).BT = rmmissing(BTaux);
+    expProcData.(filedataExp.Key(i)).BT = BTaux;
     % fitting parameters for rho corrected
-    auxLinFit = calProcData.fittingRhoResultsAll(calProcData.fittingRhoResultsAll.model == "HP_lin",:);
-    expProcData.(filedataExp.Key(i)).BT.rho_corr_mean = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM);
-    expProcData.(filedataExp.Key(i)).BT.rho_corr_min = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM-auxLinFit.RMSE);
-    expProcData.(filedataExp.Key(i)).BT.rho_corr_max = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM+auxLinFit.RMSE);
-    % look up for correspondent Xi in PR EOS table
-    expProcData.(filedataExp.Key(i)).BT.Ci_corr_mean = 100*interp1(PR_results.rho_mix, PR_results.x1, expProcData.(filedataExp.Key(i)).BT.rho_corr_mean, 'linear');
+    auxLinFit = fittingRhoResultsAll(fittingRhoResultsAll.Q == "QAll",:);
+    expProcData.(filedataExp.Key(i)).BT.rho_corr = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM);
+    expProcData.(filedataExp.Key(i)).BT.rho_corrMin = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM-auxLinFit.RMSE);
+    expProcData.(filedataExp.Key(i)).BT.rho_corrMax = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM+auxLinFit.RMSE);
 end
 
-%% Propagation of error in Xi
+%% Add molar concentration to breakthrough data and error
 
+x1 = 0:0.01:1; % array for binary mixture
+for i = 1:length(filedataExp.Key)
+    fluidPair = [filedataExp.Fluid1(i),filedataExp.Fluid2(i)];
+    Tmin = floor(min(expProcData.(filedataExp.Key(i)).BT.T_MFM)*10)/10;
+    Tmax = ceil(max(expProcData.(filedataExp.Key(i)).BT.T_MFM)*10)/10;
+    T_PR_aux = Tmin:0.1:Tmax;
+    P_psig = filedataExp.P(i);
+    P_MPa = (P_psig + 14.7)*0.00689476;
+    PTXrho_PR_ref = table();
+    for m = 1:length(T_PR_aux)
+        [PR_input_T_PR_aux,PR_results_T_PR_aux] = densZ_PR(fluidPair,x1,P_MPa,T_PR_aux(m),filedataPure,filedataBIP);
+        % Compressibility factor from Peng Robinson at T_MFM and T_mean
+        Z_PR_T_PR_aux = PR_results_T_PR_aux.Z;
+        % density from Peng Robinson at T_MFM and T_mean
+        dens_PR_T_PR_aux = PR_results_T_PR_aux.rho;        
+        % PTXrho_PR_ref table aux
+        PTXrho_PR_ref_aux = table(repmat(join(fluidPair),length(x1),1), ...
+            repmat(P_psig,length(x1),1), repmat(T_PR_aux(m),length(x1),1), x1', ...
+            Z_PR_T_PR_aux, dens_PR_T_PR_aux, 'VariableNames',{'fluidPair', ...
+            'P_cal_psig','T_PR', 'x_PR','Z_PR_T_PR', 'rho_PR_T_PR'});
+        PTXrho_PR_ref = [PTXrho_PR_ref;PTXrho_PR_ref_aux];
+    end   
+    scatInterp = scatteredInterpolant(PTXrho_PR_ref.T_PR, ...
+        PTXrho_PR_ref.rho_PR_T_PR, PTXrho_PR_ref.x_PR, 'linear', 'linear');
+    % at rho corr value
+    expProcData.(filedataExp.Key(i)).BT.Ci = ...
+        100*scatInterp(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
+        expProcData.(filedataExp.Key(i)).BT.rho_corr);
+    % at rho min value
+    expProcData.(filedataExp.Key(i)).BT.CiMax = ...
+        100*scatInterp(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
+        expProcData.(filedataExp.Key(i)).BT.rho_corrMin);
+    % at rho max value
+    expProcData.(filedataExp.Key(i)).BT.CiMin = ...
+        100*scatInterp(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
+        expProcData.(filedataExp.Key(i)).BT.rho_corrMax);
+    % absolute error % 
+    expProcData.(filedataExp.Key(i)).BT.dC = ...
+        abs(expProcData.(filedataExp.Key(i)).BT.CiMax ...
+        -expProcData.(filedataExp.Key(i)).BT.CiMin);
+end
 
 %% Save data
 
@@ -228,7 +267,7 @@ for i = 1:length(filedataExp.Key)
 
     subplot(5,1,2);
     if isempty(expProcData.(filedataExp.Key(i)).pumpsData) == 0 && ismissing(pumps_data_name) == 0
-        scatter(expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed,expProcData.(filedataExp.Key(i)).pumpsData.P_P3,10,'filled','DisplayName','Pconf')
+        scatter(expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed,expProcData.(filedataExp.Key(i)).pumpsData.P_Pconf,10,'filled','DisplayName','Pconf')
     end
     % xlabel('Time elapsed [hh:mm:ss]')
     ylabel('Pressure [psig]')
@@ -240,7 +279,7 @@ for i = 1:length(filedataExp.Key)
 
     subplot(5,1,3);
     if isempty(expProcData.(filedataExp.Key(i)).pumpsData) == 0 && ismissing(pumps_data_name) == 0
-        scatter(expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed,expProcData.(filedataExp.Key(i)).pumpsData.q_P1,10,'filled','DisplayName','q_{pump}')
+        scatter(expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed,expProcData.(filedataExp.Key(i)).pumpsData.Q_Pworking,10,'filled','DisplayName','q_{pump}')
         hold on
     end
     if isempty(expProcData.(filedataExp.Key(i)).MFMData) == 0
@@ -258,17 +297,17 @@ for i = 1:length(filedataExp.Key)
     yyaxis left
     ax = gca;
     ax.YColor = [0 0 0];
-    scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.rho_corr_mean,10,'filled','MarkerFaceColor','r')
+    scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.rho_corr,10,'filled','MarkerFaceColor','r')
     hold on
     xlabel('Time elapsed [hh:mm:ss]')
     xtickformat('hh:mm:ss')
-    ylabel('Corrected Density [kg/m^{3}]');
+    ylabel('\rho_{corr} [kg/m^{3}]');
     yyaxis right
     ax = gca;
     ax.YColor = [0 0 0];
     ylabel('Temperature [°C]');
     scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.T_MFM,10,'filled', 'MarkerFaceColor',[0.9290, 0.6940, 0.1250])
-    legend('density_{MFM}','T_{MFM}', 'Location','southeast');
+    legend('\rho_{corr}','T_{MFM}', 'Location','southeast');
     title(filedataExp.Key(i) + " density and temperature", 'Interpreter', 'none')
     grid on;
 
@@ -276,7 +315,9 @@ for i = 1:length(filedataExp.Key)
     yyaxis left
     ax = gca;
     ax.YColor = [0 0 0];
-    ylabel('PGD molar concentration [mol %]');
+    ylabel('C1_{PGDs} [mol %]');
+    ylim([0,100])
+    hold on
     if isempty(expProcData.(filedataExp.Key(i)).PGD2Data) == 0 && ismissing(PGD2_data_name) == 0
         scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,10,'filled', 'MarkerFaceColor',[0.0000 0.4470 0.7410], 'DisplayName','C1_{PGD2}')
         hold on
@@ -288,11 +329,12 @@ for i = 1:length(filedataExp.Key)
     yyaxis right
     ax = gca;
     ax.YColor = [0 0 0];
-    scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.Ci_corr_mean,10,'filled','MarkerFaceColor','r','DisplayName','C1_{MFM}')
+    scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.Ci,10,'filled','MarkerFaceColor','r','DisplayName','C1_{MFM}')
     hold on
     xlabel('Time elapsed [hh:mm:ss]')
     xtickformat('hh:mm:ss')
-    ylabel('MFM molar concentration [mol %]');
+    ylabel('C1_{MFM} [mol %]');
+    ylim([0,100])
     legend('Location','southeast');
     title(filedataExp.Key(i) + " molar concentrations", 'Interpreter', 'none')
     grid on;
@@ -311,16 +353,21 @@ for i = 1:length(filedataExp.Key)
     figure('Position', [100, 100, 700, 550]);
     tiledlayout(2,2, 'TileSpacing', 'tight', 'Padding','tight');
     if isempty(expProcData.(filedataExp.Key(i)).PGD2Data) == 0 && ismissing(PGD2_data_name) == 0
-        h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,5,'filled','MarkerFaceColor',[0.7 0.7 0.7],'DisplayName','PGD2');
+        h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,5,'filled','MarkerFaceColor',[0.7 0.7 0.7],'DisplayName','C_{PGD2}');
         hold on 
     end
     if isempty(expProcData.(filedataExp.Key(i)).PGD1Data) == 0 && ismissing(PGD1_data_name) == 0
-        h2 = scatter(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,5,'filled','MarkerFaceColor',[0.9290 0.6940 0.1250],'DisplayName','PGD1');
+        h2 = scatter(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,5,'filled','MarkerFaceColor',[0.9290 0.6940 0.1250],'DisplayName','C_{PGD1}');
         hold on 
     end
     if isempty(expProcData.(filedataExp.Key(i)).MFMData) == 0 && ismissing(MFM_data_name) == 0
-        h3 = scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.Ci_corr_mean,5,'filled','MarkerFaceColor','r','DisplayName','MFM');
-        hold on
+        t = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
+        C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
+        C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
+        C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
+        errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', 'Color', [1 0.7 0.8])
+        hold on 
+        h3 = scatter(t,C1,5,'filled','MarkerFaceColor','r','DisplayName','C_{MFM} \pm \DeltaC_{MFM}');
     end
     xlabel('Time elapsed [hh:mm:ss]','FontSize', 14);
     xtickformat('hh:mm:ss')

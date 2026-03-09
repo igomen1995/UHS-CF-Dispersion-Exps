@@ -303,12 +303,12 @@ for i = 1:length(filedataExp.Key)
                 [PR_input_T_mean,PR_results_T_mean] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean,filedataPure,filedataBIP);
                 [PR_input_T_max,PR_results_T_max] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean+T_std, filedataPure,filedataBIP); % at Tmax
                 [PR_input_T_min,PR_results_T_min] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean-T_std, filedataPure,filedataBIP); % at Tmin
-                    % Compressibility factor from Peng Robinson at T_MFM and T_mean
+                    % Compressibility factor from Peng Robinson T_mean
                 Z_PR_T_mean = PR_results_T_mean.Z;
                 Z_PR_T_max = PR_results_T_max.Z;
                 Z_PR_T_min = PR_results_T_min.Z;
                 Z_PR_T_mean_std = abs(Z_PR_T_max-Z_PR_T_min); % error of Z depending on T
-                    % density from Peng Robinson at T_MFM and T_mean
+                    % density from Peng Robinson at T_mean
                 dens_PR_T_mean = PR_results_T_mean.rho;
                 dens_PR_T_max = PR_results_T_max.rho;
                 dens_PR_T_min = PR_results_T_min.rho;
