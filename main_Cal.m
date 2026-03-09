@@ -148,7 +148,7 @@ clear expTrimData;
 
 % Start calResults as an empty table
 calResults = table();
-calData = table();
+% calData = table();
 
 for i = 1:length(filedataExp.Key)
         
@@ -269,7 +269,8 @@ for i = 1:length(filedataExp.Key)
     
                 % MFM main data arrays for cal data for cal curve, freq and Q MFMF could be added too
                 dens_MFM = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.dens_MFM2;
-                T_MFM = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.T_MFM2;       
+                T_MFM = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.T_MFM2;
+                Q_MFM = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.q_MFM2;
     
                 % statistics for same P, Q, T and fluid
                     % mean for a specific P and Q
@@ -322,12 +323,12 @@ for i = 1:length(filedataExp.Key)
                 calData_temp = table(repmat(fluid_cal,length(dens_MFM),1), ...
                     repmat(T_cal,length(dens_MFM),1), repmat(P_unique(j),length(dens_MFM),1), ...
                     repmat(Q_unique(k),length(dens_MFM),1), ...
-                    T_MFM, repmat(T_mean,length(dens_MFM),1), repmat(T_std,length(dens_MFM),1), ...
+                    Q_MFM,T_MFM, repmat(T_mean,length(dens_MFM),1), repmat(T_std,length(dens_MFM),1), ...
                     dens_MFM, repmat(dens_mean,length(dens_MFM),1), repmat(dens_std,length(dens_MFM),1), ...
                     repmat(Z_PR_T_mean,length(dens_MFM),1), repmat(Z_PR_T_mean_std,length(dens_MFM),1), ...
                     repmat(dens_PR_T_mean,length(dens_MFM),1), repmat(dens_PR_T_mean_std,length(dens_MFM),1), ...
                     'VariableNames',{'Fluid_cal','T_cal_C', 'P_cal_psig', 'Q_cal_mlmin', ...
-                    'T_MFM','T_mean','T_std','dens_MFM','dens_mean','dens_std', ...
+                    'Q_MFM','T_MFM','T_mean','T_std','dens_MFM','dens_mean','dens_std', ...
                     'Z_PR_T_mean','Z_PR_T_mean_std','dens_PR_T_mean','dens_PR_T_mean_std'});
                 
                 % calProcData struct collects calResults_temp and calData_temp
@@ -404,10 +405,6 @@ for i = 1:length(filedataExp.Key)
         pumps_data_trim = [pumps_data_trim; pumps_data_trim_QAll];
         MFM_data_trim = [MFM_data_trim; MFM_data_trim_QAll];
 
-        % cal Results and data for each fluid, T, P and Q
-        calResults = [calResults;calResults_QAll];
-        calData = [calData;calData_QAll];
-
         % calProcData struct incorporates QAll
         calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.pumpsData = pumps_data_trim_QAll;
         calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.MFMData = MFM_data_trim_QAll;
@@ -427,6 +424,10 @@ for i = 1:length(filedataExp.Key)
         % cal proc data gets calResults and Data for each fluid, T and P, QAll
         calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.calResults = calResults_QAll;
         calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.calData = calData_QAll;
+
+        % cal Results and data for each fluid, T, P and Q
+        calResults = [calResults;calResults_QAll];
+        % calData = [calData;calData_QAll];
         
     end
 
@@ -439,10 +440,11 @@ for i = 1:length(filedataExp.Key)
 
 end
 
-%% Peng Robinson for T_MFM
+%% Peng Robinson for T_MFM and cal data all
 
 % Run for all Q after calData is finished
 fluid_unique = fieldnames(calProcData);
+calData = table();
 
 for i = 1:length(fields(calProcData)) % for each fluid
     T_unique_field = fieldnames(calProcData.(fluid_unique{i}));
@@ -475,6 +477,9 @@ for i = 1:length(fields(calProcData)) % for each fluid
             calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.dens_PR_T_MFM = ...
             interp1(PTXrho_PR_ref.T_PR, PTXrho_PR_ref.dens_PR_T_PR, ...
             calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.T_MFM, 'linear');
+            
+            % create calData with all data for cal curve
+            calData = [calData;calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData];
         end
     end
 end
@@ -676,6 +681,93 @@ for i = aux_idx
 end
 
 %% Calibration curve
+
+% Linear fitting all Qs and each Q all considering punctual rho at T_MFM
+
+Q_unique = unique(vertcat(filedataExp.Q_mlmin{:}));
+Q_unique_field = "Q"+ string(Q_unique);
+cal_curve_params = {};
+cal_curve_params_Qeach = {};
+fittingRhoResultsAll = table('Size',[0 4],'VariableTypes', ...
+    {'string','double','double','double'},'VariableNames',{'Q','p1','p2','RMSE'});
+% fitting for each Q
+for k = 1:length(Q_unique)
+    cal_curve_params_Qeach_aux = fitlm ...
+        (calData.dens_PR_T_MFM(calData.Q_cal_mlmin(calData.P_cal_psig>800) == Q_unique(k)), ...
+        calData.dens_MFM(calData.Q_cal_mlmin(calData.P_cal_psig>800) == Q_unique(k)));
+    cal_curve_params_Qeach{end+1} = cal_curve_params_Qeach_aux;
+    fittingRhoResultsAll(k,:) = {Q_unique_field{k}, ...
+        cal_curve_params_Qeach_aux.Coefficients.Estimate(1), ...
+        cal_curve_params_Qeach_aux.Coefficients.Estimate(2), ...
+        cal_curve_params_Qeach_aux.RMSE};
+end
+cal_curve_params_Qall = fitlm(calData.dens_PR_T_MFM(calData.P_cal_psig>800),calData.dens_MFM(calData.P_cal_psig>800));
+cal_curve_params = {cal_curve_params_Qeach;cal_curve_params_Qall};
+fittingRhoResultsAll(length(Q_unique)+1,:) = {"QAll", ...
+        cal_curve_params_Qall.Coefficients.Estimate(1), ...
+        cal_curve_params_Qall.Coefficients.Estimate(2), ...
+        cal_curve_params_Qall.RMSE};
+
+%% Linear fitting with Q as a param too
+
+calCurveQmodel = @(p,x)(p(1)*x(:,1)+p(2)*x(:,2).^p(3));
+tbl_Q_cal = calData(:,{'dens_PR_T_MFM','Q_cal_mlmin','dens_MFM','P_cal_psig'});
+tbl_Q_MFM = calData(:,{'dens_PR_T_MFM','Q_MFM','dens_MFM','P_cal_psig'});
+tbl_Q_cal(tbl_Q_cal.P_cal_psig<800,:)=[];
+tbl_Q_MFM((tbl_Q_MFM.Q_MFM <0.001) & (tbl_Q_MFM.P_cal_psig<800),:) =[];
+pinit = [1,1,1];
+% cal_curve_params_Qcorr_nl_Q_cal = fitnlm(tbl_Q_cal,calCurveQmodel,pinit);
+% cal_curve_params_Qcorr_nl_Q_MFM = fitnlm(tbl_Q_MFM,calCurveQmodel,pinit);
+
+cal_curve_params_Qcorr = fitlm([calData.dens_PR_T_MFM,calData.Q_cal_mlmin],calData.dens_MFM);
+
+%% Cal curve plot model
+
+% linear
+figure
+for k = 1:length(Q_unique)
+    plot(0:1:800,feval(cal_curve_params_Qeach{k},0:1:800),"DisplayName",Q_unique_field(k),'LineWidth',2)
+    hold on
+    grid on
+    legend()
+end
+plot(0:1:800,feval(cal_curve_params_Qall,0:1:800),"DisplayName","QAll",'LineWidth',2,'Color','k')
+% linear Q and rho
+plot(0:1:800,feval(cal_curve_params_Qcorr,[(0:1:800)',5*ones(801,1)]),"DisplayName","Q5-Qcorr-l",'LineWidth',2,'Color','red')
+% plot(0:1:800,feval(cal_curve_params_Qcorr_nl_Q_cal,[(0:1:800)',5*ones(801,1)]),"DisplayName","Q5-Qcorr-nl",'LineWidth',2,'Color','green')
+% plot(0:1:800,feval(cal_curve_params_Qcorr_nl_Q_MFM,[(0:1:800)',5*ones(801,1)]),"DisplayName","Q5-Qcorr-nl-Q_MFM",'LineWidth',2,'Color',[0.5 0.5 0.5])
+% scatter(calData.dens_PR_T_MFM(calData.Q_MFM >0.001),calData.dens_MFM(calData.Q_MFM >0.001),20,calData.Q_MFM(calData.Q_MFM >0.001),'filled')
+scatter(calData.dens_PR_T_MFM((calData.Q_MFM >0.001)&(calData.P_cal_psig>800)),calData.dens_MFM((calData.Q_MFM >0.001)&(calData.P_cal_psig>800)),20,calData.Q_cal_mlmin((calData.Q_MFM >0.001)&(calData.P_cal_psig>800)),'filled')
+c=colorbar;
+c.Title.String = 'Qcal [ml/min]';
+c.Title.Rotation = 90;
+c.Title.Units = 'normalized';
+c.Title.Position = [3.55, 0.5, 0];
+c.Title.FontSize = 14;
+cTicks = c.Ticks;
+cTicks = cTicks(mod(cTicks,1) == 0);
+c.Ticks = cTicks;
+hold on
+
+%%
+
+
+rho_cal_fit_lin = fitlm(dens_cal_vals_all(:,1:2)); 
+% high pressure cal only
+dens_cal_vals_HP = dens_cal_vals_all(dens_cal_vals_all.P_cal_ref==1500,:);
+rho_cal_HP_fit_lin = fitlm(dens_cal_vals_HP(:,1:2)); 
+
+% save fit model params
+fittingRhoResultsAll = table('Size',[0 4],'VariableTypes',{'string','double','double','double'},'VariableNames',{'model','p1','p2','RMSE'});
+calProcData.rho_cal_fit_lin = rho_cal_fit_lin;
+fittingRhoResultsAll(1,:) = {"all_lin",rho_cal_fit_lin.Coefficients.Estimate(1),rho_cal_fit_lin.Coefficients.Estimate(2),rho_cal_fit_lin.RMSE};
+calProcData.rho_cal_HP_fit_lin = rho_cal_HP_fit_lin;
+fittingRhoResultsAll(2,:) = {"HP_lin",rho_cal_HP_fit_lin.Coefficients.Estimate(1),rho_cal_HP_fit_lin.Coefficients.Estimate(2),rho_cal_HP_fit_lin.RMSE};
+
+calProcData.fittingRhoResultsAll = fittingRhoResultsAll;
+writetable(fittingRhoResultsAll,pathExportAll + "fittingRhoResultsAll.xlsx");
+save(pathExportAll + "calProcData.mat",'calProcData')
+
 
 % To do: linear fitting first for each Q and allQ, then plot all points and
 % curves together with temeprature legend
