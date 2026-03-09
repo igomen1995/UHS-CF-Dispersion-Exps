@@ -93,6 +93,9 @@ for i = 1:length(filedataExp.Key)
 
     if ismissing(PGD1_data_name) == 0 % if PGD1 exist (name is stated in input file)
         PGD1_data = import_PGD1_data(PGD1_data_name); % import PGD1 data to local variable
+        if filedataExp.GMT_PGD{i} == "GMT9"
+            PGD1_data.TimeStamp = PGD1_data.TimeStamp - hours(13); %ONLY if PGD in Japan time GMT+9    
+        end
         expRawData.(filedataExp.Key(i)).PGD1Data = PGD1_data ...
             ((PGD1_data.TimeStamp>=filedataExp.st(i))& ...
             (PGD1_data.TimeStamp<=filedataExp.et(i)),:); % import PGD1 data from st (start time) to et (end time) to struct.Key
@@ -100,6 +103,9 @@ for i = 1:length(filedataExp.Key)
 
     if ismissing(PGD2_data_name) == 0 % if PGD2 exist (name is stated in input file)
         PGD2_data = import_PGD2_data(PGD2_data_name); % import PGD1 data to local variable
+        if filedataExp.GMT_PGD{i} == "GMT9"
+            PGD2_data.TimeStamp = PGD2_data.TimeStamp - hours(13); %ONLY if PGD in Japan time GMT+9    
+        end
         expRawData.(filedataExp.Key(i)).PGD2Data = PGD2_data ...
             ((PGD2_data.TimeStamp>=filedataExp.st(i))& ...
             (PGD2_data.TimeStamp<=filedataExp.et(i)),:); % import PGD2 data from st (start time) to et (end time) to struct.Key
@@ -297,12 +303,12 @@ for i = 1:length(filedataExp.Key)
                 [PR_input_T_mean,PR_results_T_mean] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean,filedataPure,filedataBIP);
                 [PR_input_T_max,PR_results_T_max] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean+T_std, filedataPure,filedataBIP); % at Tmax
                 [PR_input_T_min,PR_results_T_min] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean-T_std, filedataPure,filedataBIP); % at Tmin
-                    % Compressibility factor from Peng Robinson at T_MFM and T_mean
+                    % Compressibility factor from Peng Robinson T_mean
                 Z_PR_T_mean = PR_results_T_mean.Z;
                 Z_PR_T_max = PR_results_T_max.Z;
                 Z_PR_T_min = PR_results_T_min.Z;
                 Z_PR_T_mean_std = abs(Z_PR_T_max-Z_PR_T_min); % error of Z depending on T
-                    % density from Peng Robinson at T_MFM and T_mean
+                    % density from Peng Robinson at T_mean
                 dens_PR_T_mean = PR_results_T_mean.rho;
                 dens_PR_T_max = PR_results_T_max.rho;
                 dens_PR_T_min = PR_results_T_min.rho;

@@ -1,11 +1,10 @@
 % main_DataExtract.m
-% version: v13_Feb2026
 % Author: Ianna Gomez Mendez
-% 
 %
 % Objective: Extract data collected during core flooding experiments
 % using 3 Quizix pumps, 1 mass flow meter Bronkhorst, 2 transducers Omega
 % and 2 portable gas detectors Cosmos (DOD Technologies)
+% The only mandatory data is pumps and MFM data
 % 
 % Input (use Import Data tool in Matlab):
 % 1 - Pumps file (.dat)
@@ -18,9 +17,10 @@
 % Procedure:
 % 1 - Import files
 % 2 - Estimate xi array
-% 3 - Export in Results one Excel for each experiment with all data in each
+% 3 - Estimate xi error
+% 4 - Export in Results one Excel for each experiment with all data in each
 % spreadsheet
-% 4 - Plot in one figure all vars (5 panels): vars included:PT1, PT2 P
+% 5 - Plot in one figure all vars (5 panels): vars included:PT1, PT2 P
 % Conf, q pump, T MFM, densitites corrected, Xi estimated, C1 from PGDs
 % 
 % Output: 
@@ -34,32 +34,28 @@ addpath('functions/');
 % Introduce name of input and desired output folder name
 
 filenameExp = 'input/input_exp_H2-CO2-T32-P1500.xlsx';
+
+% PR parameters
+% INTRODUCE THE INPUT HERE
+% file containing pure components NIST data: Tc, Pc and acentric factor w
+filenamePure = 'input/input_PR_pure.xlsx';
+% file containing mixture compoents A12 B12 factor to estimate BIP
+filenameBIP = 'input/input_PR_BIP.xlsx';
+
+% cal curve results input import
 pathImportCal = 'results/cal_250725_PR/';
-pathImportPR = 'results/PR_H2-CO2-T32-P1500/';
+
 mkdir('results/exp_H2-CO2-T32-P1500-H');
 pathExportAll = 'results/exp_H2-CO2-T32-P1500-H/';
 
 %% IMPORT data
 
-% Do not change unless input excel format changed
+filedataExp = import_inputExp(filenameExp); % import input to a local variable
 
-opts = spreadsheetImportOptions("NumVariables", 29);
-% Specify sheet and range
-opts.Sheet = "Sheet1";
-opts.DataRange = [3,Inf];
-% Specify column names and types
-opts.VariableNames = ["Key", "Date", "Type","Fluid1", "Fluid2", ...
-    "T", "P", "Q", "Run", "D", "L", "phi", "K", "Vcore", ...
-    "setupVersion", "Vlinesbefore", "Vlinesafter", "Vtotal", "Comments", "st", "et", "dt", ...
-    "path", "pumps_data_name", "trans_data_name", "MFM_data_name", "PGD1_data_name", "PGD2_data_name","GMT_PGD"];
-opts.VariableTypes = ["string", "string","string", "string", "string", ...
-    "double", "double", "double", "double", "double", "double", "double", "double", "double", ...
-    "string", "double", "double", "double","string", "datetime", "datetime", "double", ...
-    "string", "string", "string", "string", "string", "string", "string"];
-filedataExp = readtable(filenameExp,opts);
-
-filedataExp.st = datetime(filedataExp.st,'Format','MM/dd/uuuu HH:mm:ss');
-filedataExp.et = datetime(filedataExp.et,'Format','MM/dd/uuuu HH:mm:ss');
+% import pure components NIST data: Tc, Pc and acentric factor w
+filedataPure = import_inputPR_params_pure(filenamePure);
+% import mixture components A12 and B12 factor to estimate BIP (kij)
+filedataBIP = import_inputPR_params_BIP(filenameBIP);
 
 for i = 1:length(filedataExp.Key)
     pumps_data_name = filedataExp.path(i) + filedataExp.pumps_data_name(i);
@@ -67,65 +63,81 @@ for i = 1:length(filedataExp.Key)
     MFM_data_name = filedataExp.path(i) + filedataExp.MFM_data_name(i);
     PGD1_data_name = filedataExp.path(i) + filedataExp.PGD1_data_name(i);
     PGD2_data_name = filedataExp.path(i) + filedataExp.PGD2_data_name(i);
-
+    
+    % pumps in local variables
+    workingPump = filedataExp.workingPump(i);
+    cushionPump = filedataExp.cushionPump(i);
+    confPump = filedataExp.confiningPump(i);
+    
+    
     if ismissing(pumps_data_name) == 0
-        pumps_data = import_pumps_data(pumps_data_name);
-    end
-
-    if ismissing(trans_data_name) == 0
-        trans_data = import_trans_data(trans_data_name);
-    end
-
-    if ismissing(MFM_data_name) == 0
-        MFM_data = import_MFM_data(MFM_data_name);
-    end
-
-    if ismissing(PGD1_data_name) == 0
-        PGD1_data = import_PGD1_data(PGD1_data_name);
-        if filedataExp.GMT_PGD{i} == "GMT9"
-        PGD1_data.TimeStamp = PGD1_data.TimeStamp - hours(13); %ONLY if PGD in Japan time GMT+9    
-        end
-    end
-
-    if ismissing(PGD2_data_name) == 0
-        PGD2_data = import_PGD2_data(PGD2_data_name);
-        if filedataExp.GMT_PGD{i} == "GMT9"
-        PGD2_data.TimeStamp = PGD2_data.TimeStamp - hours(13); %ONLY if PGD in Japan time GMT+9    
-        end
-    end
-
-    % Trim data to st and et, and calculate time elapsed and vol injected
-    expProcData.(filedataExp.Key(i)).pumpsData = pumps_data((pumps_data.TimeStamp>=filedataExp.st(i))&(pumps_data.TimeStamp<=filedataExp.et(i)),:);
-    if isempty(expProcData.(filedataExp.Key(i)).pumpsData) == 0
+        pumps_data = import_pumps_data(pumps_data_name, workingPump, confPump, cushionPump); % import pumps data to local variable
+        % Trim data to st and et
+        expProcData.(filedataExp.Key(i)).pumpsData = pumps_data ...
+            ((pumps_data.TimeStamp>=filedataExp.st(i))& ...
+            (pumps_data.TimeStamp<=filedataExp.et(i)),:); % import pumps data from st (start time) to et (end time) to struct.Key
+        % Calculate time elapsed
         expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed = expProcData.(filedataExp.Key(i)).pumpsData.TimeStamp - filedataExp.st(i);
         expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed.Format = 'hh:mm:ss.SSS';
+        % Calculate vol injected
         expProcData.(filedataExp.Key(i)).pumpsData.VolInjected = expProcData.(filedataExp.Key(i)).pumpsData.V_P1 - expProcData.(filedataExp.Key(i)).pumpsData.V_P1(1);
     end
 
-    expProcData.(filedataExp.Key(i)).transData = trans_data((trans_data.TimeStamp_PT1>=filedataExp.st(i))&(trans_data.TimeStamp_PT1<=filedataExp.et(i)),:);
-    if isempty(expProcData.(filedataExp.Key(i)).transData) == 0
-        expProcData.(filedataExp.Key(i)).transData.TimeElapsed = expProcData.(filedataExp.Key(i)).transData.TimeStamp_PT1 - filedataExp.st(i);
-        expProcData.(filedataExp.Key(i)).transData.TimeElapsed.Format = 'hh:mm:ss.SSS';
-    end
-       
-    expProcData.(filedataExp.Key(i)).MFMData = MFM_data((MFM_data.TimeStamp>=filedataExp.st(i))&(MFM_data.TimeStamp<=filedataExp.et(i)),:);
-    if isempty(expProcData.(filedataExp.Key(i)).MFMData) == 0
+    if ismissing(MFM_data_name) == 0
+        MFM_data = import_MFM_data(MFM_data_name); % import MFM2 data to local variable
+        % Trim data to st and et
+        expProcData.(filedataExp.Key(i)).MFMData = MFM_data ...
+            ((MFM_data.TimeStamp>=filedataExp.st(i))& ...
+            (MFM_data.TimeStamp<=filedataExp.et(i)),:); % import MFM2 data from st (start time) to et (end time) to struct.Key
+        % Calculate time elapsed
         expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed = expProcData.(filedataExp.Key(i)).MFMData.TimeStamp - filedataExp.st(i);
         expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed.Format = 'hh:mm:ss.SSS';
     end
 
-    expProcData.(filedataExp.Key(i)).PGD1Data = PGD1_data((PGD1_data.TimeStamp>=filedataExp.st(i))&(PGD1_data.TimeStamp<=filedataExp.et(i)),:);
-    if isempty(expProcData.(filedataExp.Key(i)).PGD1Data) == 0
+    if ismissing(trans_data_name) == 0
+        trans_data = import_trans_data(trans_data_name); % import p transducer data to local variable
+         % Trim data to st and et
+        expProcData.(filedataExp.Key(i)).transData = trans_data ...
+            ((trans_data.TimeStamp_PT1>=filedataExp.st(i))& ...
+            (trans_data.TimeStamp_PT1<=filedataExp.et(i)),:); % import p trans data from st (start time) to et (end time) to struct.Key
+        % Calculate time elapsed
+        expProcData.(filedataExp.Key(i)).transData.TimeElapsed = expProcData.(filedataExp.Key(i)).transData.TimeStamp_PT1 - filedataExp.st(i);
+        expProcData.(filedataExp.Key(i)).transData.TimeElapsed.Format = 'hh:mm:ss.SSS';
+    end
+
+    if ismissing(PGD1_data_name) == 0
+        PGD1_data = import_PGD1_data(PGD1_data_name); % import PGD1 data to local variable
+        % Change time if other GMT
+        if filedataExp.GMT_PGD{i} == "GMT9"
+            PGD1_data.TimeStamp = PGD1_data.TimeStamp - hours(13); %ONLY if PGD in Japan time GMT+9    
+        end
+        % Trim data to st and et
+        expProcData.(filedataExp.Key(i)).PGD1Data = PGD1_data ...
+            ((PGD1_data.TimeStamp>=filedataExp.st(i))& ...
+            (PGD1_data.TimeStamp<=filedataExp.et(i)),:); % import PGD1 data from st (start time) to et (end time) to struct.Key
+        % Calculate time elapsed
         expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed = expProcData.(filedataExp.Key(i)).PGD1Data.TimeStamp - filedataExp.st(i);
         expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed.Format = 'hh:mm:ss.SSS';
+        % C1 in vol concentration % and mol concentration % (atmospheric conditions)
         expProcData.(filedataExp.Key(i)).PGD1Data.C1 = expProcData.(filedataExp.Key(i)).PGD1Data.H2GasConcentration;
     end
 
-    expProcData.(filedataExp.Key(i)).PGD2Data = PGD2_data((PGD2_data.TimeStamp>=filedataExp.st(i))&(PGD2_data.TimeStamp<=filedataExp.et(i)),:);
-    if isempty(expProcData.(filedataExp.Key(i)).PGD1Data) == 0
+    if ismissing(PGD2_data_name) == 0
+        PGD2_data = import_PGD2_data(PGD2_data_name); % import PGD1 data to local variable
+        % Change time if other GMT
+        if filedataExp.GMT_PGD{i} == "GMT9"
+            PGD2_data.TimeStamp = PGD2_data.TimeStamp - hours(13); %ONLY if PGD in Japan time GMT+9    
+        end
+        % Trim data to st and et
+        expProcData.(filedataExp.Key(i)).PGD2Data = PGD2_data ...
+            ((PGD2_data.TimeStamp>=filedataExp.st(i))& ...
+            (PGD2_data.TimeStamp<=filedataExp.et(i)),:); % import PGD2 data from st (start time) to et (end time) to struct.Key
+        % Calculate time elapsed
         expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed = expProcData.(filedataExp.Key(i)).PGD2Data.TimeStamp - filedataExp.st(i);
         expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed.Format = 'hh:mm:ss.SSS';
+        % C2 in vol concentration and mol concentration (atmospheric conditions)
         expProcData.(filedataExp.Key(i)).PGD2Data.C2 = expProcData.(filedataExp.Key(i)).PGD2Data.CO2GasConcentration;
+        % Because binary mixture: C1 in vol concentration % and mol concentration % (atmospheric conditions)
         expProcData.(filedataExp.Key(i)).PGD2Data.C1 = 100 - expProcData.(filedataExp.Key(i)).PGD2Data.C2;
     end
 
@@ -134,7 +146,7 @@ for i = 1:length(filedataExp.Key)
     q = filedataExp.Q(i)*(10^(-6))/60; %m3/s
     v = q./A; % Darcy velocity m/s
     u = v./filedataExp.phi(i); % Interstitial velocity
-    
+
     exp_params = table(filedataExp.Key(i), filedataExp.Date(i), filedataExp.Type(i), filedataExp.Fluid1(i), ...
         filedataExp.Fluid2(i), filedataExp.T(i), filedataExp.P(i), filedataExp.Q(i), filedataExp.Run(i), ...
         filedataExp.D(i), filedataExp.L(i), filedataExp.phi(i), filedataExp.K(i), filedataExp.Vcore(i), ...
@@ -148,7 +160,10 @@ end
 
 load(pathImportCal + "calProcData.mat")
 load(pathImportCal + "calResults.mat")
-load(pathImportPR + "PR_results.mat")
+load(pathImportCal + "calData.mat")
+load(pathImportCal + "fittingRhoResultsAll.mat")
+load(pathImportCal + "cal_curve_params.mat")
+% load(pathImportPR + "PR_results.mat")
 
 %% Extract breakthrough curve data
 
@@ -156,7 +171,7 @@ load(pathImportPR + "PR_results.mat")
 rho_corr_lin = @(p,y) (y-p(1))/p(2);
 
 for i = 1:length(filedataExp.Key)
-    % Extrat measured density vs time & remove missing
+    % Extrat measured density vs time
     BTaux = table(expProcData.(filedataExp.Key(i)).MFMData.TimeStamp, ...
         expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed, ...
         seconds(expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed), ...
@@ -164,18 +179,57 @@ for i = 1:length(filedataExp.Key)
         expProcData.(filedataExp.Key(i)).MFMData.T_MFM2, ...
         expProcData.(filedataExp.Key(i)).MFMData.q_MFM2, ...
         'VariableNames',{'TimeStamp','TimeElapsed', 'SecondsElapsed', 'rho_MFM','T_MFM','q_MFM'});
-    expProcData.(filedataExp.Key(i)).BT = rmmissing(BTaux);
+    expProcData.(filedataExp.Key(i)).BT = BTaux;
     % fitting parameters for rho corrected
-    auxLinFit = calProcData.fittingRhoResultsAll(calProcData.fittingRhoResultsAll.model == "HP_lin",:);
-    expProcData.(filedataExp.Key(i)).BT.rho_corr_mean = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM);
-    expProcData.(filedataExp.Key(i)).BT.rho_corr_min = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM-auxLinFit.RMSE);
-    expProcData.(filedataExp.Key(i)).BT.rho_corr_max = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM+auxLinFit.RMSE);
-    % look up for correspondent Xi in PR EOS table
-    expProcData.(filedataExp.Key(i)).BT.Ci_corr_mean = 100*interp1(PR_results.rho_mix, PR_results.x1, expProcData.(filedataExp.Key(i)).BT.rho_corr_mean, 'linear');
+    auxLinFit = fittingRhoResultsAll(fittingRhoResultsAll.Q == "QAll",:);
+    expProcData.(filedataExp.Key(i)).BT.rho_corr = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM);
+    expProcData.(filedataExp.Key(i)).BT.rho_corrMin = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM-auxLinFit.RMSE);
+    expProcData.(filedataExp.Key(i)).BT.rho_corrMax = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM+auxLinFit.RMSE);
 end
 
-%% Propagation of error in Xi
+%% Add molar concentration to breakthrough data and error
 
+x1 = 0:0.01:1; % array for binary mixture
+for i = 1:length(filedataExp.Key)
+    fluidPair = [filedataExp.Fluid1(i),filedataExp.Fluid2(i)];
+    Tmin = floor(min(expProcData.(filedataExp.Key(i)).BT.T_MFM)*10)/10;
+    Tmax = ceil(max(expProcData.(filedataExp.Key(i)).BT.T_MFM)*10)/10;
+    T_PR_aux = Tmin:0.1:Tmax;
+    P_psig = filedataExp.P(i);
+    P_MPa = (P_psig + 14.7)*0.00689476;
+    PTXrho_PR_ref = table();
+    for m = 1:length(T_PR_aux)
+        [PR_input_T_PR_aux,PR_results_T_PR_aux] = densZ_PR(fluidPair,x1,P_MPa,T_PR_aux(m),filedataPure,filedataBIP);
+        % Compressibility factor from Peng Robinson at T_MFM and T_mean
+        Z_PR_T_PR_aux = PR_results_T_PR_aux.Z;
+        % density from Peng Robinson at T_MFM and T_mean
+        dens_PR_T_PR_aux = PR_results_T_PR_aux.rho;        
+        % PTXrho_PR_ref table aux
+        PTXrho_PR_ref_aux = table(repmat(join(fluidPair),length(x1),1), ...
+            repmat(P_psig,length(x1),1), repmat(T_PR_aux(m),length(x1),1), x1', ...
+            Z_PR_T_PR_aux, dens_PR_T_PR_aux, 'VariableNames',{'fluidPair', ...
+            'P_cal_psig','T_PR', 'x_PR','Z_PR_T_PR', 'rho_PR_T_PR'});
+        PTXrho_PR_ref = [PTXrho_PR_ref;PTXrho_PR_ref_aux];
+    end   
+    scatInterp = scatteredInterpolant(PTXrho_PR_ref.T_PR, ...
+        PTXrho_PR_ref.rho_PR_T_PR, PTXrho_PR_ref.x_PR, 'linear', 'linear');
+    % at rho corr value
+    expProcData.(filedataExp.Key(i)).BT.Ci = ...
+        100*scatInterp(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
+        expProcData.(filedataExp.Key(i)).BT.rho_corr);
+    % at rho min value
+    expProcData.(filedataExp.Key(i)).BT.CiMax = ...
+        100*scatInterp(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
+        expProcData.(filedataExp.Key(i)).BT.rho_corrMin);
+    % at rho max value
+    expProcData.(filedataExp.Key(i)).BT.CiMin = ...
+        100*scatInterp(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
+        expProcData.(filedataExp.Key(i)).BT.rho_corrMax);
+    % absolute error % 
+    expProcData.(filedataExp.Key(i)).BT.dC = ...
+        abs(expProcData.(filedataExp.Key(i)).BT.CiMax ...
+        -expProcData.(filedataExp.Key(i)).BT.CiMin);
+end
 
 %% Save data
 
@@ -213,7 +267,7 @@ for i = 1:length(filedataExp.Key)
 
     subplot(5,1,2);
     if isempty(expProcData.(filedataExp.Key(i)).pumpsData) == 0 && ismissing(pumps_data_name) == 0
-        scatter(expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed,expProcData.(filedataExp.Key(i)).pumpsData.P_P3,10,'filled','DisplayName','Pconf')
+        scatter(expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed,expProcData.(filedataExp.Key(i)).pumpsData.P_Pconf,10,'filled','DisplayName','Pconf')
     end
     % xlabel('Time elapsed [hh:mm:ss]')
     ylabel('Pressure [psig]')
@@ -225,7 +279,7 @@ for i = 1:length(filedataExp.Key)
 
     subplot(5,1,3);
     if isempty(expProcData.(filedataExp.Key(i)).pumpsData) == 0 && ismissing(pumps_data_name) == 0
-        scatter(expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed,expProcData.(filedataExp.Key(i)).pumpsData.q_P1,10,'filled','DisplayName','q_{pump}')
+        scatter(expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed,expProcData.(filedataExp.Key(i)).pumpsData.Q_Pworking,10,'filled','DisplayName','q_{pump}')
         hold on
     end
     if isempty(expProcData.(filedataExp.Key(i)).MFMData) == 0
@@ -243,17 +297,17 @@ for i = 1:length(filedataExp.Key)
     yyaxis left
     ax = gca;
     ax.YColor = [0 0 0];
-    scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.rho_corr_mean,10,'filled','MarkerFaceColor','r')
+    scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.rho_corr,10,'filled','MarkerFaceColor','r')
     hold on
     xlabel('Time elapsed [hh:mm:ss]')
     xtickformat('hh:mm:ss')
-    ylabel('Corrected Density [kg/m^{3}]');
+    ylabel('\rho_{corr} [kg/m^{3}]');
     yyaxis right
     ax = gca;
     ax.YColor = [0 0 0];
     ylabel('Temperature [°C]');
     scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.T_MFM,10,'filled', 'MarkerFaceColor',[0.9290, 0.6940, 0.1250])
-    legend('density_{MFM}','T_{MFM}', 'Location','southeast');
+    legend('\rho_{corr}','T_{MFM}', 'Location','southeast');
     title(filedataExp.Key(i) + " density and temperature", 'Interpreter', 'none')
     grid on;
 
@@ -261,7 +315,9 @@ for i = 1:length(filedataExp.Key)
     yyaxis left
     ax = gca;
     ax.YColor = [0 0 0];
-    ylabel('PGD molar concentration [mol %]');
+    ylabel('C1_{PGDs} [mol %]');
+    ylim([0,100])
+    hold on
     if isempty(expProcData.(filedataExp.Key(i)).PGD2Data) == 0 && ismissing(PGD2_data_name) == 0
         scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,10,'filled', 'MarkerFaceColor',[0.0000 0.4470 0.7410], 'DisplayName','C1_{PGD2}')
         hold on
@@ -273,11 +329,12 @@ for i = 1:length(filedataExp.Key)
     yyaxis right
     ax = gca;
     ax.YColor = [0 0 0];
-    scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.Ci_corr_mean,10,'filled','MarkerFaceColor','r','DisplayName','C1_{MFM}')
+    scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.Ci,10,'filled','MarkerFaceColor','r','DisplayName','C1_{MFM}')
     hold on
     xlabel('Time elapsed [hh:mm:ss]')
     xtickformat('hh:mm:ss')
-    ylabel('MFM molar concentration [mol %]');
+    ylabel('C1_{MFM} [mol %]');
+    ylim([0,100])
     legend('Location','southeast');
     title(filedataExp.Key(i) + " molar concentrations", 'Interpreter', 'none')
     grid on;
@@ -296,16 +353,21 @@ for i = 1:length(filedataExp.Key)
     figure('Position', [100, 100, 700, 550]);
     tiledlayout(2,2, 'TileSpacing', 'tight', 'Padding','tight');
     if isempty(expProcData.(filedataExp.Key(i)).PGD2Data) == 0 && ismissing(PGD2_data_name) == 0
-        h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,5,'filled','MarkerFaceColor',[0.7 0.7 0.7],'DisplayName','PGD2');
+        h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,5,'filled','MarkerFaceColor',[0.7 0.7 0.7],'DisplayName','C_{PGD2}');
         hold on 
     end
     if isempty(expProcData.(filedataExp.Key(i)).PGD1Data) == 0 && ismissing(PGD1_data_name) == 0
-        h2 = scatter(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,5,'filled','MarkerFaceColor',[0.9290 0.6940 0.1250],'DisplayName','PGD1');
+        h2 = scatter(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,5,'filled','MarkerFaceColor',[0.9290 0.6940 0.1250],'DisplayName','C_{PGD1}');
         hold on 
     end
     if isempty(expProcData.(filedataExp.Key(i)).MFMData) == 0 && ismissing(MFM_data_name) == 0
-        h3 = scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.Ci_corr_mean,5,'filled','MarkerFaceColor','r','DisplayName','MFM');
-        hold on
+        t = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
+        C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
+        C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
+        C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
+        errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', 'Color', [1 0.7 0.8])
+        hold on 
+        h3 = scatter(t,C1,5,'filled','MarkerFaceColor','r','DisplayName','C_{MFM} \pm \DeltaC_{MFM}');
     end
     xlabel('Time elapsed [hh:mm:ss]','FontSize', 14);
     xtickformat('hh:mm:ss')
