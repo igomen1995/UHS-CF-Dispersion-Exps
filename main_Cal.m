@@ -21,8 +21,6 @@
 % 2 - Import files (and prepare time data)
 % 3 - Create one file with all raw data and save
 % 4 - Inspect data in plot density and temperature vs time
-% Come back to input cal exp file to input/correct input st and et (start and end time) of each
-% P, T, fluid fixed, also input P and T, and change key
 % 5 - Calculate error of density for a given period of time with Temperature and pressure stable
 % 6 - Plot density inst vs Ref data
 % 
@@ -154,7 +152,6 @@ clear expTrimData;
 
 % Start calResults as an empty table
 calResults = table();
-% calData = table();
 
 for i = 1:length(filedataExp.Key)
         
@@ -433,7 +430,6 @@ for i = 1:length(filedataExp.Key)
 
         % cal Results and data for each fluid, T, P and Q
         calResults = [calResults;calResults_QAll];
-        % calData = [calData;calData_QAll];
         
     end
 
@@ -564,7 +560,7 @@ for i = 1:length(filedataExp.Key)
     scatter(expRawData.(filedataExp.Key(i)).pumpsData.TimeStamp,expRawData.(filedataExp.Key(i)).pumpsData.Q_Pworking,10,'filled','MarkerFaceColor',[0.8500, 0.3250, 0.0980])
     hold on
     scatter(expRawData.(filedataExp.Key(i)).MFMData.TimeStamp,expRawData.(filedataExp.Key(i)).MFMData.q_MFM2,5,'filled','MarkerFaceColor',[0.4940 0.1840 0.5560])
-    legend('P_pump','q_pump','q_{MFM}', 'Location','southwest');
+    legend('P_{pump}','q_{pump}','q_{MFM}', 'Location','southwest');
     title(filedataExp.Key(i) + " pressure & flow rates", 'Interpreter', 'none')
     grid on;
 
@@ -598,7 +594,7 @@ for i = 1:length(filedataExp.Key)
     ax.YColor = [0 0 0];
     ylabel('Pressure [psig]');
     scatter(expRawData.(filedataExp.Key(i)).pumpsData.TimeStamp,expRawData.(filedataExp.Key(i)).pumpsData.P_Pworking,10,'filled','MarkerFaceColor',[0, 0.4470, 0.7410])
-    legend('density_{MFM}','P_pump', 'Location','southwest');
+    legend('density_{MFM}','P_{pump}', 'Location','southwest');
     title(filedataExp.Key(i) + " pressure & pressures", 'Interpreter', 'none')
     grid on;
 
@@ -724,20 +720,6 @@ writetable(fittingRhoResultsAll,pathExportAll + "fittingRhoResultsAll.xlsx");
 save(pathExportAll + "cal_curve_params.mat",'cal_curve_params');
 save(pathExportAll + "fittingRhoResultsAll.mat",'fittingRhoResultsAll')
 
-% %% Linear fitting with Q as a param too
-% 
-% calCurveQmodel = @(p,x)(p(1)*x(:,1)+p(2)*x(:,2).^p(3));
-% tbl_Q_cal = calData(:,{'dens_PR_T_MFM','Q_cal_mlmin','dens_MFM'});
-% tbl_Q_MFM = calData(:,{'dens_PR_T_MFM','Q_MFM','dens_MFM'});
-% tbl_Q_cal(calData.P_cal_psig<1000,:)=[];
-% tbl_Q_MFM(calData.Q_MFM <0.001,:)= [];
-% tbl_Q_MFM(calData.P_cal_psig<1000),:) =[];
-% pinit = [1,1,1];
-% cal_curve_params_Qcorr_nl_Q_cal = fitnlm(tbl_Q_cal,calCurveQmodel,pinit);
-% cal_curve_params_Qcorr_nl_Q_MFM = fitnlm(tbl_Q_MFM,calCurveQmodel,pinit);
-% 
-% cal_curve_params_Qcorr = fitlm([calData.dens_PR_T_MFM,calData.Q_cal_mlmin],calData.dens_MFM);
-
 %% Density cal plot all densitites (all fluids, temperatures and pressures)
 figure
 set(gcf, 'Position', [100, 100, 700, 550])
@@ -859,32 +841,3 @@ xlabel('\rho_{CO_2} (T_{MFM}, 10.4 MPa)')
 grid on
 saveas(gcf,pathExportAll + "Cal-curve-zoom-in",'png')
 
-
-% %% Cal curve plot model
-% 
-% % linear
-% figure
-% for k = 1:length(Q_unique)
-%     plot(0:1:800,feval(cal_curve_params_Qeach{k},0:1:800),"DisplayName",Q_unique_field(k),'LineWidth',2)
-%     hold on
-%     grid on
-%     legend()
-% end
-% plot(0:1:800,feval(cal_curve_params_Qall,0:1:800),"DisplayName","QAll",'LineWidth',2,'Color','k')
-% % linear Q and rho
-% % plot(0:1:800,feval(cal_curve_params_Qcorr,[(0:1:800)',5*ones(801,1)]),"DisplayName","Q5-Qcorr-l",'LineWidth',2,'Color','red')
-% % plot(0:1:800,feval(cal_curve_params_Qcorr_nl_Q_cal,[(0:1:800)',5*ones(801,1)]),"DisplayName","Q5-Qcorr-nl",'LineWidth',2,'Color','green')
-% % plot(0:1:800,feval(cal_curve_params_Qcorr_nl_Q_MFM,[(0:1:800)',5*ones(801,1)]),"DisplayName","Q5-Qcorr-nl-Q_MFM",'LineWidth',2,'Color',[0.5 0.5 0.5])
-% % scatter(calData.dens_PR_T_MFM(calData.Q_MFM >0.001),calData.dens_MFM(calData.Q_MFM >0.001),20,calData.Q_MFM(calData.Q_MFM >0.001),'filled')
-% scatter(caldata_aux.dens_PR_T_MFM,caldata_aux.dens_MFM,20,caldata_aux.Q_MFM,'filled')
-% c=colorbar;
-% c.Title.String = 'QMFM [ml/min]';
-% c.Title.Rotation = 90;
-% c.Title.Units = 'normalized';
-% c.Title.Position = [3.55, 0.5, 0];
-% c.Title.FontSize = 14;
-% cTicks = c.Ticks;
-% cTicks = cTicks(mod(cTicks,1) == 0);
-% c.Ticks = cTicks;
-% hold on
-% 
