@@ -158,12 +158,7 @@ for i = 1:length(filedataExp.Key)
 
 end
 
-load(pathImportCal + "calProcData.mat")
-load(pathImportCal + "calResults.mat")
-load(pathImportCal + "calData.mat")
 load(pathImportCal + "fittingRhoResultsAll.mat")
-load(pathImportCal + "cal_curve_params.mat")
-% load(pathImportPR + "PR_results.mat")
 
 %% Extract breakthrough curve data
 
