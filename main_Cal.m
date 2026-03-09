@@ -691,7 +691,8 @@ cal_curve_params_Qeach = {};
 fittingRhoResultsAll = table('Size',[0 4],'VariableTypes', ...
     {'string','double','double','double'},'VariableNames',{'Q','p1','p2','RMSE'});
 % fitting for each Q
-caldata_aux = calData(calData.P_cal_psig>1000,:);
+caldata_aux2 = calData(calData.Fluid_cal=="CO2",:);
+caldata_aux = caldata_aux2(caldata_aux2.P_cal_psig > 400,:);
 for k = 1:length(Q_unique)
     cal_curve_params_Qeach_aux = fitlm ...
         (caldata_aux.dens_PR_T_MFM(caldata_aux.Q_cal_mlmin == Q_unique(k)), ...
@@ -702,7 +703,7 @@ for k = 1:length(Q_unique)
         cal_curve_params_Qeach_aux.Coefficients.Estimate(2), ...
         cal_curve_params_Qeach_aux.RMSE};
 end
-cal_curve_params_Qall = fitlm(calData.dens_PR_T_MFM(calData.P_cal_psig>1000),calData.dens_MFM(calData.P_cal_psig>1000));
+cal_curve_params_Qall = fitlm(caldata_aux.dens_PR_T_MFM,caldata_aux.dens_MFM);
 cal_curve_params = {cal_curve_params_Qeach;cal_curve_params_Qall};
 fittingRhoResultsAll(length(Q_unique)+1,:) = {"QAll", ...
         cal_curve_params_Qall.Coefficients.Estimate(1), ...
@@ -734,11 +735,11 @@ for k = 1:length(Q_unique)
 end
 plot(0:1:800,feval(cal_curve_params_Qall,0:1:800),"DisplayName","QAll",'LineWidth',2,'Color','k')
 % linear Q and rho
-plot(0:1:800,feval(cal_curve_params_Qcorr,[(0:1:800)',5*ones(801,1)]),"DisplayName","Q1-Qcorr-l",'LineWidth',2,'Color','red')
-plot(0:1:800,feval(cal_curve_params_Qcorr_nl_Q_cal,[(0:1:800)',5*ones(801,1)]),"DisplayName","Q1-Qcorr-nl",'LineWidth',2,'Color','green')
-plot(0:1:800,feval(cal_curve_params_Qcorr_nl_Q_MFM,[(0:1:800)',5*ones(801,1)]),"DisplayName","Q1-Qcorr-nl-Q_MFM",'LineWidth',2,'Color',[0.5 0.5 0.5])
+% plot(0:1:800,feval(cal_curve_params_Qcorr,[(0:1:800)',5*ones(801,1)]),"DisplayName","Q5-Qcorr-l",'LineWidth',2,'Color','red')
+% plot(0:1:800,feval(cal_curve_params_Qcorr_nl_Q_cal,[(0:1:800)',5*ones(801,1)]),"DisplayName","Q5-Qcorr-nl",'LineWidth',2,'Color','green')
+% plot(0:1:800,feval(cal_curve_params_Qcorr_nl_Q_MFM,[(0:1:800)',5*ones(801,1)]),"DisplayName","Q5-Qcorr-nl-Q_MFM",'LineWidth',2,'Color',[0.5 0.5 0.5])
 % scatter(calData.dens_PR_T_MFM(calData.Q_MFM >0.001),calData.dens_MFM(calData.Q_MFM >0.001),20,calData.Q_MFM(calData.Q_MFM >0.001),'filled')
-scatter(calData.dens_PR_T_MFM((calData.Q_MFM >0.001)|(calData.P_cal_psig>1000)),calData.dens_MFM((calData.Q_MFM >0.001)|(calData.P_cal_psig>1000)),20,calData.Q_MFM((calData.Q_MFM >0.001)|(calData.P_cal_psig>1000)),'filled')
+scatter(caldata_aux.dens_PR_T_MFM,caldata_aux.dens_MFM,20,caldata_aux.Q_MFM,'filled')
 c=colorbar;
 c.Title.String = 'QMFM [ml/min]';
 c.Title.Rotation = 90;
@@ -752,7 +753,13 @@ hold on
 %%
 caldata_aux = calData(calData.P_cal_psig>1000,:);
 figure
-scatter(caldata_aux.Q_MFM((caldata_aux.T_MFM>32)&(caldata_aux.T_MFM<32.2)),caldata_aux.dens_MFM((caldata_aux.T_MFM>32)&(caldata_aux.T_MFM<32.2)),20,caldata_aux.T_MFM((caldata_aux.T_MFM>32)&(caldata_aux.T_MFM<32.2)),'filled')
+scatter(caldata_aux.dens_MFM,caldata_aux.Q_MFM,20,caldata_aux.T_MFM,'filled')
+grid on
+
+%%
+caldata_aux = calData(calData.P_cal_psig>1000,:);
+figure
+scatter3(caldata_aux.dens_MFM,caldata_aux.Q_MFM,caldata_aux.T_MFM,20,caldata_aux.dens_PR_T_MFM,'filled')
 grid on
 %%
 
