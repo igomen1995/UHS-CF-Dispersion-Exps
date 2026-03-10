@@ -245,6 +245,13 @@ end
 
 % Subplot all in 5 panels
 for i = 1:length(filedataExp.Key)
+    
+    pumps_data_name = filedataExp.path(i) + filedataExp.pumps_data_name(i);
+    trans_data_name = filedataExp.path(i) + filedataExp.trans_data_name(i);
+    MFM_data_name = filedataExp.path(i) + filedataExp.MFM_data_name(i);
+    PGD1_data_name = filedataExp.path(i) + filedataExp.PGD1_data_name(i);
+    PGD2_data_name = filedataExp.path(i) + filedataExp.PGD2_data_name(i);
+
     figure('Position', [100, 100, 600, 900]); % [left, bottom, width, height];
     subplot(5,1,1);
     if isempty(expProcData.(filedataExp.Key(i)).transData) == 0 && ismissing(trans_data_name) == 0

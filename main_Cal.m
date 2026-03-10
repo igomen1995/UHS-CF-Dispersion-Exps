@@ -507,6 +507,11 @@ for i = 1:length(filedataExp.Key)
     xlsx_name = pathExportAll + filedataExp.Key(i) + '_Trim';
     delete(xlsx_name + '.xlsx');
 
+    % names for rest of data types; pumps_data_name & MFM_data name are mandatory
+    trans_data_name = filedataExp.path(i) + filedataExp.trans_data_name(i);
+    PGD1_data_name = filedataExp.path(i) + filedataExp.PGD1_data_name(i);
+    PGD2_data_name = filedataExp.path(i) + filedataExp.PGD2_data_name(i);
+
     % save table for each key but trimmed
     writetable(expTrimData.(filedataExp.Key(i)).pumpsData,xlsx_name  + '.xlsx', 'Sheet', 'pumps_data');
     writetable(expTrimData.(filedataExp.Key(i)).MFMData,xlsx_name  + '.xlsx', 'Sheet', 'MFM_data');
@@ -720,7 +725,80 @@ writetable(fittingRhoResultsAll,pathExportAll + "fittingRhoResultsAll.xlsx");
 save(pathExportAll + "cal_curve_params.mat",'cal_curve_params');
 save(pathExportAll + "fittingRhoResultsAll.mat",'fittingRhoResultsAll')
 
+%% Calibration curve
+
+% Non linear fitting Q all considering punctual rho at T_MFM and high pressures
+rho_MFM = @(p,rho_ref)(p(1) + p(2)*rho_ref + (p(3)-p(2))*max(0,rho_ref-p(4))); % two linear trams
+pinit = [1,1,1,10];
+Q_unique = unique(vertcat(filedataExp.Q_mlmin{:}));
+Q_unique_field = "Q"+ string(Q_unique);
+nl_cal_curve_params_Qeach = {};
+nlfittingRhoResultsAll = table('Size',[0 6],'VariableTypes', ...
+    {'string','double','double','double','double','double'},'VariableNames',{'Q','p1','p2','p3','p4','RMSE'});
+% fitting for each Q
+% take only High Pressure Data
+calData_aux = calData(calData.P_cal_psig > 400,:);
+for k = 1:length(Q_unique)
+    cal_curve_params_Qeach_aux = fitnlm ...
+        (calData_aux.dens_PR_T_MFM(calData_aux.Q_cal_mlmin == Q_unique(k)), ...
+        calData_aux.dens_MFM(calData_aux.Q_cal_mlmin == Q_unique(k)),rho_MFM,pinit);
+    % Add Fitting Qeach to table fittingRhoResultsAll
+    nl_cal_curve_params_Qeach{end+1} = cal_curve_params_Qeach_aux;
+    nlfittingRhoResultsAll(k,:) = {Q_unique_field{k}, ...
+        cal_curve_params_Qeach_aux.Coefficients.Estimate(1), ...
+        cal_curve_params_Qeach_aux.Coefficients.Estimate(2), ...
+        cal_curve_params_Qeach_aux.Coefficients.Estimate(3), ...
+        cal_curve_params_Qeach_aux.Coefficients.Estimate(4), ...
+        cal_curve_params_Qeach_aux.RMSE};
+end
+% Fitting for all Qs
+nl_cal_curve_params_Qall = fitnlm(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,rho_MFM,pinit);
+% Add Fitting QAll to table fittingRhoResultsAll
+nl_cal_curve_params = {nl_cal_curve_params_Qeach;nl_cal_curve_params_Qall};
+nlfittingRhoResultsAll(length(Q_unique)+1,:) = {"QAll", ...
+        nl_cal_curve_params_Qall.Coefficients.Estimate(1), ...
+        nl_cal_curve_params_Qall.Coefficients.Estimate(2), ...
+        nl_cal_curve_params_Qall.Coefficients.Estimate(3), ...
+        nl_cal_curve_params_Qall.Coefficients.Estimate(4), ...
+        nl_cal_curve_params_Qall.RMSE};
+
+% save fittingRhoResultsAll
+writetable(nlfittingRhoResultsAll,pathExportAll + "nlfittingRhoResultsAll.xlsx");
+save(pathExportAll + "nl_cal_curve_params.mat",'nl_cal_curve_params');
+save(pathExportAll + "nlfittingRhoResultsAll.mat",'nlfittingRhoResultsAll')
+
 %% Density cal plot all densitites (all fluids, temperatures and pressures)
+% linear and non linear
+calData_aux = calData(calData.P_cal_psig > 400,:);
+
+figure
+set(gcf, 'Position', [100, 100, 700, 550])
+scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled','DisplayName','data')
+hold on
+plot(0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k','DisplayName','linear fitting') % fitting responds to high pressure only
+plot(0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'red','DisplayName','non linear fitting') % fitting responds to high pressure only
+xlabel('\rho_{ref} [kg/m^{3}]');
+ylabel('\rho_{MFM} [kg/m^{3}]');
+xlim([0 800]);
+ylim([0 800]);
+xticks(0:100:800)
+yticks(0:100:800)
+c=colorbar;
+c.Title.String = 'Temperature [°C]';
+c.Title.Rotation = 90;
+c.Title.Units = 'normalized';
+c.Title.Position = [3.55, 0.5, 0];
+c.Title.FontSize = 14;
+cTicks = c.Ticks;
+cTicks = cTicks(mod(cTicks,1) == 0);
+c.Ticks = cTicks;
+legend();
+grid on
+title("Calibration curve - all cal fluids P and T - linear and non linear")
+saveas(gcf,pathExportAll + "Cal-all-HP400+-nl",'png')
+
+%% Density cal plot all densitites (all fluids, temperatures and pressures)
+% linear
 figure
 set(gcf, 'Position', [100, 100, 700, 550])
 scatter(calData.dens_PR_T_MFM,calData.dens_MFM,20,calData.T_MFM,'filled')
