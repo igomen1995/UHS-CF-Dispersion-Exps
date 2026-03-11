@@ -481,6 +481,3 @@ c.Ticks = cTicks;
 grid on
 title("Validation curve - H2CO2 (~32 °C, 10.4 MPa)")
 saveas(gcf,pathExportAll + "Val-P1500",'png')
-
-%% Plot calibration curve with these two points included
-
