@@ -201,46 +201,45 @@ for i = 1:length(filedataExp.Key)
         rho_MFM(rho_MFM>rho_MFM_0)+auxnLinFit.RMSE);
 end
 
-%% Extract breakthrough curve data
-% Q effect
-
-%rho_corr_lin function
-rho_corr_lin = @(p,y) (y(:,1)-(y(:,2).^(p(3))).*p(1))./p(2);
-
-% rho_corr_nl function second part
-rho_corr_nlin = @(p,y) (y(:,1)-(y(:,2).^(p(5))).*p(1)+(p(3).*p(4)))./(p(2)+p(3));
-
-for i = 1:length(filedataExp.Key)
-    Q = filedataExp.Q(i);
-    % Extrat measured density vs time
-    BTaux = table(expProcData.(filedataExp.Key(i)).MFMData.TimeStamp, ...
-        expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed, ...
-        seconds(expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed), ...
-        expProcData.(filedataExp.Key(i)).MFMData.dens_MFM2, ...
-        expProcData.(filedataExp.Key(i)).MFMData.T_MFM2, ...
-        expProcData.(filedataExp.Key(i)).MFMData.q_MFM2, ...
-        'VariableNames',{'TimeStamp','TimeElapsed', 'SecondsElapsed', 'rho_MFM','T_MFM','q_MFM'});
-    expProcData.(filedataExp.Key(i)).BT = BTaux;
-    % fitting parameters for rho corrected
-    % auxLinFit = fittingRhoResultsAll(fittingRhoResultsAll.Q == "QAll",:);
-    auxnLinQFit = nlQfittingRhoResultsAll(nlQfittingRhoResultsAll.Q == "QAll",:);
-    rho_MFM_0 = rho_corr_lin([auxnLinQFit.p1,auxnLinQFit.p2,auxnLinQFit.p5],[auxnLinQFit.p4,Q]);
-    rho_MFM = expProcData.(filedataExp.Key(i)).BT.rho_MFM;
-    % lower slope
-    expProcData.(filedataExp.Key(i)).BT.rho_corr = rho_corr_lin([auxnLinQFit.p1,auxnLinQFit.p2,auxnLinQFit.p5],[rho_MFM,repmat(Q,length(rho_MFM),1)]);
-    expProcData.(filedataExp.Key(i)).BT.rho_corrMin = rho_corr_lin([auxnLinQFit.p1,auxnLinQFit.p2,auxnLinQFit.p5],[rho_MFM-auxnLinQFit.RMSE,repmat(Q,length(rho_MFM),1)]);
-    expProcData.(filedataExp.Key(i)).BT.rho_corrMax = rho_corr_lin([auxnLinQFit.p1,auxnLinQFit.p2,auxnLinQFit.p5],[rho_MFM+auxnLinQFit.RMSE,repmat(Q,length(rho_MFM),1)]);
-    % higher slope
-    expProcData.(filedataExp.Key(i)).BT.rho_corr(rho_MFM>rho_MFM_0) = ...
-        rho_corr_nlin([auxnLinQFit.p1,auxnLinQFit.p2,auxnLinQFit.p3,auxnLinQFit.p4,auxnLinQFit.p5], ...
-        [rho_MFM(rho_MFM>rho_MFM_0),repmat(Q,length(rho_MFM(rho_MFM>rho_MFM_0)),1)]);
-    expProcData.(filedataExp.Key(i)).BT.rho_corrMin(rho_MFM>rho_MFM_0) = ...
-        rho_corr_nlin([auxnLinQFit.p1,auxnLinQFit.p2,auxnLinQFit.p3,auxnLinQFit.p4,auxnLinQFit.p5], ...
-        [rho_MFM(rho_MFM>rho_MFM_0)-auxnLinQFit.RMSE,repmat(Q,length(rho_MFM(rho_MFM>rho_MFM_0)),1)]);
-    expProcData.(filedataExp.Key(i)).BT.rho_corrMax(rho_MFM>rho_MFM_0) = ...
-        rho_corr_nlin([auxnLinQFit.p1,auxnLinQFit.p2,auxnLinQFit.p3,auxnLinQFit.p4,auxnLinQFit.p5], ...
-        [rho_MFM(rho_MFM>rho_MFM_0)+auxnLinQFit.RMSE, repmat(Q,length(rho_MFM(rho_MFM>rho_MFM_0)),1)]);
-end
+% %% Extract breakthrough curve data
+% 
+% %rho_corr_lin function
+% rho_corr_lin = @(p,y) (y(:,1)-(y(:,2).^(p(3))).*p(1))./p(2);
+% 
+% % rho_corr_nl function second part
+% rho_corr_nlin = @(p,y) (y(:,1)-(y(:,2).^(p(5))).*p(1)+(p(3)-p(2)).*p(4))./p(3);
+% 
+% for i = 1:length(filedataExp.Key)
+%     Q = filedataExp.Q(i);
+%     % Extrat measured density vs time
+%     BTaux = table(expProcData.(filedataExp.Key(i)).MFMData.TimeStamp, ...
+%         expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed, ...
+%         seconds(expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed), ...
+%         expProcData.(filedataExp.Key(i)).MFMData.dens_MFM2, ...
+%         expProcData.(filedataExp.Key(i)).MFMData.T_MFM2, ...
+%         expProcData.(filedataExp.Key(i)).MFMData.q_MFM2, ...
+%         'VariableNames',{'TimeStamp','TimeElapsed', 'SecondsElapsed', 'rho_MFM','T_MFM','q_MFM'});
+%     expProcData.(filedataExp.Key(i)).BT = BTaux;
+%     % fitting parameters for rho corrected
+%     % auxLinFit = fittingRhoResultsAll(fittingRhoResultsAll.Q == "QAll",:);
+%     auxnLinQFit = nlQfittingRhoResultsAll(nlQfittingRhoResultsAll.Q == "QAll",:);
+%     rho_MFM_0 = rho_corr_lin([auxnLinQFit.p1,auxnLinQFit.p2,auxnLinQFit.p5],[auxnLinQFit.p4,Q]);
+%     rho_MFM = expProcData.(filedataExp.Key(i)).BT.rho_MFM;
+%     % lower slope
+%     expProcData.(filedataExp.Key(i)).BT.rho_corr = rho_corr_lin([auxnLinQFit.p1,auxnLinQFit.p2,auxnLinQFit.p5],[rho_MFM,repmat(Q,length(rho_MFM),1)]);
+%     expProcData.(filedataExp.Key(i)).BT.rho_corrMin = rho_corr_lin([auxnLinQFit.p1,auxnLinQFit.p2,auxnLinQFit.p5],[rho_MFM-auxnLinQFit.RMSE,repmat(Q,length(rho_MFM),1)]);
+%     expProcData.(filedataExp.Key(i)).BT.rho_corrMax = rho_corr_lin([auxnLinQFit.p1,auxnLinQFit.p2,auxnLinQFit.p5],[rho_MFM+auxnLinQFit.RMSE,repmat(Q,length(rho_MFM),1)]);
+%     % higher slope
+%     expProcData.(filedataExp.Key(i)).BT.rho_corr(rho_MFM>rho_MFM_0) = ...
+%         rho_corr_nlin([auxnLinQFit.p1,auxnLinQFit.p2,auxnLinQFit.p3,auxnLinQFit.p4,auxnLinQFit.p5], ...
+%         [rho_MFM(rho_MFM>rho_MFM_0),repmat(Q,length(rho_MFM(rho_MFM>rho_MFM_0)),1)]);
+%     expProcData.(filedataExp.Key(i)).BT.rho_corrMin(rho_MFM>rho_MFM_0) = ...
+%         rho_corr_nlin([auxnLinQFit.p1,auxnLinQFit.p2,auxnLinQFit.p3,auxnLinQFit.p4,auxnLinQFit.p5], ...
+%         [rho_MFM(rho_MFM>rho_MFM_0)-auxnLinQFit.RMSE,repmat(Q,length(rho_MFM(rho_MFM>rho_MFM_0)),1)]);
+%     expProcData.(filedataExp.Key(i)).BT.rho_corrMax(rho_MFM>rho_MFM_0) = ...
+%         rho_corr_nlin([auxnLinQFit.p1,auxnLinQFit.p2,auxnLinQFit.p3,auxnLinQFit.p4,auxnLinQFit.p5], ...
+%         [rho_MFM(rho_MFM>rho_MFM_0)+auxnLinQFit.RMSE, repmat(Q,length(rho_MFM(rho_MFM>rho_MFM_0)),1)]);
+% end
 %% Add molar concentration to breakthrough data and error
 
 x1 = 0:0.01:1; % array for binary mixture
