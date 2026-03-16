@@ -319,7 +319,7 @@ load(pathImportCal + "nlfittingRhoResultsAll.mat")
 rho_corr_lin = @(p,rho_MFM) (rho_MFM-p(1))/p(2);
 
 % rho_corr_nl function second part
-rho_corr_nlin = @(p,rho_MFM) (rho_MFM-p(1)+(p(3)-p(2))*p(4))/p(3);
+rho_corr_nlin = @(p,rho_MFM) (rho_MFM-p(1)+p(3)*p(4))/(p(3)+p(2));
 
 % P of interest array % P in all arrays to validate should be the same
 P_unique = unique(vertcat(filedataExp.P_psig{:}));

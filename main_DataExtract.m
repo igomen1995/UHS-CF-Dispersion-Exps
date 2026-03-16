@@ -168,7 +168,7 @@ load(pathImportCal + "nlQfittingRhoResultsAll.mat")
 rho_corr_lin = @(p,y) (y-p(1))/p(2);
 
 % rho_corr_nl function second part
-rho_corr_nlin = @(p,rho_MFM) (rho_MFM-p(1)+(p(3)-p(2))*p(4))/p(3);
+rho_corr_nlin = @(p,rho_MFM) (rho_MFM-p(1)+p(3)*p(4))/(p(3)+p(2));
 
 for i = 1:length(filedataExp.Key)
     % Extrat measured density vs time
@@ -207,7 +207,7 @@ end
 % rho_corr_lin = @(p,y) (y(:,1)-(y(:,2).^(p(3))).*p(1))./p(2);
 % 
 % % rho_corr_nl function second part
-% rho_corr_nlin = @(p,y) (y(:,1)-(y(:,2).^(p(5))).*p(1)+(p(3)-p(2)).*p(4))./p(3);
+% rho_corr_nlin = @(p,y) (y(:,1)-(y(:,2).^(p(5))).*p(1)+p(3).*p(4))./(p(3)+p(2));
 % 
 % for i = 1:length(filedataExp.Key)
 %     Q = filedataExp.Q(i);
