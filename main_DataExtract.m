@@ -158,17 +158,21 @@ for i = 1:length(filedataExp.Key)
 
 end
 
-load(pathImportCal + "calProcData.mat")
-load(pathImportCal + "calResults.mat")
-load(pathImportCal + "calData.mat")
 load(pathImportCal + "fittingRhoResultsAll.mat")
-load(pathImportCal + "cal_curve_params.mat")
-% load(pathImportPR + "PR_results.mat")
+load(pathImportCal + "nlfittingRhoResultsAll.mat")
+load(pathImportCal + "nlQfittingRhoResultsAll.mat")
+
+load(pathImportCal + "cal_curve_params.mat");
+load(pathImportCal + "nl_cal_curve_params.mat");
+load(pathImportCal + "nl_Q_cal_curve_params.mat");
 
 %% Extract breakthrough curve data
 
 %rho_corr_lin function
 rho_corr_lin = @(p,y) (y-p(1))/p(2);
+
+% rho_corr_nl function second part
+rho_corr_nlin = @(p,rho_MFM) (rho_MFM-p(1)+p(3)*p(4))/(p(3)+p(2));
 
 for i = 1:length(filedataExp.Key)
     % Extrat measured density vs time
@@ -181,11 +185,72 @@ for i = 1:length(filedataExp.Key)
         'VariableNames',{'TimeStamp','TimeElapsed', 'SecondsElapsed', 'rho_MFM','T_MFM','q_MFM'});
     expProcData.(filedataExp.Key(i)).BT = BTaux;
     % fitting parameters for rho corrected
-    auxLinFit = fittingRhoResultsAll(fittingRhoResultsAll.Q == "QAll",:);
-    expProcData.(filedataExp.Key(i)).BT.rho_corr = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM);
-    expProcData.(filedataExp.Key(i)).BT.rho_corrMin = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM-auxLinFit.RMSE);
-    expProcData.(filedataExp.Key(i)).BT.rho_corrMax = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],expProcData.(filedataExp.Key(i)).BT.rho_MFM+auxLinFit.RMSE);
+    % auxLinFit = fittingRhoResultsAll(fittingRhoResultsAll.Q == "QAll",:);
+    auxnLinFit = nlfittingRhoResultsAll(nlfittingRhoResultsAll.Q == "QAll",:);
+    rho_MFM_0 = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],auxnLinFit.p4);
+    rho_MFM = expProcData.(filedataExp.Key(i)).BT.rho_MFM;
+    % lower slope
+    expProcData.(filedataExp.Key(i)).BT.rho_corr = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM);
+    expProcData.(filedataExp.Key(i)).BT.rho_corrMin = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM-auxnLinFit.RMSE);
+    expProcData.(filedataExp.Key(i)).BT.rho_corrMax = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM+auxnLinFit.RMSE);
+    % higher slope
+    expProcData.(filedataExp.Key(i)).BT.rho_corr(rho_MFM>rho_MFM_0) = ...
+        rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
+        rho_MFM(rho_MFM>rho_MFM_0));
+    expProcData.(filedataExp.Key(i)).BT.rho_corrMin(rho_MFM>rho_MFM_0) = ...
+        rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
+        rho_MFM(rho_MFM>rho_MFM_0)-auxnLinFit.RMSE);
+    expProcData.(filedataExp.Key(i)).BT.rho_corrMax(rho_MFM>rho_MFM_0) = ...
+        rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
+        rho_MFM(rho_MFM>rho_MFM_0)+auxnLinFit.RMSE);
 end
+
+% %% Extract breakthrough curve data Q efect low density
+% 
+% rho_ref_0 = nlfittingRhoResultsAll.p4(nlfittingRhoResultsAll.Q == "QAll");
+% nl_cal_curve_params_Qall = nl_cal_curve_params{2};
+% rho_MFM_0 = predict(nl_cal_curve_params_Qall,rho_ref_0);
+% 
+% % rho_corr_nl function second part
+% rho_corr_nlin = @(p,rho_MFM) (rho_MFM-p(1))/(p(2)); % p(1) intercept, p(2) slope
+% 
+% % params from fitting for each curve
+% auxnLinFit_LD = nlQfittingRhoResultsAll(nlQfittingRhoResultsAll.Q == "QAll-Lrho",:);
+% auxnLinFit_HD = nlQfittingRhoResultsAll(nlQfittingRhoResultsAll.Q == "QAll-Hrho",:);
+% 
+% % % low dens parameters depend on Q
+% p_low_dens = [rho_MFM_0 - (filedataExp.Q.^auxnLinFit_LD.p5)*auxnLinFit_LD.p2*rho_ref_0,(filedataExp.Q.^auxnLinFit_LD.p5)*auxnLinFit_LD.p2];
+% p_high_dens = [rho_MFM_0 - auxnLinFit_HD.m*rho_ref_0,auxnLinFit_HD.m];
+% 
+% for i = 1:length(filedataExp.Key)
+%     Q = filedataExp.Q(i);
+%     % Extrat measured density vs time
+%     BTaux = table(expProcData.(filedataExp.Key(i)).MFMData.TimeStamp, ...
+%         expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed, ...
+%         seconds(expProcData.(filedataExp.Key(i)).MFMData.TimeElapsed), ...
+%         expProcData.(filedataExp.Key(i)).MFMData.dens_MFM2, ...
+%         expProcData.(filedataExp.Key(i)).MFMData.T_MFM2, ...
+%         expProcData.(filedataExp.Key(i)).MFMData.q_MFM2, ...
+%         'VariableNames',{'TimeStamp','TimeElapsed', 'SecondsElapsed', 'rho_MFM','T_MFM','q_MFM'});
+%     expProcData.(filedataExp.Key(i)).BT = BTaux;
+%     % fitting parameters for rho corrected
+%     rho_MFM = expProcData.(filedataExp.Key(i)).BT.rho_MFM;
+%     % lower slope
+%     expProcData.(filedataExp.Key(i)).BT.rho_corr = rho_corr_nlin([rho_MFM_0 - (Q^auxnLinFit_LD.p5)*auxnLinFit_LD.p2*rho_ref_0,(Q^auxnLinFit_LD.p5)*auxnLinFit_LD.p2],rho_MFM);
+%     expProcData.(filedataExp.Key(i)).BT.rho_corrMin = rho_corr_nlin([rho_MFM_0 - (Q^auxnLinFit_LD.p5)*auxnLinFit_LD.p2*rho_ref_0,(Q^auxnLinFit_LD.p5)*auxnLinFit_LD.p2],rho_MFM-auxnLinFit_LD.RMSE);
+%     expProcData.(filedataExp.Key(i)).BT.rho_corrMax = rho_corr_nlin([rho_MFM_0 - (Q^auxnLinFit_LD.p5)*auxnLinFit_LD.p2*rho_ref_0,(Q^auxnLinFit_LD.p5)*auxnLinFit_LD.p2],rho_MFM+auxnLinFit_LD.RMSE);
+%     % higher slope
+%     expProcData.(filedataExp.Key(i)).BT.rho_corr(rho_MFM>rho_MFM_0) = ...
+%         rho_corr_nlin([rho_MFM_0 - auxnLinFit_HD.m*rho_ref_0,auxnLinFit_HD.m], ...
+%         rho_MFM(rho_MFM>rho_MFM_0));
+%     expProcData.(filedataExp.Key(i)).BT.rho_corrMin(rho_MFM>rho_MFM_0) = ...
+%         rho_corr_nlin([rho_MFM_0 - auxnLinFit_HD.m*rho_ref_0,auxnLinFit_HD.m], ...
+%         rho_MFM(rho_MFM>rho_MFM_0)-auxnLinFit_HD.RMSE);
+%     expProcData.(filedataExp.Key(i)).BT.rho_corrMax(rho_MFM>rho_MFM_0) = ...
+%         rho_corr_nlin([rho_MFM_0 - auxnLinFit_HD.m*rho_ref_0,auxnLinFit_HD.m], ...
+%         rho_MFM(rho_MFM>rho_MFM_0)+auxnLinFit_HD.RMSE);
+% end
+% 
 
 %% Add molar concentration to breakthrough data and error
 
@@ -228,7 +293,7 @@ for i = 1:length(filedataExp.Key)
     % absolute error % 
     expProcData.(filedataExp.Key(i)).BT.dC = ...
         abs(expProcData.(filedataExp.Key(i)).BT.CiMax ...
-        -expProcData.(filedataExp.Key(i)).BT.CiMin);
+        -expProcData.(filedataExp.Key(i)).BT.Ci);
 end
 
 %% Save data
@@ -250,6 +315,13 @@ end
 
 % Subplot all in 5 panels
 for i = 1:length(filedataExp.Key)
+    
+    pumps_data_name = filedataExp.path(i) + filedataExp.pumps_data_name(i);
+    trans_data_name = filedataExp.path(i) + filedataExp.trans_data_name(i);
+    MFM_data_name = filedataExp.path(i) + filedataExp.MFM_data_name(i);
+    PGD1_data_name = filedataExp.path(i) + filedataExp.PGD1_data_name(i);
+    PGD2_data_name = filedataExp.path(i) + filedataExp.PGD2_data_name(i);
+
     figure('Position', [100, 100, 600, 900]); % [left, bottom, width, height];
     subplot(5,1,1);
     if isempty(expProcData.(filedataExp.Key(i)).transData) == 0 && ismissing(trans_data_name) == 0
@@ -352,14 +424,6 @@ for i = 1:length(filedataExp.Key)
     % Densities and concentrations PGD
     figure('Position', [100, 100, 700, 550]);
     tiledlayout(2,2, 'TileSpacing', 'tight', 'Padding','tight');
-    if isempty(expProcData.(filedataExp.Key(i)).PGD2Data) == 0 && ismissing(PGD2_data_name) == 0
-        h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,5,'filled','MarkerFaceColor',[0.7 0.7 0.7],'DisplayName','C_{PGD2}');
-        hold on 
-    end
-    if isempty(expProcData.(filedataExp.Key(i)).PGD1Data) == 0 && ismissing(PGD1_data_name) == 0
-        h2 = scatter(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,5,'filled','MarkerFaceColor',[0.9290 0.6940 0.1250],'DisplayName','C_{PGD1}');
-        hold on 
-    end
     if isempty(expProcData.(filedataExp.Key(i)).MFMData) == 0 && ismissing(MFM_data_name) == 0
         t = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
         C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
@@ -369,9 +433,17 @@ for i = 1:length(filedataExp.Key)
         hold on 
         h3 = scatter(t,C1,5,'filled','MarkerFaceColor','r','DisplayName','C_{MFM} \pm \DeltaC_{MFM}');
     end
+    if isempty(expProcData.(filedataExp.Key(i)).PGD2Data) == 0 && ismissing(PGD2_data_name) == 0
+        h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,5,'filled','MarkerFaceColor',[0.7 0.7 0.7],'DisplayName','C_{PGD2}');
+        hold on 
+    end
+    if isempty(expProcData.(filedataExp.Key(i)).PGD1Data) == 0 && ismissing(PGD1_data_name) == 0
+        h2 = scatter(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,5,'filled','MarkerFaceColor',[0.9290 0.6940 0.1250],'DisplayName','C_{PGD1}');
+        hold on 
+    end
     xlabel('Time elapsed [hh:mm:ss]','FontSize', 14);
     xtickformat('hh:mm:ss')
-    ylabel('C_{1} [mol %]','FontSize', 14);
+    ylabel('C_{H_2} [mol %]','FontSize', 14);
     ylim([0,100]);
     legend([h3,h2,h1], 'Location','southeast');
     title (filedataExp.Key(i), 'Interpreter', 'none','FontSize', 16)
