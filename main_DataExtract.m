@@ -219,8 +219,8 @@ auxnLinFit_LD = nlQfittingRhoResultsAll(nlQfittingRhoResultsAll.Q == "QAll-Lrho"
 auxnLinFit_HD = nlQfittingRhoResultsAll(nlQfittingRhoResultsAll.Q == "QAll-Hrho",:);
 
 % % low dens parameters depend on Q
-% p_low_dens = [rho_MFM_0 - (filedataExp.Q^auxnLinFit_LD.p5)*auxnLinFit_LD.p2*rho_ref_0,(filedataExp.Q^auxnLinFit_LD.p5)*auxnLinFit_LD.p2];
-% p_high_dens = [rho_MFM_0 - auxnLinFit_HD.m*rho_ref_0,auxnLinFit_HD.m];
+p_low_dens = [rho_MFM_0 - (filedataExp.Q.^auxnLinFit_LD.p5)*auxnLinFit_LD.p2*rho_ref_0,(filedataExp.Q.^auxnLinFit_LD.p5)*auxnLinFit_LD.p2];
+p_high_dens = [rho_MFM_0 - auxnLinFit_HD.m*rho_ref_0,auxnLinFit_HD.m];
 
 for i = 1:length(filedataExp.Key)
     Q = filedataExp.Q(i);
@@ -337,15 +337,15 @@ end
 %% Save data
 
 for i = 1:length(filedataExp.Key)
-    delete(pathExportAll + filedataExp.Key(i) + '.xlsx')
+    delete(pathExportAll + filedataExp.Key(i) + '_LD.xlsx')
 
-    writetable(expProcData.(filedataExp.Key(i)).pumpsData,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'pumps_data');
-    writetable(expProcData.(filedataExp.Key(i)).transData,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'trans_data');
-    writetable(expProcData.(filedataExp.Key(i)).MFMData,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'MFM_data');
-    writetable(expProcData.(filedataExp.Key(i)).PGD1Data,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'PGD1_data');
-    writetable(expProcData.(filedataExp.Key(i)).PGD2Data,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'PGD2_data');
-    writetable(expProcData.(filedataExp.Key(i)).exp_params,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'exp_params');
-    writetable(expProcData.(filedataExp.Key(i)).BT,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'BT_curve');
+    writetable(expProcData.(filedataExp.Key(i)).pumpsData,pathExportAll + filedataExp.Key(i) + '_LD.xlsx', 'Sheet', 'pumps_data');
+    writetable(expProcData.(filedataExp.Key(i)).transData,pathExportAll + filedataExp.Key(i) + '_LD.xlsx', 'Sheet', 'trans_data');
+    writetable(expProcData.(filedataExp.Key(i)).MFMData,pathExportAll + filedataExp.Key(i) + '_LD.xlsx', 'Sheet', 'MFM_data');
+    writetable(expProcData.(filedataExp.Key(i)).PGD1Data,pathExportAll + filedataExp.Key(i) + '_LD.xlsx', 'Sheet', 'PGD1_data');
+    writetable(expProcData.(filedataExp.Key(i)).PGD2Data,pathExportAll + filedataExp.Key(i) + '_LD.xlsx', 'Sheet', 'PGD2_data');
+    writetable(expProcData.(filedataExp.Key(i)).exp_params,pathExportAll + filedataExp.Key(i) + '_LD.xlsx', 'Sheet', 'exp_params');
+    writetable(expProcData.(filedataExp.Key(i)).BT,pathExportAll + filedataExp.Key(i) + '_LD.xlsx', 'Sheet', 'BT_curve');
     save(pathExportAll + "expProcData.mat",'expProcData')
 end
 
@@ -486,5 +486,5 @@ for i = 1:length(filedataExp.Key)
     legend([h3,h2,h1], 'Location','southeast');
     title (filedataExp.Key(i), 'Interpreter', 'none','FontSize', 16)
     grid on;
-    % saveas(gcf,pathExportAll + filedataExp.Key(i) + "_dens_conc",'png')
+    saveas(gcf,pathExportAll + filedataExp.Key(i) + "_dens_conc_Q_lowdens",'png')
 end
