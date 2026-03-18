@@ -105,7 +105,7 @@ for i = 1:length(Fluid1_unique)
                         if filedataExp.P(l) == P_unique(k)
                             for m = 1:length(Q_unique)
                                 if filedataExp.Q(l) == Q_unique(m)
-                                    tD = expProcData.(filedataExp.Key(l)).BT.SecondsElapsed*filedataExp.Q(l)/(60*filedataExp.Vtotal(l));
+                                    tD = expProcData.(filedataExp.Key(l)).BT.SecondsElapsed*filedataExp.Q(l)/(60*filedataExp.Vcore(l));
                                     CD = expProcData.(filedataExp.Key(l)).BT.Ci/100;
                                     CDmin = expProcData.(filedataExp.Key(l)).BT.CiMin/100;
                                     CDmax = expProcData.(filedataExp.Key(l)).BT.CiMax/100;
