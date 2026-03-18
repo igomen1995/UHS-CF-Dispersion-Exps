@@ -40,8 +40,8 @@ load(pathImportAll+"expProcData.mat")
 
 Cj = 1;
 Ci = 0;
-% CDj = 1;
-% CDi = 0;
+CDj = 1;
+CDi = 0;
 
 % No need to correct BT curve due to extra volume before core, the
 % fit_dispersion_dt corrects for that extra t
@@ -53,8 +53,8 @@ table_name = pathExportAll + "fittingResults";  % Name used for saving TrimData 
 delete(table_name + '.mat');
 delete(table_name + '.xlsx');
 % 
-% C_function = @(p,t)(Ci + (Cj/2)*erfc(((L-u.*(t-p(2))).*((t).^(1/2)))./(2*t.*p(1))));
-% CD_function = @(pD,tD)(CDi + (CDj/2)*erfc(((1-(tD-pD(2))).*((t).^(1/2)))./(2*t.*p(1))));
+C_function = @(p,t)(Ci + (Cj/2)*erfc((L-u.*(t-p(2)))./(2*(max((t-p(2)),eps).^(1/2)).*p(1))));
+CD_function = @(pD,tD)(CDi + (CDj/2)*erfc((1-(tD-pD(2)))./(2*(max((tD-pD(2)),eps).^(1/2)).*pD(1))));
 
 fitting_results = table();
 for i = 1:length(filedataExp.Key)
@@ -67,6 +67,7 @@ for i = 1:length(filedataExp.Key)
         C1_max_vals = expProcData.(filedataExp.Key(i)).BT.CiMax(expProcData.(filedataExp.Key(i)).BT.Ci<90)/100;
         C1_min_vals = expProcData.(filedataExp.Key(i)).BT.CiMin(expProcData.(filedataExp.Key(i)).BT.Ci<90)/100;
         
+        q = expProcData.(filedataExp.Key(i)).exp_params.Q_mlmin;
         u = expProcData.(filedataExp.Key(i)).exp_params.u_SI;
         L = expProcData.(filedataExp.Key(i)).exp_params.L_SI;
         p_guess = [1,dt_guess];
@@ -85,33 +86,37 @@ for i = 1:length(filedataExp.Key)
         expProcData.(filedataExp.Key(i)).exp_params.Cj_fit = Cj_fit;
         expProcData.(filedataExp.Key(i)).exp_params.Ci_fit = Ci_fit;       
         % Fitting parameters mean
+        Pe = u*L/KL;
+        dtD = u*dt_fit/L;% respect to Vcore
         expProcData.(filedataExp.Key(i)).exp_params.C_fit = C_fit;
         expProcData.(filedataExp.Key(i)).exp_params.KL_SI = KL;
         expProcData.(filedataExp.Key(i)).exp_params.KL_cm2min = KL*60*10^4;
+        expProcData.(filedataExp.Key(i)).exp_params.Pe = Pe;
         expProcData.(filedataExp.Key(i)).exp_params.dt_SI = dt_fit;
         expProcData.(filedataExp.Key(i)).exp_params.dt_min = dt_fit/60;
         expProcData.(filedataExp.Key(i)).exp_params.dtD_SI = dt_fit;
         expProcData.(filedataExp.Key(i)).exp_params.dtD_min = dt_fit/60;
-
+        expProcData.(filedataExp.Key(i)).exp_params.dtD = dtD;
         % Fitting parameters max
+        Pe_max = u*L/KL_max;
+        dtD_max = u*dt_fit_max/L;% respect to Vcore
         expProcData.(filedataExp.Key(i)).exp_params.C_fit_max = C_fit_max;
         expProcData.(filedataExp.Key(i)).exp_params.KL_max_SI = KL_max;
         expProcData.(filedataExp.Key(i)).exp_params.KL_max_cm2min = KL_max*60*10^4;
+        expProcData.(filedataExp.Key(i)).exp_params.Pe_max = Pe_max;
         expProcData.(filedataExp.Key(i)).exp_params.dt_max_SI = dt_fit_max;
         expProcData.(filedataExp.Key(i)).exp_params.dt_max_min = dt_fit_max/60;
+        expProcData.(filedataExp.Key(i)).exp_params.dtD_max = dtD_max;
         % Fitting parameters min
+        Pe_min = u*L/KL_min;
+        dtD_min = u*dt_fit_min/L;% respect to Vcore
         expProcData.(filedataExp.Key(i)).exp_params.C_fit_min = C_fit_min;
         expProcData.(filedataExp.Key(i)).exp_params.KL_min_SI = KL_min;
         expProcData.(filedataExp.Key(i)).exp_params.KL_min_cm2min = KL_min*60*10^4;
+        expProcData.(filedataExp.Key(i)).exp_params.Pe_min = Pe_min;
         expProcData.(filedataExp.Key(i)).exp_params.dt_min_SI = dt_fit_min;
         expProcData.(filedataExp.Key(i)).exp_params.dt_min_min = dt_fit_min/60;
-
-        % Corrected BT with time shift
-        expProcData.(filedataExp.Key(i)).BT.SecondsElapsed_corr = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed - dt_fit;
-        expProcData.(filedataExp.Key(i)).BT_corr = expProcData.(filedataExp.Key(i)).BT(expProcData.(filedataExp.Key(i)).BT.SecondsElapsed_corr>=0,:);
-        SecondsElapsedNew_aux = seconds(expProcData.(filedataExp.Key(i)).BT_corr.SecondsElapsed_corr);
-        SecondsElapsedNew_aux.Format = 'hh:mm:ss.SSS';
-        expProcData.(filedataExp.Key(i)).BT_corr.TimeElapsedNew = SecondsElapsedNew_aux;
+        expProcData.(filedataExp.Key(i)).exp_params.dtD_min = dtD_min;
 
         % Table with fitting results
         % mean
@@ -120,21 +125,27 @@ for i = 1:length(filedataExp.Key)
         p1 = expProcData.(filedataExp.Key(i)).exp_params.C_fit.Coefficients.Estimate(1);
         SE_p1 = expProcData.(filedataExp.Key(i)).exp_params.C_fit.Coefficients.SE(1);
         SE_KL = (((2*p1)^2)*(SE_p1^2))^(1/2);
+        SE_Pe = (((-u*L*((KL)^-2))^2)*(SE_KL^2))^(1/2);
         SE_dt = expProcData.(filedataExp.Key(i)).exp_params.C_fit.Coefficients.SE(2);
+        SE_dtD = (((u/L)^2)*(SE_dt^2))^(1/2);
         % max
         RMSE_max = expProcData.(filedataExp.Key(i)).exp_params.C_fit_max.RMSE;
         R2_max = expProcData.(filedataExp.Key(i)).exp_params.C_fit_max.Rsquared.Adjusted;
         p1_max = expProcData.(filedataExp.Key(i)).exp_params.C_fit_max.Coefficients.Estimate(1);
         SE_p1_max = expProcData.(filedataExp.Key(i)).exp_params.C_fit_max.Coefficients.SE(1);
         SE_KL_max = (((2*p1_max)^2)*(SE_p1_max^2))^(1/2);
+        SE_Pe_max = (((-u*L*((KL_max)^-2))^2)*(SE_KL_max^2))^(1/2);
         SE_dt_max = expProcData.(filedataExp.Key(i)).exp_params.C_fit_max.Coefficients.SE(2);
+        SE_dtD_max = (((u/L)^2)*(SE_dt_max^2))^(1/2);
         %min
         RMSE_min = expProcData.(filedataExp.Key(i)).exp_params.C_fit_min.RMSE;
         R2_min = expProcData.(filedataExp.Key(i)).exp_params.C_fit_min.Rsquared.Adjusted;
         p1_min = expProcData.(filedataExp.Key(i)).exp_params.C_fit_min.Coefficients.Estimate(1);
         SE_p1_min = expProcData.(filedataExp.Key(i)).exp_params.C_fit_min.Coefficients.SE(1);
         SE_KL_min = (((2*p1_max)^2)*(SE_p1_max^2))^(1/2);
+        SE_Pe_min = (((-u*L*((KL_min)^-2))^2)*(SE_KL_min^2))^(1/2);
         SE_dt_min = expProcData.(filedataExp.Key(i)).exp_params.C_fit_min.Coefficients.SE(2);
+        SE_dtD_min = (((u/L)^2)*(SE_dt_min^2))^(1/2);
         % Temperature stats
         T_mean = mean(expProcData.(filedataExp.Key(i)).BT.T_MFM);
         T_std = std(expProcData.(filedataExp.Key(i)).BT.T_MFM);
@@ -145,22 +156,51 @@ for i = 1:length(filedataExp.Key)
             KL, SE_KL, KL*60*10^4,(SE_KL)*60*10^4, ...
             abs(KL-KL_max)*60*10^4, abs(KL-KL_min)*60*10^4, ...
             mean([abs(KL-KL_max),abs(KL-KL_min)])*60*10^4, 100*mean([abs(KL-KL_max),abs(KL-KL_min)])/KL,...
+            Pe, SE_Pe, ...
+            abs(Pe-Pe_max), abs(Pe-Pe_min), mean([abs(Pe-Pe_max), abs(Pe-Pe_min)]), 100*mean([abs(Pe-Pe_max), abs(Pe-Pe_min)])/Pe,...
             dt_fit, SE_dt, dt_fit/60, SE_dt/60,...
+            abs(dt_fit-dt_fit_max), abs(dt_fit-dt_fit_min), ...
+            mean([abs(dt_fit-dt_fit_max), abs(dt_fit-dt_fit_min)]), 100*mean([abs(dt_fit-dt_fit_max), abs(dt_fit-dt_fit_min)])/dt_fit,...
+            dtD, SE_dtD,...
+            abs(dtD-dtD_max), abs(dtD-dtD_min), ...
+            mean([abs(dtD-dtD_max), abs(dtD-dtD_min)]), 100*mean([abs(dtD-dtD_max), abs(dtD-dtD_min)])/dtD,...
             Cj_fit_max, KL_max, SE_KL_max, KL_max*60*10^4,(SE_KL_max)*60*10^4, ...
+            Pe_max, SE_Pe_max, ...
             dt_fit_max, SE_dt_max, dt_fit_max/60, SE_dt_max/60,...
+            dtD_max, SE_dtD_max,...
             Cj_fit_min, KL_min, SE_KL_min, KL_min*60*10^4,(SE_KL_min)*60*10^4, ...
+            Pe_min, SE_Pe_min, ...
             dt_fit_min, SE_dt_min, dt_fit_min/60, SE_dt_min/60,...
+            dtD_min, SE_dtD_min,...
             'VariableNames',{'Key','u_SI','u_cmmin', 'L_SI', 'L_cm', ...
             'u_fit_SI','u_fit_cmmin', 'Cj_fit','Ci_fit','RMSE','R2','T_mean','T_std',...
             'KL_SI', 'SE_KL_SI', 'KL_cm2min','SE_KL_cm2min', ...
             'sd_KL_max_cm2min', 'sd_KL_min_cm2min', ...
             'sd_KL_avg_cm2min', 'error_pc_KL_avg_cm2min'...
+            'Pe', 'SE_Pe', ...
+            'sd_Pe_max', 'sd_Pe_min', ...
+            'sd_Pe_avg', 'error_pc_Pe_avg'...
             'dt_SI', 'SE_dt_SI', 'dt_min', 'SE_dt_min',...
+            'sd_dt_max_SI', 'sd_dt_min_SI', 'sd_dt_avg_SI', 'error_pc_dt_avg_SI',...
+            'dtD', 'SE_dtD', ...
+            'sd_dtD_max', 'sd_dtD_min', ...
+            'sd_dtD_avg', 'error_pc_dtD_avg'...
             'Cj_fit_max','KL_max_SI', 'SE_KL_max_SI', 'KL_max_cm2min','SE_KL_max_cm2min', ...
+            'Pe_max', 'SE_Pe_max', ...
             'dt_max_SI', 'SE_dt_max_SI', 'dt_max_min', 'SE_dt_max_min', ...
+            'dtD_max', 'SE_dtD_max', ...
             'Cj_fit_min','KL_min_SI', 'SE_KL_min_SI', 'KL_min_cm2min','SE_KL_min_cm2min', ...
-            'dt_min_SI', 'SE_dt_min_SI', 'dt_min_min', 'SE_dt_min_min'});
+            'Pe_min', 'SE_Pe_min', ...
+            'dt_min_SI', 'SE_dt_min_SI', 'dt_min_min', 'SE_dt_min_min',...
+            'dtD_min', 'SE_dtD_min'});
         fitting_results = [fitting_results;row_temp];
+
+        % Corrected BT with time shift
+        expProcData.(filedataExp.Key(i)).BT.SecondsElapsed_corr = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed - dt_fit;
+        expProcData.(filedataExp.Key(i)).BT_corr = expProcData.(filedataExp.Key(i)).BT(expProcData.(filedataExp.Key(i)).BT.SecondsElapsed_corr>=0,:);
+        SecondsElapsedNew_aux = seconds(expProcData.(filedataExp.Key(i)).BT_corr.SecondsElapsed_corr);
+        SecondsElapsedNew_aux.Format = 'hh:mm:ss.SSS';
+        expProcData.(filedataExp.Key(i)).BT_corr.TimeElapsedNew = SecondsElapsedNew_aux;
     end
 end
 writetable(fitting_results,table_name + ".xlsx");
