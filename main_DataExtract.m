@@ -41,6 +41,9 @@ filenameExp = 'input/input_exp_H2-CO2-T32-P1500.xlsx';
 filenamePure = 'input/input_PR_pure.xlsx';
 % file containing mixture compoents A12 B12 factor to estimate BIP
 filenameBIP = 'input/input_PR_BIP.xlsx';
+% file diffusion params Marrero to calculate D12 effective diffusion
+% coefficient using Marrero mold
+filenameDiff = 'input/input_diffusion_Marrero.xlsx';
 
 % cal curve results input import
 pathImportCal = 'results/cal_250725_PR/';
@@ -56,6 +59,8 @@ filedataExp = import_inputExp(filenameExp); % import input to a local variable
 filedataPure = import_inputPR_params_pure(filenamePure);
 % import mixture components A12 and B12 factor to estimate BIP (kij)
 filedataBIP = import_inputPR_params_BIP(filenameBIP);
+% import file diffusion params Marrero
+filedataDiff = import_params_diffusion_marrero(filenameDiff);
 
 for i = 1:length(filedataExp.Key)
     pumps_data_name = filedataExp.path(i) + filedataExp.pumps_data_name(i);
@@ -68,7 +73,6 @@ for i = 1:length(filedataExp.Key)
     workingPump = filedataExp.workingPump(i);
     cushionPump = filedataExp.cushionPump(i);
     confPump = filedataExp.confiningPump(i);
-    
     
     if ismissing(pumps_data_name) == 0
         pumps_data = import_pumps_data(pumps_data_name, workingPump, confPump, cushionPump); % import pumps data to local variable
@@ -147,12 +151,23 @@ for i = 1:length(filedataExp.Key)
     v = q./A; % Darcy velocity m/s
     u = v./filedataExp.phi(i); % Interstitial velocity
 
-    exp_params = table(filedataExp.Key(i), filedataExp.Date(i), filedataExp.Type(i), filedataExp.Fluid1(i), ...
-        filedataExp.Fluid2(i), filedataExp.T(i), filedataExp.P(i), filedataExp.Q(i), filedataExp.Run(i), ...
+    % Assumes only one row is output, unique parasm for fluid 1 and 2
+    filedataDiffaux = filedataDiff((filedataDiff.Fluid1 == filedataExp.Fluid1{i} & filedataDiff.Fluid2 == filedataExp.Fluid2{i}),:);
+    
+    %[D12, dD12] = calc_diff_marrero(T_C,P_psig, A, B, C, D, E, group, dev_pc)
+    [D12,dD12] = calc_diff_marrero(filedataExp.T(i), ...
+        filedataExp.P(i), filedataDiffaux.A, filedataDiffaux.B, ...
+        filedataDiffaux.C, filedataDiffaux.D, filedataDiffaux.E, ...
+        filedataDiffaux.group, filedataDiffaux.dev_pc);
+
+    exp_params = table(filedataExp.Key(i), filedataExp.Date(i), filedataExp.Type(i), filedataExp.Fluid1(i), filedataExp.Fluid2(i), ...
+        D12, dD12,...
+        filedataExp.T(i), filedataExp.P(i), filedataExp.Q(i), filedataExp.C1init(i), filedataExp.C1j(i), filedataExp.Run(i), ...
         filedataExp.D(i), filedataExp.L(i), filedataExp.phi(i), filedataExp.K(i), filedataExp.Vcore(i), ...
         filedataExp.setupVersion(i), filedataExp.Vlinesbefore(i), filedataExp.Vlinesafter(i), ... 
         filedataExp.Vtotal(i), A,L,q,v,u, 'VariableNames', {'Key', 'Date', 'Type','Fluid1', 'Fluid2', ...
-        'T_C', 'P_C', 'Q_mlmin', 'Run', 'D_in', 'L_in', 'phi', 'K_mD', 'Vcore_cc', ...
+        'D12_cm2min', 'dD12_cm2min'...
+        'T_C', 'P_psig', 'Q_mlmin', 'C1init_pcmol', 'C1j_pcmol', 'Run', 'D_in', 'L_in', 'phi', 'K_mD', 'Vcore_cc', ...
         'setupVersion', 'Vlinesbefore_cc', 'Vlinesafter_cc', 'Vtotal_cc','A_SI','L_SI','q_SI','v_SI','u_SI'});
     expProcData.(filedataExp.Key(i)).exp_params = exp_params;
 
@@ -276,8 +291,12 @@ for i = 1:length(filedataExp.Key)
             'P_cal_psig','T_PR', 'x_PR','Z_PR_T_PR', 'rho_PR_T_PR'});
         PTXrho_PR_ref = [PTXrho_PR_ref;PTXrho_PR_ref_aux];
     end   
+    % x1 interpolation function based on T and rho_corr
     scatInterp = scatteredInterpolant(PTXrho_PR_ref.T_PR, ...
         PTXrho_PR_ref.rho_PR_T_PR, PTXrho_PR_ref.x_PR, 'linear', 'linear');
+    % Z interpolation function based on T and rho_corr
+    scatInterpZ = scatteredInterpolant(PTXrho_PR_ref.T_PR, ...
+        PTXrho_PR_ref.rho_PR_T_PR, PTXrho_PR_ref.Z_PR_T_PR, 'linear', 'linear');
     % at rho corr value
     expProcData.(filedataExp.Key(i)).BT.Ci = ...
         100*scatInterp(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
@@ -293,7 +312,57 @@ for i = 1:length(filedataExp.Key)
     % absolute error % 
     expProcData.(filedataExp.Key(i)).BT.dC = ...
         abs(expProcData.(filedataExp.Key(i)).BT.CiMax ...
-        -expProcData.(filedataExp.Key(i)).BT.Ci);
+        -expProcData.(filedataExp.Key(i)).BT.Ci)/2;
+
+    % at rho corr value
+    expProcData.(filedataExp.Key(i)).BT.Z = ...
+        scatInterpZ(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
+        expProcData.(filedataExp.Key(i)).BT.rho_corr);
+    % at rho min value
+    expProcData.(filedataExp.Key(i)).BT.ZMax = ...
+        scatInterpZ(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
+        expProcData.(filedataExp.Key(i)).BT.rho_corrMin);
+    % at rho max value
+    expProcData.(filedataExp.Key(i)).BT.ZMin = ...
+        scatInterpZ(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
+        expProcData.(filedataExp.Key(i)).BT.rho_corrMax);
+    % absolute error 
+    expProcData.(filedataExp.Key(i)).BT.dZ = ...
+        abs(expProcData.(filedataExp.Key(i)).BT.ZMax ...
+        -expProcData.(filedataExp.Key(i)).BT.ZMin)/2;
+
+    % dimensionless values 
+    % td = Q t / V
+    expProcData.(filedataExp.Key(i)).BT.tD = ... % in respect to Vcore
+        expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*filedataExp.Q(i)/...
+        (60*filedataExp.Vcore(i));
+
+    expProcData.(filedataExp.Key(i)).BT.tDtotal = ... % in respect to Vtotal
+        expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*filedataExp.Q(i)/...
+        (60*filedataExp.Vtotal(i));
+
+    T_K_real = expProcData.(filedataExp.Key(i)).BT.T_MFM + 275.15;
+    T_K_base = 25 + 275.15;
+    P_MPa_base = (0 + 14.7)*0.00689476;
+
+    % expProcData.(filedataExp.Key(i)).BT.tDZ = ... % in respect to Vcore
+    %     expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*filedataExp.Q(i)./...
+    %     (60*(expProcData.(filedataExp.Key(i)).BT.Z.*(T_K_real/T_K_base)*(P_MPa_base/P_MPa)*filedataExp.Vcore(i)));
+    % 
+    % expProcData.(filedataExp.Key(i)).BT.tDZtotal = ... % in respect to Vcore
+    %     expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*filedataExp.Q(i)./...
+    %     (60*(expProcData.(filedataExp.Key(i)).BT.Z).*(T_K_real/T_K_base)*(P_MPa_base/P_MPa)*filedataExp.Vtotal(i));
+    
+    % Cd = (C - Ciinit) / (Cj - Cinit)
+    expProcData.(filedataExp.Key(i)).BT.CDi = ...
+        (expProcData.(filedataExp.Key(i)).BT.Ci - filedataExp.C1init(i))/(filedataExp.C1j(i)-filedataExp.C1init(i));
+
+    expProcData.(filedataExp.Key(i)).BT.CDiMax = ...
+        (expProcData.(filedataExp.Key(i)).BT.CiMax - filedataExp.C1init(i))/(filedataExp.C1j(i)-filedataExp.C1init(i));
+
+    expProcData.(filedataExp.Key(i)).BT.CDiMin = ...
+        (expProcData.(filedataExp.Key(i)).BT.CiMin - filedataExp.C1init(i))/(filedataExp.C1j(i)-filedataExp.C1init(i));
+
 end
 
 %% Save data
@@ -308,8 +377,8 @@ for i = 1:length(filedataExp.Key)
     writetable(expProcData.(filedataExp.Key(i)).PGD2Data,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'PGD2_data');
     writetable(expProcData.(filedataExp.Key(i)).exp_params,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'exp_params');
     writetable(expProcData.(filedataExp.Key(i)).BT,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'BT_curve');
-    save(pathExportAll + "expProcData.mat",'expProcData')
 end
+save(pathExportAll + "expProcData.mat",'expProcData')
 
 %% Plots for analysis
 

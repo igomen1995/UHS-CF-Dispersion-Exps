@@ -105,10 +105,10 @@ for i = 1:length(Fluid1_unique)
                         if filedataExp.P(l) == P_unique(k)
                             for m = 1:length(Q_unique)
                                 if filedataExp.Q(l) == Q_unique(m)
-                                    tD = expProcData.(filedataExp.Key(l)).BT.SecondsElapsed*filedataExp.Q(l)/(60*filedataExp.Vcore(l));
-                                    CD = expProcData.(filedataExp.Key(l)).BT.Ci/100;
-                                    CDmin = expProcData.(filedataExp.Key(l)).BT.CiMin/100;
-                                    CDmax = expProcData.(filedataExp.Key(l)).BT.CiMax/100;
+                                    tD = expProcData.(filedataExp.Key(l)).BT.tD;
+                                    CD = expProcData.(filedataExp.Key(l)).BT.CDi;
+                                    CDmin = expProcData.(filedataExp.Key(l)).BT.CDiMin;
+                                    CDmax = expProcData.(filedataExp.Key(l)).BT.CDiMax;
                                     errorbar(tD, CD, CD-CDmin, CDmax - CD, 'LineStyle', 'none', 'Color', [0.8 0.8 0.8],'HandleVisibility','Off')
                                     hold on 
                                     scatter(tD,CD,5,'filled','MarkerFaceColor',colors(m,:),'DisplayName',"Q"+filedataExp.Q(l)+": C_{MFM} \pm \DeltaC_{MFM}");
@@ -158,7 +158,7 @@ saveas(gcf,pathImportAll + "all_fluids_T_P_Q",'png')
 figure
 c = parula(length(filedataExp.Key));
 for i = 1:length(filedataExp.Key)
-    scatter(expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*filedataExp.Q(i)/(60*filedataExp.Vtotal(i)),expProcData.(filedataExp.Key(i)).BT.Ci/100,10,c(i,:),'filled',"DisplayName",filedataExp.Key(i))
+    scatter(expProcData.(filedataExp.Key(i)).BT.tD,expProcData.(filedataExp.Key(i)).BT.CDi,10,c(i,:),'filled',"DisplayName",filedataExp.Key(i))
     xlabel('Dimensionless Time [-]');
     xlim([0,2]);
     ylabel('C_{D}[-]');
