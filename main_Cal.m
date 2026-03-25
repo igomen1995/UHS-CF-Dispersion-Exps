@@ -1042,7 +1042,7 @@ c.Title.FontSize = 14;
 cTicks = c.Ticks;
 cTicks = cTicks(mod(cTicks,1) == 0);
 c.Ticks = cTicks;
-title("    Coriolis density calibration curve")
+% title("    Coriolis density calibration curve")
 grid on
 legend({'Measured density','Calibration curve'},'Location','southeast')
 % cal curve formula annotation
