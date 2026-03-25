@@ -9,7 +9,7 @@
 % and 2 portable gas detectors Cosmos (DOD Technologies)
 % 
 % Input:
-% 1. Exp file:
+% 1. Experiment file:
 % - Pumps file (.dat) (mandatory)
 % - Transducer file (.csv)
 % - Mass Flow Meters (.csv) (mandatory)
