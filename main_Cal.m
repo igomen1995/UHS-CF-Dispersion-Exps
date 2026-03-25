@@ -1042,7 +1042,7 @@ c.Title.FontSize = 14;
 cTicks = c.Ticks;
 cTicks = cTicks(mod(cTicks,1) == 0);
 c.Ticks = cTicks;
-title("    Coriolis density calibration curve")
+% title("    Coriolis density calibration curve")
 grid on
 legend({'Measured density','Calibration curve'},'Location','southeast')
 % cal curve formula annotation
@@ -1062,7 +1062,7 @@ hold on
 plot(insetAx,0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 xlim([0,10])
 ylim([9.5,9.5+range(insetAx.XLim)/limScale])
-title({ 'H_2 @ T_{MFM},', ...
+title({ 'H_2 @ T_{MFM}', ...
         'P = 3.5, 6.3, 10.4 MPa' }, ...
       'Interpreter','tex', 'FontSize',7);
 grid on
@@ -1075,7 +1075,7 @@ hold on
 plot(insetAx,0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 xlim([3,19])
 ylim([12.5,12.5+range(insetAx.XLim)/limScale])
-title({ 'He @ T_{MFM},', ...
+title({ 'He @ T_{MFM}', ...
         'P = 3.5, 6.3, 10.4 MPa' }, ...
       'Interpreter','tex', 'FontSize',7);
 grid on
@@ -1088,7 +1088,7 @@ hold on
 plot(insetAx,0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 xlim([75,80])
 ylim([83,83+range(insetAx.XLim)/limScale])
-title({ 'CO_2 @ T_{MFM},', ...
+title({ 'CO_2 @ T_{MFM}', ...
         'P = 3.5 MPa' }, ...
       'Interpreter','tex', 'FontSize',7);
 grid on
@@ -1101,7 +1101,7 @@ hold on
 plot(insetAx,0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 xlim([184,204])
 ylim([182,182+range(insetAx.XLim)/limScale])
-title({ 'CO_2 @ T_{MFM},', ...
+title({ 'CO_2 @ T_{MFM}', ...
         'P = 6.3 MPa' }, ...
       'Interpreter','tex', 'FontSize',7);
 grid on
@@ -1114,13 +1114,13 @@ hold on
 plot(insetAx,0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 xlim([692,716])
 ylim([750,750+range(insetAx.XLim)/limScale])
-title({ 'CO_2 @ T_{MFM},', ...
+title({ 'CO_2 @ T_{MFM}', ...
         'P = 10.4 MPa' }, ...
       'Interpreter','tex', 'FontSize',7);
 grid on
 saveas(gcf,pathExportAll + "Cal-curve-nonlin-zoom-in",'png')
 
-% %% All fluids, highest pressures, Q effect, non linear zoom in
+% %% All fluids, highest pressures, Q effect, non linear zoom in %
 % 
 % % three different fluids H2, He, CO2 for paper! High pressure = 1500 psig, Tref = 32C
 % calData_aux = calData(calData.P_cal_psig > 400,:);
