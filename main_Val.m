@@ -370,6 +370,10 @@ P_unique = unique(vertcat(filedataExp.P_psig{:}));
 P_unique_field = "P"+ string(P_unique);
 
 x1 = 0:0.01:1; % array for binary mixture
+
+% all data for calibration
+Ci_ref_all = [];
+Ci_est_all = [];
 for i = 1:length(filedataExp.Key)
     for j = 1: length(P_unique)
         fluidPair = [filedataExp.Fluid1(i),filedataExp.Fluid2(i)];
@@ -410,9 +414,22 @@ for i = 1:length(filedataExp.Key)
         expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.dC = ...
             abs(expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.CiMax ...
             -expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.CiMin);
+
+        Ci_ref_all = [Ci_ref_all;expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.Ci_ref]; % mol fraction
+        Ci_est_all = [Ci_est_all;expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.Ci]; % mol percent
     end
 end
+Ci_ref_all = Ci_ref_all*100; % convert to mol %
+%% Calibration curve
+Cval_lin_params = fitlm(Ci_ref_all,Ci_est_all);
 
+CvalFitResults = table(Cval_lin_params.Coefficients.Estimate(1),Cval_lin_params.Coefficients.Estimate(2), ...
+    Cval_lin_params.RMSE, Cval_lin_params.Rsquared.Ordinary,'VariableNames',{'n','m','RMSE','R2'}); % mol %
+
+% save cal val curve
+writetable(CvalFitResults,pathExportAll + "CvalFitResults.xlsx");
+save(pathExportAll + "Cval_lin_params.mat",'Cval_lin_params');
+save(pathExportAll + "CvalFitResults.mat",'CvalFitResults')
 %% Save trimmed and processed data
 
 % name to save matrices and spreadsheets
@@ -459,12 +476,15 @@ save(expProcData_name + '.mat','expProcData')
 
 figure
 set(gcf, 'Position', [100, 100, 700, 550])
+errorbar(0:0.1:100,Cval_lin_params.feval(0:0.1:100), repmat(CvalFitResults.RMSE,length(0:0.1:100),1), ...
+    'LineStyle', 'none','Color', [0.88 0.88 0.88],'HandleVisibility','Off')
+hold on
 for i = 1: length(filedataExp.Key)
     scatter(100*expProcData.(filedataExp.Key(i)).P1500.BT.Ci_ref, ...
         expProcData.(filedataExp.Key(i)).P1500.BT.Ci,20,expProcData.(filedataExp.Key(i)).P1500.BT.T_MFM,'filled')
 hold on
 end
-plot(0:1:100,0:1:100,"Color",'k') % fitting responds to high pressure only
+plot(0:1:100,Cval_lin_params.feval(0:1:100),"Color",'k') % fitting responds to high pressure only
 xlabel('C_{H2} _{ref} [mol %]');
 ylabel('C_{H2} _{MFM} [mol %]');
 xlim([0 100]);
