@@ -862,19 +862,20 @@ save(pathExportAll + "nlfittingRhoResultsAll.mat",'nlfittingRhoResultsAll')
 %% Density cal plot all densitites (all fluids, temperatures and pressures)
 % non linear
 calData_aux = calData(calData.P_cal_psig > 400,:);
-
-figure
+figure;
 set(gcf, 'Position', [100, 100, 700, 550])
-scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled','DisplayName','Measured density')
+ax1 = axes;
+scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled')
 hold on
-% plot(0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k','DisplayName','linear fitting') % fitting responds to high pressure only
-plot(0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k','DisplayName','Non linear calibration curve') % fitting responds to high pressure only
-xlabel('\rho_{ref} [kg/m^{3}]');
-ylabel('\rho_{MFM} [kg/m^{3}]');
+plot(0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k','LineWidth',0.8) % fitting responds to high pressure only
+x1 = xlabel('\rho_{ref} [kg/m^{3}]', 'FontSize', 14);
+ylabel('\rho_{MFM} [kg/m^{3}]', 'FontSize', 14);
 xlim([0 800]);
 ylim([0 800]);
 xticks(0:100:800)
 yticks(0:100:800)
+numTicks = 6;
+ax1.FontSize = 14;
 c=colorbar;
 c.Title.String = 'Temperature [°C]';
 c.Title.Rotation = 90;
@@ -884,9 +885,17 @@ c.Title.FontSize = 14;
 cTicks = c.Ticks;
 cTicks = cTicks(mod(cTicks,1) == 0);
 c.Ticks = cTicks;
-legend('Location','southeast');
 grid on
-title("Calibration curve - all cal fluids P and T - linear and non linear")
+legend({'Measured density','Calibration curve'},'Location','southeast')
+% cal curve formula annotation
+coeffs = nlfittingRhoResultsAll(nlfittingRhoResultsAll.Q == 'QAll',:);
+annotText = sprintf(['$\\rho_{MFM} = \\left\\{ \\begin{array}{ll}',...
+    '%.2f + %.3f\\rho_{Ref}, & \\rho_{Ref} \\le %.2f \\\\',...
+    '%.2f + %.3f\\rho_{Ref}, & \\rho_{Ref} > %.2f',...
+    '\\end{array} \\right.$'], coeffs.p1, coeffs.p2, coeffs.p4, coeffs.n2, coeffs.p3, coeffs.p4);
+annotation('textbox', [0.34, 0.25, 0.3, 0.1], 'String', annotText, ...
+    'Interpreter', 'latex', 'FontSize', 11, 'EdgeColor', 'none');
+% title("Calibration curve - all cal fluids P and T - linear and non linear")
 saveas(gcf,pathExportAll + "Cal-all-HP400+-nl",'png')
 
 %% Density cal plot all densitites (all fluids, temperatures and pressures)
