@@ -480,13 +480,13 @@ errorbar(0:0.1:100,Cval_lin_params.feval(0:0.1:100), repmat(CvalFitResults.RMSE,
     'LineStyle', 'none','Color', [0.88 0.88 0.88],'HandleVisibility','Off')
 hold on
 for i = 1: length(filedataExp.Key)
-    scatter(100*expProcData.(filedataExp.Key(i)).P1500.BT.Ci_ref, ...
-        expProcData.(filedataExp.Key(i)).P1500.BT.Ci,20,expProcData.(filedataExp.Key(i)).P1500.BT.T_MFM,'filled')
+    h1 = scatter(100*expProcData.(filedataExp.Key(i)).P1500.BT.Ci_ref, ...
+        expProcData.(filedataExp.Key(i)).P1500.BT.Ci,20,expProcData.(filedataExp.Key(i)).P1500.BT.T_MFM,'filled');
 hold on
 end
-plot(0:1:100,Cval_lin_params.feval(0:1:100),"Color",'k') % fitting responds to high pressure only
-xlabel('C_{H2} _{ref} [mol %]');
-ylabel('C_{H2} _{MFM} [mol %]');
+h2 = plot(0:1:100,Cval_lin_params.feval(0:1:100),"Color",'k'); % fitting responds to high pressure only
+xlabel('C_{H_2}_{ ref} [mol %]');
+ylabel('C_{H_2}_{ MFM} [mol %]');
 xlim([0 100]);
 ylim([0 100]);
 c=colorbar;
@@ -499,5 +499,6 @@ cTicks = c.Ticks;
 cTicks = cTicks(mod(cTicks,1) == 0);
 c.Ticks = cTicks;
 grid on
-title("Validation curve - H2CO2 (~32 °C, 10.4 MPa)")
+legend([h1,h2],{'C_{H_2}_{ MFM}','C_{H_2}_{ MFM_{ fit}} \pm \DeltaC_{H_2}_{ MFM_{ fit}}'},'Location','southeast')
+% title("Validation curve - H2CO2 (~32 °C, 10.4 MPa)")
 saveas(gcf,pathExportAll + "Val-P1500",'png')
