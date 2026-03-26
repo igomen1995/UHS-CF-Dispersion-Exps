@@ -689,41 +689,41 @@ end
 
 %% Calibration curve
 
-% Linear fitting Q all considering punctual rho at T_MFM and high pressures
-
-Q_unique = unique(vertcat(filedataExp.Q_mlmin{:}));
-Q_unique_field = "Q"+ string(Q_unique);
-cal_curve_params = {};
-cal_curve_params_Qeach = {};
-fittingRhoResultsAll = table('Size',[0 4],'VariableTypes', ...
-    {'string','double','double','double'},'VariableNames',{'Q','p1','p2','RMSE'});
-% fitting for each Q
-% take only High Pressure Data
-calData_aux = calData(calData.P_cal_psig > 1000,:);
-for k = 1:length(Q_unique)
-    cal_curve_params_Qeach_aux = fitlm ...
-        (calData_aux.dens_PR_T_MFM(calData_aux.Q_cal_mlmin == Q_unique(k)), ...
-        calData_aux.dens_MFM(calData_aux.Q_cal_mlmin == Q_unique(k)));
-    % Add Fitting Qeach to table fittingRhoResultsAll
-    cal_curve_params_Qeach{end+1} = cal_curve_params_Qeach_aux;
-    fittingRhoResultsAll(k,:) = {Q_unique_field{k}, ...
-        cal_curve_params_Qeach_aux.Coefficients.Estimate(1), ...
-        cal_curve_params_Qeach_aux.Coefficients.Estimate(2), ...
-        cal_curve_params_Qeach_aux.RMSE};
-end
-% Fitting for all Qs
-cal_curve_params_Qall = fitlm(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM);
-% Add Fitting QAll to table fittingRhoResultsAll
-cal_curve_params = {cal_curve_params_Qeach;cal_curve_params_Qall};
-fittingRhoResultsAll(length(Q_unique)+1,:) = {"QAll", ...
-        cal_curve_params_Qall.Coefficients.Estimate(1), ...
-        cal_curve_params_Qall.Coefficients.Estimate(2), ...
-        cal_curve_params_Qall.RMSE};
-
-% save fittingRhoResultsAll
-writetable(fittingRhoResultsAll,pathExportAll + "fittingRhoResultsAll.xlsx");
-save(pathExportAll + "cal_curve_params.mat",'cal_curve_params');
-save(pathExportAll + "fittingRhoResultsAll.mat",'fittingRhoResultsAll')
+% % Linear fitting Q all considering punctual rho at T_MFM and high pressures
+% 
+% Q_unique = unique(vertcat(filedataExp.Q_mlmin{:}));
+% Q_unique_field = "Q"+ string(Q_unique);
+% cal_curve_params = {};
+% cal_curve_params_Qeach = {};
+% fittingRhoResultsAll = table('Size',[0 4],'VariableTypes', ...
+%     {'string','double','double','double'},'VariableNames',{'Q','p1','p2','RMSE'});
+% % fitting for each Q
+% % take only High Pressure Data
+% calData_aux = calData(calData.P_cal_psig > 1000,:);
+% for k = 1:length(Q_unique)
+%     cal_curve_params_Qeach_aux = fitlm ...
+%         (calData_aux.dens_PR_T_MFM(calData_aux.Q_cal_mlmin == Q_unique(k)), ...
+%         calData_aux.dens_MFM(calData_aux.Q_cal_mlmin == Q_unique(k)));
+%     % Add Fitting Qeach to table fittingRhoResultsAll
+%     cal_curve_params_Qeach{end+1} = cal_curve_params_Qeach_aux;
+%     fittingRhoResultsAll(k,:) = {Q_unique_field{k}, ...
+%         cal_curve_params_Qeach_aux.Coefficients.Estimate(1), ...
+%         cal_curve_params_Qeach_aux.Coefficients.Estimate(2), ...
+%         cal_curve_params_Qeach_aux.RMSE};
+% end
+% % Fitting for all Qs
+% cal_curve_params_Qall = fitlm(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM);
+% % Add Fitting QAll to table fittingRhoResultsAll
+% cal_curve_params = {cal_curve_params_Qeach;cal_curve_params_Qall};
+% fittingRhoResultsAll(length(Q_unique)+1,:) = {"QAll", ...
+%         cal_curve_params_Qall.Coefficients.Estimate(1), ...
+%         cal_curve_params_Qall.Coefficients.Estimate(2), ...
+%         cal_curve_params_Qall.RMSE};
+% 
+% % save fittingRhoResultsAll
+% writetable(fittingRhoResultsAll,pathExportAll + "fittingRhoResultsAll.xlsx");
+% save(pathExportAll + "cal_curve_params.mat",'cal_curve_params');
+% save(pathExportAll + "fittingRhoResultsAll.mat",'fittingRhoResultsAll')
 
 %% Calibration curve
 
@@ -733,8 +733,10 @@ pinit = [1,1,1,10];
 Q_unique = unique(vertcat(filedataExp.Q_mlmin{:}));
 Q_unique_field = "Q"+ string(Q_unique);
 nl_cal_curve_params_Qeach = {};
-nlfittingRhoResultsAll = table('Size',[0 8],'VariableTypes', ...
-    {'string','double','double','double','double','double','double','double'},'VariableNames',{'Q','p1','p2','p3','p4','m','n2','RMSE'});
+nlfittingRhoResultsAll = table('Size',[0 11],'VariableTypes', ...
+    {'string','double','double','double','double','double','double','double','double','double','double'}, ...
+    'VariableNames',{'Q','p1','p2','p3','p4','m','n2','RMSE','rho_MFM_0','drho_corr_low','drho_corr_high'});
+
 % fitting for each Q
 % take only High Pressure Data
 calData_aux = calData(calData.P_cal_psig > 400,:);
@@ -751,7 +753,9 @@ for k = 1:length(Q_unique)
         cal_curve_params_Qeach_aux.Coefficients.Estimate(4), ...
         cal_curve_params_Qeach_aux.Coefficients.Estimate(3) + cal_curve_params_Qeach_aux.Coefficients.Estimate(2), ...
         -1*(cal_curve_params_Qeach_aux.Coefficients.Estimate(3))* cal_curve_params_Qeach_aux.Coefficients.Estimate(4)+cal_curve_params_Qeach_aux.Coefficients.Estimate(1),...
-        cal_curve_params_Qeach_aux.RMSE};
+        cal_curve_params_Qeach_aux.RMSE, ...
+        cal_curve_params_Qeach_aux.feval(cal_curve_params_Qeach_aux.Coefficients.Estimate(4)), ...
+        ((1/(cal_curve_params_Qeach_aux.Coefficients.Estimate(2)))*(cal_curve_params_Qeach_aux.RMSE^2))^(1/2), ((1/(cal_curve_params_Qeach_aux.Coefficients.Estimate(2)+cal_curve_params_Qeach_aux.Coefficients.Estimate(3)))*(cal_curve_params_Qeach_aux.RMSE^2))^(1/2)};
 end
 % Fitting for all Qs
 nl_cal_curve_params_Qall = fitnlm(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,rho_MFM,pinit);
@@ -764,7 +768,9 @@ nlfittingRhoResultsAll(length(Q_unique)+1,:) = {"QAll", ...
         nl_cal_curve_params_Qall.Coefficients.Estimate(4), ...
         nl_cal_curve_params_Qall.Coefficients.Estimate(3) + nl_cal_curve_params_Qall.Coefficients.Estimate(2), ...
         -1*(nl_cal_curve_params_Qall.Coefficients.Estimate(3))* nl_cal_curve_params_Qall.Coefficients.Estimate(4)+nl_cal_curve_params_Qall.Coefficients.Estimate(1),...
-        nl_cal_curve_params_Qall.RMSE};
+        nl_cal_curve_params_Qall.RMSE, ...
+        nl_cal_curve_params_Qall.feval(nl_cal_curve_params_Qall.Coefficients.Estimate(4)), ...
+        ((1/(nl_cal_curve_params_Qall.Coefficients.Estimate(2)))*(nl_cal_curve_params_Qall.RMSE^2))^(1/2), ((1/(nl_cal_curve_params_Qall.Coefficients.Estimate(2)+nl_cal_curve_params_Qall.Coefficients.Estimate(3)))*(nl_cal_curve_params_Qall.RMSE^2))^(1/2)};
 
 % save no linear fittingRhoResultsAll
 writetable(nlfittingRhoResultsAll,pathExportAll + "nlfittingRhoResultsAll.xlsx");
@@ -898,44 +904,15 @@ annotation('textbox', [0.34, 0.25, 0.3, 0.1], 'String', annotText, ...
 % title("Calibration curve - all cal fluids P and T - linear and non linear")
 saveas(gcf,pathExportAll + "Cal-all-HP400+-nl",'png')
 
-%% Density cal plot all densitites (all fluids, temperatures and pressures)
-% linear
-calData_aux = calData(calData.P_cal_psig > 400,:);
-
-figure
-set(gcf, 'Position', [100, 100, 700, 550])
-scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled','DisplayName','Measured density')
-hold on
-plot(0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k','DisplayName','Linear calibration curve') % fitting responds to high pressure only
-xlabel('\rho_{ref} [kg/m^{3}]');
-ylabel('\rho_{MFM} [kg/m^{3}]');
-xlim([0 800]);
-ylim([0 800]);
-xticks(0:100:800)
-yticks(0:100:800)
-c=colorbar;
-c.Title.String = 'Temperature [°C]';
-c.Title.Rotation = 90;
-c.Title.Units = 'normalized';
-c.Title.Position = [3.55, 0.5, 0];
-c.Title.FontSize = 14;
-cTicks = c.Ticks;
-cTicks = cTicks(mod(cTicks,1) == 0);
-c.Ticks = cTicks;
-legend('Location','southeast');
-grid on
-title("Calibration curve - all cal fluids P and T")
-saveas(gcf,pathExportAll + "Cal-all",'png')
-
-% %% All fluids, only high pressure - cal curves
-% % take only High Pressure Data
-% calData_aux = calData(calData.P_cal_psig > 1000,:);
+% %% Density cal plot all densitites (all fluids, temperatures and pressures)
+% % linear
+% calData_aux = calData(calData.P_cal_psig > 400,:);
 % 
 % figure
 % set(gcf, 'Position', [100, 100, 700, 550])
-% scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled')
+% scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled','DisplayName','Measured density')
 % hold on
-% plot(0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k') % fitting responds to high pressure only
+% plot(0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k','DisplayName','Linear calibration curve') % fitting responds to high pressure only
 % xlabel('\rho_{ref} [kg/m^{3}]');
 % ylabel('\rho_{MFM} [kg/m^{3}]');
 % xlim([0 800]);
@@ -951,77 +928,106 @@ saveas(gcf,pathExportAll + "Cal-all",'png')
 % cTicks = c.Ticks;
 % cTicks = cTicks(mod(cTicks,1) == 0);
 % c.Ticks = cTicks;
+% legend('Location','southeast');
 % grid on
-% title("Calibration curve - all cal fluids and T at HP")
-% saveas(gcf,pathExportAll + "Cal-all_HP",'png')
+% title("Calibration curve - all cal fluids P and T")
+% saveas(gcf,pathExportAll + "Cal-all",'png')
+% 
+% % %% All fluids, only high pressure - cal curves
+% % % take only High Pressure Data
+% % calData_aux = calData(calData.P_cal_psig > 1000,:);
+% % 
+% % figure
+% % set(gcf, 'Position', [100, 100, 700, 550])
+% % scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled')
+% % hold on
+% % plot(0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k') % fitting responds to high pressure only
+% % xlabel('\rho_{ref} [kg/m^{3}]');
+% % ylabel('\rho_{MFM} [kg/m^{3}]');
+% % xlim([0 800]);
+% % ylim([0 800]);
+% % xticks(0:100:800)
+% % yticks(0:100:800)
+% % c=colorbar;
+% % c.Title.String = 'Temperature [°C]';
+% % c.Title.Rotation = 90;
+% % c.Title.Units = 'normalized';
+% % c.Title.Position = [3.55, 0.5, 0];
+% % c.Title.FontSize = 14;
+% % cTicks = c.Ticks;
+% % cTicks = cTicks(mod(cTicks,1) == 0);
+% % c.Ticks = cTicks;
+% % grid on
+% % title("Calibration curve - all cal fluids and T at HP")
+% % saveas(gcf,pathExportAll + "Cal-all_HP",'png')
 
-%% All fluids, only high pressure, cal curves, zoom in
-
-% three different fluids H2, He, CO2 for paper! High pressure = 1500 psig, Tref = 32C
-calData_aux = calData(calData.P_cal_psig > 1000,:);
-
-figure;
-set(gcf, 'Position', [100, 100, 700, 550])
-ax1 = axes;
-scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled')
-hold on
-plot(0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k') % fitting responds to high pressure only
-x1 = xlabel('\rho_{ref} [kg/m^{3}]', 'FontSize', 14);
-ylabel('\rho_{MFM} [kg/m^{3}]', 'FontSize', 14);
-xlim([0 800]);
-ylim([0 800]);
-xticks(0:100:800)
-yticks(0:100:800)
-numTicks = 6;
-ax1.FontSize = 14;
-c=colorbar;
-c.Title.String = 'Temperature [°C]';
-c.Title.Rotation = 90;
-c.Title.Units = 'normalized';
-c.Title.Position = [3.55, 0.5, 0];
-c.Title.FontSize = 14;
-cTicks = c.Ticks;
-cTicks = cTicks(mod(cTicks,1) == 0);
-c.Ticks = cTicks;
-title("    Coriolis density calibration curve")
-grid on
-legend({'Measured density','Calibration curve'},'Location','southeast')
-% cal curve formula annotation
-coeffs = cal_curve_params_Qall.Coefficients.Estimate;
-annotText = sprintf('\\rho_{MFM} = %.2f \\cdot \\rho_{Ref} + %.2f', coeffs(2), coeffs(1));
-annotation('textbox', [0.2, 0.12, 0.3, 0.1], 'String', annotText, ...
-    'Interpreter', 'tex', 'FontSize', 11, 'EdgeColor', 'none');
-% H2
-insetAx = axes('Position', [0.19 0.72 0.1 0.15]);  % [x y width height]
-box(insetAx, 'on');  % Add border to inset
-scatter(insetAx,calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,15,calData_aux.T_MFM,'filled')
-hold on
-plot(insetAx,0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k')
-xlim([4,12])
-ylim([17,27])
-xlabel('\rho_{H_2} (T_{MFM}, 10.4 MPa)')
-grid on
-% He
-insetAx = axes('Position', [0.37 0.72 0.1 0.15]);  % [x y width height]
-box(insetAx, 'on');  % Add border to inset
-scatter(insetAx,calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,15,calData_aux.T_MFM,'filled')
-hold on
-plot(insetAx,0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k')
-xlim([12,20])
-ylim([24,34])
-xlabel('\rho_{He} (T_{MFM}, 10.4 MPa)')
-grid on
-% CO2
-insetAx = axes('Position', [0.19 0.47 0.1 0.15]);  % [x y width height]
-box(insetAx, 'on');  % Add border to inset
-scatter(insetAx,calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,15,calData_aux.T_MFM,'filled')
-hold on
-plot(insetAx,0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k')
-xlim([692,716])
-ylim([754,783])
-xlabel('\rho_{CO_2} (T_{MFM}, 10.4 MPa)')
-grid on
-saveas(gcf,pathExportAll + "Cal-curve-zoom-in",'png')
+% %% All fluids, only high pressure, cal curves, zoom in
+% 
+% % three different fluids H2, He, CO2 for paper! High pressure = 1500 psig, Tref = 32C
+% calData_aux = calData(calData.P_cal_psig > 1000,:);
+% 
+% figure;
+% set(gcf, 'Position', [100, 100, 700, 550])
+% ax1 = axes;
+% scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled')
+% hold on
+% plot(0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k') % fitting responds to high pressure only
+% x1 = xlabel('\rho_{ref} [kg/m^{3}]', 'FontSize', 14);
+% ylabel('\rho_{MFM} [kg/m^{3}]', 'FontSize', 14);
+% xlim([0 800]);
+% ylim([0 800]);
+% xticks(0:100:800)
+% yticks(0:100:800)
+% numTicks = 6;
+% ax1.FontSize = 14;
+% c=colorbar;
+% c.Title.String = 'Temperature [°C]';
+% c.Title.Rotation = 90;
+% c.Title.Units = 'normalized';
+% c.Title.Position = [3.55, 0.5, 0];
+% c.Title.FontSize = 14;
+% cTicks = c.Ticks;
+% cTicks = cTicks(mod(cTicks,1) == 0);
+% c.Ticks = cTicks;
+% title("    Coriolis density calibration curve")
+% grid on
+% legend({'Measured density','Calibration curve'},'Location','southeast')
+% % cal curve formula annotation
+% coeffs = cal_curve_params_Qall.Coefficients.Estimate;
+% annotText = sprintf('\\rho_{MFM} = %.2f \\cdot \\rho_{Ref} + %.2f', coeffs(2), coeffs(1));
+% annotation('textbox', [0.2, 0.12, 0.3, 0.1], 'String', annotText, ...
+%     'Interpreter', 'tex', 'FontSize', 11, 'EdgeColor', 'none');
+% % H2
+% insetAx = axes('Position', [0.19 0.72 0.1 0.15]);  % [x y width height]
+% box(insetAx, 'on');  % Add border to inset
+% scatter(insetAx,calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,15,calData_aux.T_MFM,'filled')
+% hold on
+% plot(insetAx,0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k')
+% xlim([4,12])
+% ylim([17,27])
+% xlabel('\rho_{H_2} (T_{MFM}, 10.4 MPa)')
+% grid on
+% % He
+% insetAx = axes('Position', [0.37 0.72 0.1 0.15]);  % [x y width height]
+% box(insetAx, 'on');  % Add border to inset
+% scatter(insetAx,calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,15,calData_aux.T_MFM,'filled')
+% hold on
+% plot(insetAx,0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k')
+% xlim([12,20])
+% ylim([24,34])
+% xlabel('\rho_{He} (T_{MFM}, 10.4 MPa)')
+% grid on
+% % CO2
+% insetAx = axes('Position', [0.19 0.47 0.1 0.15]);  % [x y width height]
+% box(insetAx, 'on');  % Add border to inset
+% scatter(insetAx,calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,15,calData_aux.T_MFM,'filled')
+% hold on
+% plot(insetAx,0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k')
+% xlim([692,716])
+% ylim([754,783])
+% xlabel('\rho_{CO_2} (T_{MFM}, 10.4 MPa)')
+% grid on
+% saveas(gcf,pathExportAll + "Cal-curve-zoom-in",'png')
 
 %% All fluids, highest pressures, non linear zoom in
 
