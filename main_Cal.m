@@ -871,8 +871,17 @@ calData_aux = calData(calData.P_cal_psig > 400,:);
 figure;
 set(gcf, 'Position', [100, 100, 700, 550])
 ax1 = axes;
+rho_ref_0 = nlfittingRhoResultsAll.p4(nlfittingRhoResultsAll.Q == "QAll");
+drho_corr_low = nlfittingRhoResultsAll.drho_corr_low(nlfittingRhoResultsAll.Q == "QAll");
+drho_corr_high = nlfittingRhoResultsAll.drho_corr_high(nlfittingRhoResultsAll.Q == "QAll");
+step = 1;
+%error bar low dens
+errorbar(0:step:rho_ref_0,feval(nl_cal_curve_params_Qall,0:step:rho_ref_0),drho_corr_low,'LineStyle', 'none', ...
+    'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
+hold on 
+errorbar(rho_ref_0:step:800,feval(nl_cal_curve_params_Qall,rho_ref_0:step:800),drho_corr_high,'LineStyle', 'none', ...
+    'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
 scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled')
-hold on
 plot(0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k','LineWidth',0.8) % fitting responds to high pressure only
 x1 = xlabel('\rho_{ref} [kg/m^{3}]', 'FontSize', 14);
 ylabel('\rho_{MFM} [kg/m^{3}]', 'FontSize', 14);
@@ -892,15 +901,15 @@ cTicks = c.Ticks;
 cTicks = cTicks(mod(cTicks,1) == 0);
 c.Ticks = cTicks;
 grid on
-legend({'Measured density','Calibration curve'},'Location','southeast')
+legend({'\rho_{MFM}','\rho_{MFM_{fit}} \pm \Delta\rho_{MFM_{fit}}'},'Location','southeast')
 % cal curve formula annotation
 coeffs = nlfittingRhoResultsAll(nlfittingRhoResultsAll.Q == 'QAll',:);
-annotText = sprintf(['$\\rho_{MFM} = \\left\\{ \\begin{array}{ll}',...
-    '%.2f + %.3f\\rho_{Ref}, & \\rho_{Ref} \\le %.2f \\\\',...
-    '%.2f + %.3f\\rho_{Ref}, & \\rho_{Ref} > %.2f',...
-    '\\end{array} \\right.$'], coeffs.p1, coeffs.p2, coeffs.p4, coeffs.n2, coeffs.p3, coeffs.p4);
-annotation('textbox', [0.34, 0.25, 0.3, 0.1], 'String', annotText, ...
-    'Interpreter', 'latex', 'FontSize', 11, 'EdgeColor', 'none');
+% annotText = sprintf(['$\\rho_{MFM_{fit}} = \\left\\{ \\begin{array}{ll}',...
+%     '%.2f + %.3f\\rho_{Ref}, & \\rho_{Ref} \\le %.2f \\\\',...
+%     '%.2f + %.3f\\rho_{Ref}, & \\rho_{Ref} > %.2f',...
+%     '\\end{array} \\right.$'], coeffs.p1, coeffs.p2, coeffs.p4, coeffs.n2, coeffs.p3, coeffs.p4);
+% annotation('textbox', [0.33, 0.27, 0.3, 0.1], 'String', annotText, ...
+%     'Interpreter', 'latex', 'FontSize', 11, 'EdgeColor', 'none');
 % title("Calibration curve - all cal fluids P and T - linear and non linear")
 saveas(gcf,pathExportAll + "Cal-all-HP400+-nl",'png')
 

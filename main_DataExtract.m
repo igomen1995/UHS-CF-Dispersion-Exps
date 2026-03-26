@@ -204,11 +204,11 @@ for i = 1:length(filedataExp.Key)
     auxnLinFit = nlfittingRhoResultsAll(nlfittingRhoResultsAll.Q == "QAll",:);
     rho_MFM_0 = auxnLinFit.rho_MFM_0;
     rho_MFM = expProcData.(filedataExp.Key(i)).BT.rho_MFM;
-    % lower slope
+    % low densities
     expProcData.(filedataExp.Key(i)).BT.rho_corr = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM);
     expProcData.(filedataExp.Key(i)).BT.rho_corrMin = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM-auxnLinFit.drho_corr_low);
     expProcData.(filedataExp.Key(i)).BT.rho_corrMax = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM+auxnLinFit.drho_corr_low);
-    % higher slope
+    % high densities
     expProcData.(filedataExp.Key(i)).BT.rho_corr(rho_MFM>rho_MFM_0) = ...
         rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
         rho_MFM(rho_MFM>rho_MFM_0));

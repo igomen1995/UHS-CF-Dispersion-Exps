@@ -342,22 +342,22 @@ for i = 1:length(filedataExp.Key)
         % fitting parameters for rho corrected
         % auxLinFit = fittingRhoResultsAll(fittingRhoResultsAll.Q == "QAll",:);
         auxnLinFit = nlfittingRhoResultsAll(nlfittingRhoResultsAll.Q == "QAll",:);
-        rho_MFM_0 = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],auxnLinFit.p4);
+        rho_MFM_0 = auxnLinFit.rho_MFM_0;
         rho_MFM = expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_MFM;
-        % lower slope
+        % low densitites
         expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM);
-        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM-auxnLinFit.RMSE);
-        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM+auxnLinFit.RMSE);
-        % higher slope
+        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM-auxnLinFit.drho_corr_low);
+        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM+auxnLinFit.drho_corr_low);
+        % high densitites
         expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr(rho_MFM>rho_MFM_0) = ...
             rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
             rho_MFM(rho_MFM>rho_MFM_0));
         expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin(rho_MFM>rho_MFM_0) = ...
             rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
-            rho_MFM(rho_MFM>rho_MFM_0)-auxnLinFit.RMSE);
+            rho_MFM(rho_MFM>rho_MFM_0)-auxnLinFit.drho_corr_high);
         expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax(rho_MFM>rho_MFM_0) = ...
             rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
-            rho_MFM(rho_MFM>rho_MFM_0)+auxnLinFit.RMSE);
+            rho_MFM(rho_MFM>rho_MFM_0)+auxnLinFit.drho_corr_high);
     end
 end
 
