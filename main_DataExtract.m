@@ -151,6 +151,10 @@ for i = 1:length(filedataExp.Key)
     v = q./A; % Darcy velocity m/s
     u = v./filedataExp.phi(i); % Interstitial velocity
 
+    % lines
+    A_lines = pi*((filedataExp.IDlines_cm(i)/100)/2)^2; %m2
+    v_lines = q./A_lines; %m3/s
+
     % Assumes only one row is output, unique parasm for fluid 1 and 2
     filedataDiffaux = filedataDiff((filedataDiff.Fluid1 == filedataExp.Fluid1{i} & filedataDiff.Fluid2 == filedataExp.Fluid2{i}),:);
     
@@ -164,11 +168,12 @@ for i = 1:length(filedataExp.Key)
         D12, dD12,...
         filedataExp.T(i), filedataExp.P(i), filedataExp.Q(i), filedataExp.C1init(i), filedataExp.C1j(i), filedataExp.Run(i), ...
         filedataExp.D(i), filedataExp.L(i), filedataExp.phi(i), filedataExp.K(i), filedataExp.Vcore(i), ...
-        filedataExp.setupVersion(i), filedataExp.Vlinesbefore(i), filedataExp.Vlinesafter(i), ... 
-        filedataExp.Vtotal(i), A,L,q,v,u, 'VariableNames', {'Key', 'Date', 'Type','Fluid1', 'Fluid2', ...
+        filedataExp.setupVersion(i), filedataExp.IDlines_cm(i), filedataExp.Vlinesbefore(i), filedataExp.Vlinesafter(i), ... 
+        filedataExp.Vtotal(i), A,L,q,v,u, A_lines, v_lines, 'VariableNames', {'Key', 'Date', 'Type','Fluid1', 'Fluid2', ...
         'D12_cm2min', 'dD12_cm2min'...
         'T_C', 'P_psig', 'Q_mlmin', 'C1init_pcmol', 'C1j_pcmol', 'Run', 'D_in', 'L_in', 'phi', 'K_mD', 'Vcore_cc', ...
-        'setupVersion', 'Vlinesbefore_cc', 'Vlinesafter_cc', 'Vtotal_cc','A_SI','L_SI','q_SI','v_SI','u_SI'});
+        'setupVersion', 'ID_lines_cm', 'Vlinesbefore_cc', 'Vlinesafter_cc', 'Vtotal_cc','A_SI','L_SI','q_SI','v_SI','u_SI', ...
+        'A_lines_SI','v_lines_SI'});
     expProcData.(filedataExp.Key(i)).exp_params = exp_params;
 
 end
@@ -365,6 +370,8 @@ for i = 1:length(filedataExp.Key)
 
 end
 
+save(pathExportAll + "expProcData.mat",'expProcData')
+
 %% Save data
 
 for i = 1:length(filedataExp.Key)
@@ -378,7 +385,6 @@ for i = 1:length(filedataExp.Key)
     writetable(expProcData.(filedataExp.Key(i)).exp_params,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'exp_params');
     writetable(expProcData.(filedataExp.Key(i)).BT,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'BT_curve');
 end
-save(pathExportAll + "expProcData.mat",'expProcData')
 
 %% Plots for analysis
 
