@@ -57,17 +57,20 @@ for i = 1:length(filedataExp.Key)
         q = expProcData.(filedataExp.Key(i)).exp_params.Q_mlmin;
         u = expProcData.(filedataExp.Key(i)).exp_params.u_SI;
         L = expProcData.(filedataExp.Key(i)).exp_params.L_SI;
+        Vtotal = expProcData.(filedataExp.Key(i)).exp_params.Vtotal_cc;
         D0 = expProcData.(filedataExp.Key(i)).exp_params.D12_cm2min/(60*10^4);
         dD0 = expProcData.(filedataExp.Key(i)).exp_params.dD12_cm2min/(60*10^4);
         Pe_D0 = u*L/D0;
         dPe_D0 = (((-u*L/(D0^2))^2)*(dD0^2))^(1/2);
+        v_lines = expProcData.(filedataExp.Key(i)).exp_params.v_lines_SI;
+        KL_lines = expProcData.(filedataExp.Key(i)).exp_params.KL_lines_SI;
 
         dt_guess = (filedataExp.Vlinesbefore(i)+filedataExp.Vlinesafter(i))*60/filedataExp.Q(i); % time in seconds
         p_guess = [1,dt_guess];
 
-        [KL,dt_fit, u_fit, Cj_fit, Ci_fit, C_fit] = fit_dispersion_dt(C1_vals,t_vals,u,Cj,Ci,L,p_guess);
-        [KL_max,dt_fit_max, u_fit_max, Cj_fit_max, Ci_fit_max, C_fit_max] = fit_dispersion_dt(C1_max_vals,t_vals,u,Cj,Ci,L,p_guess); %max Ci
-        [KL_min,dt_fit_min, u_fit_min, Cj_fit_min, Ci_fit_min, C_fit_min] = fit_dispersion_dt(C1_min_vals,t_vals,u,Cj,Ci,L,p_guess); %min Ci
+        [KL,dt_fit, u_fit, Cj_fit, Ci_fit, C_fit] = fit_dispersion_dt_lines(C1_vals,t_vals,u,Cj,Ci,L,v_lines,KL_lines,p_guess);
+        [KL_max,dt_fit_max, u_fit_max, Cj_fit_max, Ci_fit_max, C_fit_max] = fit_dispersion_dt_lines(C1_max_vals,t_vals,u,Cj,Ci,L,v_lines,KL_lines,p_guess); %max Ci
+        [KL_min,dt_fit_min, u_fit_min, Cj_fit_min, Ci_fit_min, C_fit_min] = fit_dispersion_dt_lines(C1_min_vals,t_vals,u,Cj,Ci,L,v_lines,KL_lines,p_guess); %min Ci
         
         % exp params for table
         expProcData.(filedataExp.Key(i)).exp_params.u_cmmin = u*60*(10^2);
@@ -87,7 +90,8 @@ for i = 1:length(filedataExp.Key)
         
         % Fitting parameters mean
         Pe = u*L/KL;
-        dtD = u*dt_fit/L;% respect to Vcore
+        % dtD = u*dt_fit/L;% respect to Vcore
+        dtD = q*(dt_fit/60)/Vtotal;% respect to Vtotal
         RMSE = C_fit.RMSE;
         R2 = C_fit.Rsquared.Adjusted;
         p1 = C_fit.Coefficients.Estimate(1);
@@ -115,7 +119,8 @@ for i = 1:length(filedataExp.Key)
         
         % Fitting parameters max
         Pe_max = u*L/KL_max;
-        dtD_max = u*dt_fit_max/L;% respect to Vcore
+        % dtD_max = u*dt_fit_max/L;% respect to Vcore
+        dtD_max = q*(dt_fit_max/60)/Vtotal;% respect to Vtotal
         RMSE_max = C_fit_max.RMSE;
         R2_max = C_fit_max.Rsquared.Adjusted;
         p1_max = C_fit_max.Coefficients.Estimate(1);
@@ -144,7 +149,8 @@ for i = 1:length(filedataExp.Key)
 
         % Fitting parameters min
         Pe_min = u*L/KL_min;
-        dtD_min = u*dt_fit_min/L;% respect to Vcore
+        % dtD_min = u*dt_fit_min/L;% respect to Vcore
+        dtD_min = q*(dt_fit_min/60)/Vtotal;% respect to Vtotal
         RMSE_min = C_fit_min.RMSE;
         R2_min = C_fit_min.Rsquared.Adjusted;
         p1_min = C_fit_min.Coefficients.Estimate(1);
@@ -222,9 +228,9 @@ for i = 1:length(filedataExp.Key)
         dt_guess = dtD_guess*L/u; %  dt estimate according to velocity of each experiment
         p_guess = sqrt(expProcData.(filedataExp.Key(i)).exp_params.KL_SI);
 
-        [KL,dt_fit, u_fit, Cj_fit, Ci_fit, C_fit] = fit_dispersion_dtfixed(C1_vals,t_vals,u,Cj,Ci,L,dt_guess,p_guess);
-        [KL_max,dt_fit_max, u_fit_max, Cj_fit_max, Ci_fit_max, C_fit_max] = fit_dispersion_dtfixed(C1_max_vals,t_vals,u,Cj,Ci,L,dt_guess,p_guess); %max Ci
-        [KL_min,dt_fit_min, u_fit_min, Cj_fit_min, Ci_fit_min, C_fit_min] = fit_dispersion_dtfixed(C1_min_vals,t_vals,u,Cj,Ci,L,dt_guess,p_guess); %min Ci
+        [KL,dt_fit, u_fit, Cj_fit, Ci_fit, C_fit] = fit_dispersion_dtfixed_lines(C1_vals,t_vals,u,Cj,Ci,L,v_lines,KL_lines,dt_guess,p_guess);
+        [KL_max,dt_fit_max, u_fit_max, Cj_fit_max, Ci_fit_max, C_fit_max] = fit_dispersion_dtfixed_lines(C1_max_vals,t_vals,u,Cj,Ci,L,v_lines,KL_lines,dt_guess,p_guess); %max Ci
+        [KL_min,dt_fit_min, u_fit_min, Cj_fit_min, Ci_fit_min, C_fit_min] = fit_dispersion_dtfixed_lines(C1_min_vals,t_vals,u,Cj,Ci,L,v_lines,KL_lines,dt_guess,p_guess); %min Ci
 
         % exp params for table
         expProcData.(filedataExp.Key(i)).exp_params.u_fit_dtfixed_SI = u_fit;
@@ -379,18 +385,18 @@ end
 % all params in SI
 Dp_SI = unique(fitting_results.L_SI);
 u_array = fitting_results.u_SI;
-Pe_D0_array = fitting_results.Pe_D0; % Pe in respect to D0
-dPe_D0_array = fitting_results.dPe_D0;
-% Pe_array = fitting_results.Pe; % Pe in respect to KL
-% dPe_array = fitting_results.sd_Pe_avg;
+% Pe_D0_array = fitting_results.Pe_D0; % Pe in respect to D0
+% dPe_D0_array = fitting_results.dPe_D0;
+Pe_array = fitting_results.Pe; % Pe in respect to KL
+dPe_array = fitting_results.sd_Pe_avg;
 Pe_array = fitting_results.Pe_dtfixed; % Pe in respect to KL
 dPe_array = fitting_results.sd_Pe_dtfixed_avg;
 D0 = unique(fitting_results.D0_SI);
 dD0 = unique(fitting_results.dD0_SI);
-% KL_array = fitting_results.KL_SI; % KL and D0 must have same units
-% dKL_array = fitting_results.sd_KL_avg_cm2min/(60*10^4);
-KL_array = fitting_results.KL_dtfixed_SI; % KL and D0 must have same units
-dKL_array = fitting_results.sd_KL_dtfixed_avg_cm2min/(60*10^4);
+KL_array = fitting_results.KL_SI; % KL and D0 must have same units
+dKL_array = fitting_results.sd_KL_avg_cm2min/(60*10^4);
+% KL_array = fitting_results.KL_dtfixed_SI; % KL and D0 must have same units
+% dKL_array = fitting_results.sd_KL_dtfixed_avg_cm2min/(60*10^4);
 
 % fitting data
 u = u_array;
@@ -401,10 +407,10 @@ dKL = dKL_array;
 % KL/D0 vs Pe fitting, Pe = UL/D0
 % KL_D0_vs_Pe_function = @(p1,Pe)D0 *((1/p1(1)) + ((p1(2)^(1/p1(3)))*Pe).^p1(3));
 % p1 = [1,1,1];
-% KL_D0_vs_Pe_function = @(p1,Pe)D0 *((1/p1(1)) + p1(2)*Pe);
-% p1 = [1,1];
-KL_D0_vs_Pe_function = @(p1,Pe)D0 *(p1(2)*Pe);
+KL_D0_vs_Pe_function = @(p1,Pe)D0 *((1/p1(1)) + p1(2)*Pe);
 p1 = [1,1];
+% KL_D0_vs_Pe_function = @(p1,Pe)D0 *(p1(2)*Pe);
+% p1 = [1,1];
 % fitting not uncertainties
 KL_D0_vs_Pe_fit = fitnlm(Pe,KL_array,KL_D0_vs_Pe_function,p1);
 
@@ -538,8 +544,8 @@ for i = 1:length(filedataExp.Key)
         figure
         scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.Ci,10,'filled','MarkerFaceColor','red')
         hold on
-        plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,100*expProcData.(filedataExp.Key(i)).exp_params.C_fit_dtfixed.feval(expProcData.(filedataExp.Key(i)).BT.SecondsElapsed),'LineWidth',1.5,'Color', 'k')
-        %plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,100*expProcData.(filedataExp.Key(i)).exp_params.C_fit.feval(expProcData.(filedataExp.Key(i)).BT.SecondsElapsed),'LineWidth',1.5,'Color', [0.5 0.5 0.5])
+        %plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,100*expProcData.(filedataExp.Key(i)).exp_params.C_fit_dtfixed.feval(expProcData.(filedataExp.Key(i)).BT.SecondsElapsed),'LineWidth',1.5,'Color', 'k')
+        plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,100*expProcData.(filedataExp.Key(i)).exp_params.C_fit.feval(expProcData.(filedataExp.Key(i)).BT.SecondsElapsed),'LineWidth',1.5,'Color', [0.5 0.5 0.5])
         xlabel('Time elapsed [hh:mm:ss]');
         xtickformat('hh:mm:ss')
         ylabel('Molar concentration C_1 [mol %]');
@@ -767,31 +773,31 @@ savefig(gcf,pathExportAll + "BTfitting_dimlessTotal")
 
 colors = orderedcolors("glow");
 
-% % all params in SI
-% Dp_SI = unique(fitting_results.L_SI);
-% D0 = unique(fitting_results.D0_SI);
-% Pe_D0_array = fitting_results.Pe_D0; % Pe in respect to D0
-% u_array_cm2min = fitting_results.u_fit_cmmin;
-% KL_array = fitting_results.KL_cm2min; % KL and D0 must have same units
-% dKLneg_array = fitting_results.sd_KL_max_cm2min + fitting_results.SE_KL_cm2min;
-% dKLpos_array = fitting_results.sd_KL_min_cm2min + fitting_results.SE_KL_cm2min;
-% alpha_L = alphaPe1*100;
-% dalpha_L = dalphaPe1*100;
-% tortuosity = tortosityPe1;
-% dtortuosity = dtortosityPe1;
-
 % all params in SI
 Dp_SI = unique(fitting_results.L_SI);
 D0 = unique(fitting_results.D0_SI);
 Pe_D0_array = fitting_results.Pe_D0; % Pe in respect to D0
-u_array_cm2min = fitting_results.u_fit_dtfixed_cmmin;
-KL_array = fitting_results.KL_dtfixed_cm2min; % KL and D0 must have same units
-dKLneg_array = fitting_results.sd_KL_dtfixed_max_cm2min + fitting_results.SE_KL_dtfixed_cm2min;
-dKLpos_array = fitting_results.sd_KL_dtfixed_min_cm2min + fitting_results.SE_KL_dtfixed_cm2min;
+u_array_cm2min = fitting_results.u_fit_cmmin;
+KL_array = fitting_results.KL_cm2min; % KL and D0 must have same units
+dKLneg_array = fitting_results.sd_KL_max_cm2min + fitting_results.SE_KL_cm2min;
+dKLpos_array = fitting_results.sd_KL_min_cm2min + fitting_results.SE_KL_cm2min;
 alpha_L = alphaPe1*100;
 dalpha_L = dalphaPe1*100;
 tortuosity = tortosityPe1;
 dtortuosity = dtortosityPe1;
+
+% % all params in SI
+% Dp_SI = unique(fitting_results.L_SI);
+% D0 = unique(fitting_results.D0_SI);
+% Pe_D0_array = fitting_results.Pe_D0; % Pe in respect to D0
+% u_array_cm2min = fitting_results.u_fit_dtfixed_cmmin;
+% KL_array = fitting_results.KL_dtfixed_cm2min; % KL and D0 must have same units
+% dKLneg_array = fitting_results.sd_KL_dtfixed_max_cm2min + fitting_results.SE_KL_dtfixed_cm2min;
+% dKLpos_array = fitting_results.sd_KL_dtfixed_min_cm2min + fitting_results.SE_KL_dtfixed_cm2min;
+% alpha_L = alphaPe1*100;
+% dalpha_L = dalphaPe1*100;
+% tortuosity = tortosityPe1;
+% dtortuosity = dtortosityPe1;
 
 figure % dispersivity
 x = 0:1:ceil(max(Pe_D0_array));
