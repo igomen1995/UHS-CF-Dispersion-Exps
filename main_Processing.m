@@ -209,10 +209,10 @@ for i = 1:length(filedataExp.Key)
     if filedataExp.Type(i) == "CF"
 
         % the sum of V lines before and after should be the same as Vtotal - Vcore      
-        t_vals = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed((expProcData.(filedataExp.Key(i)).BT.Ci>10)&(expProcData.(filedataExp.Key(i)).BT.Ci<90));
-        C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci((expProcData.(filedataExp.Key(i)).BT.Ci>10)&(expProcData.(filedataExp.Key(i)).BT.Ci<90))/100;
-        C1_max_vals = expProcData.(filedataExp.Key(i)).BT.CiMax((expProcData.(filedataExp.Key(i)).BT.Ci>10)&(expProcData.(filedataExp.Key(i)).BT.Ci<90))/100;
-        C1_min_vals = expProcData.(filedataExp.Key(i)).BT.CiMin((expProcData.(filedataExp.Key(i)).BT.Ci>10)&(expProcData.(filedataExp.Key(i)).BT.Ci<90))/100;
+        t_vals = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed((expProcData.(filedataExp.Key(i)).BT.Ci<90));
+        C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci((expProcData.(filedataExp.Key(i)).BT.Ci<90))/100;
+        C1_max_vals = expProcData.(filedataExp.Key(i)).BT.CiMax((expProcData.(filedataExp.Key(i)).BT.Ci<90))/100;
+        C1_min_vals = expProcData.(filedataExp.Key(i)).BT.CiMin((expProcData.(filedataExp.Key(i)).BT.Ci<90))/100;
 
         q = expProcData.(filedataExp.Key(i)).exp_params.Q_mlmin;
         u = expProcData.(filedataExp.Key(i)).exp_params.u_SI;
@@ -767,31 +767,31 @@ savefig(gcf,pathExportAll + "BTfitting_dimlessTotal")
 
 colors = orderedcolors("glow");
 
-% all params in SI
-Dp_SI = unique(fitting_results.L_SI);
-D0 = unique(fitting_results.D0_SI);
-Pe_D0_array = fitting_results.Pe_D0; % Pe in respect to D0
-u_array_cm2min = fitting_results.u_fit_cmmin;
-KL_array = fitting_results.KL_cm2min; % KL and D0 must have same units
-dKLneg_array = fitting_results.sd_KL_max_cm2min + fitting_results.SE_KL_cm2min;
-dKLpos_array = fitting_results.sd_KL_min_cm2min + fitting_results.SE_KL_cm2min;
-alpha_L = alphaPe1*100;
-dalpha_L = dalphaPe1*100;
-tortuosity = tortosityPe1;
-dtortuosity = dtortosityPe1;
-
 % % all params in SI
 % Dp_SI = unique(fitting_results.L_SI);
 % D0 = unique(fitting_results.D0_SI);
 % Pe_D0_array = fitting_results.Pe_D0; % Pe in respect to D0
-% u_array_cm2min = fitting_results.u_fit_dtfixed_cmmin;
-% KL_array = fitting_results.KL_dtfixed_cm2min; % KL and D0 must have same units
-% dKLneg_array = fitting_results.sd_KL_dtfixed_max_cm2min + fitting_results.SE_KL_dtfixed_cm2min;
-% dKLpos_array = fitting_results.sd_KL_dtfixed_min_cm2min + fitting_results.SE_KL_dtfixed_cm2min;
+% u_array_cm2min = fitting_results.u_fit_cmmin;
+% KL_array = fitting_results.KL_cm2min; % KL and D0 must have same units
+% dKLneg_array = fitting_results.sd_KL_max_cm2min + fitting_results.SE_KL_cm2min;
+% dKLpos_array = fitting_results.sd_KL_min_cm2min + fitting_results.SE_KL_cm2min;
 % alpha_L = alphaPe1*100;
 % dalpha_L = dalphaPe1*100;
 % tortuosity = tortosityPe1;
 % dtortuosity = dtortosityPe1;
+
+% all params in SI
+Dp_SI = unique(fitting_results.L_SI);
+D0 = unique(fitting_results.D0_SI);
+Pe_D0_array = fitting_results.Pe_D0; % Pe in respect to D0
+u_array_cm2min = fitting_results.u_fit_dtfixed_cmmin;
+KL_array = fitting_results.KL_dtfixed_cm2min; % KL and D0 must have same units
+dKLneg_array = fitting_results.sd_KL_dtfixed_max_cm2min + fitting_results.SE_KL_dtfixed_cm2min;
+dKLpos_array = fitting_results.sd_KL_dtfixed_min_cm2min + fitting_results.SE_KL_dtfixed_cm2min;
+alpha_L = alphaPe1*100;
+dalpha_L = dalphaPe1*100;
+tortuosity = tortosityPe1;
+dtortuosity = dtortosityPe1;
 
 figure % dispersivity
 x = 0:1:ceil(max(Pe_D0_array));
