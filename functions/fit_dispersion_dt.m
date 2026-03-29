@@ -7,7 +7,9 @@ function [KL,dt_fit, u_fit, Cj_fit, Ci_fit, C_fit] = fit_dispersion_dt(C,t,u,Cj,
 % Cj, Ci, u not fitting, fitting p where Kl = p(1)^2 and dt = p(2)
 % Corrects BT curve due to extra volume before core
 
-C_function = @(p,t)(Ci + (Cj/2)*erfc((L-u.*(t-p(2)))./(2*(max((t-p(2)),eps).^(1/2)).*p(1))));
+%C_function = @(p,t)(Ci + (Cj/2)*erfc((L-u.*(t-p(2)))./(2*(max((t-p(2)),eps).^(1/2)).*p(1)))); % dt numerator and denominator
+C_function = @(p,t)(Ci + (Cj/2)*erfc((L-u.*(t-p(2)))./(2*(t.^(1/2)).*p(1)))); % dt only numerator
+
 % C_function = @(p,t) Ci + (Cj/2) .* ( ...
 %     erfc( (L - u.*(t - p(2))) ./ (2 * p(1) .* sqrt(max(t - p(2), eps))) ) + ...
 %     exp( u*L / (p(1)^2) ) .* ...
