@@ -243,8 +243,9 @@ D0 = unique(fitting_results.D0_SI);
 dD0 = unique(fitting_results.dD0_SI);
 % KL_array = fitting_results.KL_SI; % KL and D0 must have same units
 % dKL_array = fitting_results.SE_KL_SI/(60*10^4);
-KL_array = fitting_results.KL_dtfixed_SI; % KL and D0 must have same units
-dKL_array = fitting_results.SE_KL_dtfixed_SI/(60*10^4);
+% KL_array = fitting_results.KL_dtfixed_SI; % KL and D0 must have same units
+KL_array = [0.8; 1.83; 436]/(60*10^4);
+dKL_array = fitting_results.SE_KL_dtfixed_SI;
 
 % fitting data
 u = u_array;
@@ -330,8 +331,10 @@ for i = 1:length(filedataExp.Key)
     expProcData.(filedataExp.Key(i)).exp_params.dKL_vs_D0 = dKL_vs_D0_array(i);
 end
 
+expProcFullData = expProcData;
+
 % save updated expProcData
-save(pathExportAll + "expProcFullData.mat",'expProcData')
+save(pathExportAll + "expProcFullData.mat",'expProcFullData')
 
 %% Table results
 
