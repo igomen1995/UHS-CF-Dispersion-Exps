@@ -120,6 +120,10 @@ for i = 1:length(filedataExp.Key)
         % Build model function
         C_model = @(t) Ci + (Cj/2).*erfc((L - u.*t + v_lines.*dt_fit) ./ (2*p_est(1).*sqrt(max(t,eps))) );
         expProcData.(filedataExp.Key(i)).BT.Cimodel = 100*C_model(t_vals);
+        expProcData.(filedataExp.Key(i)).BT.CimodelMax = 100.*(Ci + (Cj/2).*erfc( ...
+            (L - u.*t_vals + v_lines*(dt_fit + SE_dt)) ./ (2*p_est(1).*sqrt(max(t_vals,eps))) ));
+        expProcData.(filedataExp.Key(i)).BT.CimodelMin = 100*(Ci + (Cj/2).*erfc( ...
+            (L - u.*t_vals + v_lines*(dt_fit - SE_dt)) ./ (2*p_est(1).*sqrt(max(t_vals,eps))) ));
 
     end
 end
@@ -143,14 +147,24 @@ for i = 1:length(filedataExp.Key)
         dt_guess = L_guess/v_lines; %  dt estimate according to velocity of each experiment
         p_guess = sqrt(expProcData.(filedataExp.Key(i)).exp_params.KL_SI);
 
+        dt_fixed = dt_guess;
+        ddt_all = expProcData.(filedataExp.Key(i)).exp_params.SE_dt_SI;
+
         KL_all_dtfixed_out = fit_dispersion_dtfixed_lines_error(C1_vals,dCi_vals,t_vals,u,Cj,Ci,L,v_lines,dt_guess,p_guess);
+        KL_all_dtfixed_out_plus  = fit_dispersion_dtfixed_lines_error(C1_vals,dCi_vals,t_vals,u,Cj,Ci,L,v_lines,dt_fixed + ddt_all,p_guess);
+        KL_all_dtfixed_out_minus = fit_dispersion_dtfixed_lines_error(C1_vals,dCi_vals,t_vals,u,Cj,Ci,L,v_lines,dt_fixed - ddt_all,p_guess);
 
         KL = KL_all_dtfixed_out.KL;
         SE_KL = KL_all_dtfixed_out.dKL;
         dt_fit = KL_all_dtfixed_out.dt;
-        SE_dt = KL_all_dtfixed_out.ddt;
+        SE_dt = expProcData.(filedataExp.Key(i)).exp_params.SE_dt_SI;
         p_est = KL_all_dtfixed_out.p;
-     
+
+        dKL_ddt = (KL_all_dtfixed_out_plus.KL - KL_all_dtfixed_out_minus.KL) / (2*ddt_all);
+        dKL_dtprop = abs(dKL_ddt) * ddt_all;
+
+        dKL_fixed_total = sqrt(SE_KL^2 + dKL_dtprop^2);
+
         % Fitting parameters mean
         Pe = u*L/KL;
         dtD = u*dt_fit/L;% respect to Vcore
@@ -161,8 +175,10 @@ for i = 1:length(filedataExp.Key)
         
         expProcData.(filedataExp.Key(i)).exp_params.KL_dtfixed_SI = KL;
         expProcData.(filedataExp.Key(i)).exp_params.SE_KL_dtfixed_SI = SE_KL;
+        expProcData.(filedataExp.Key(i)).exp_params.SE_KL_total_SI = dKL_fixed_total;
         expProcData.(filedataExp.Key(i)).exp_params.KL_dtfixed_cm2min = KL*60*10^4;
         expProcData.(filedataExp.Key(i)).exp_params.SE_KL_dtfixed_cm2min = (SE_KL)*60*10^4;
+        expProcData.(filedataExp.Key(i)).exp_params.SE_KL_total_cm2min = dKL_fixed_total*60*10^4;
         expProcData.(filedataExp.Key(i)).exp_params.Pe_dtfixed = Pe;
         expProcData.(filedataExp.Key(i)).exp_params.SE_Pe_dtfixed = SE_Pe;
         expProcData.(filedataExp.Key(i)).exp_params.dt_dtfixed_SI = dt_fit;
@@ -180,15 +196,18 @@ for i = 1:length(filedataExp.Key)
 
         % Predicted C BT
         % Build model function
-        dt_fixed = dt_guess;
         C_model_fixed = @(t) Ci + (Cj/2).*erfc((L - u.*t + v_lines.*dt_fixed) ./ (2*p_est(1).*sqrt(max(t,eps))) );
 
         expProcData.(filedataExp.Key(i)).BT.Cimodel_fixed = 100*C_model_fixed(t_vals);
+        expProcData.(filedataExp.Key(i)).BT.Cimodel_fixedMax = 100.*(Ci + (Cj/2).*erfc( ...
+            (L - u.*t_vals + v_lines*(dt_fit + SE_dt)) ./ (2*p_est(1).*sqrt(max(t_vals,eps))) ));
+        expProcData.(filedataExp.Key(i)).BT.Cimodel_fixedMin = 100.*(Ci + (Cj/2).*erfc( ...
+            (L - u.*t_vals + v_lines*(dt_fit - SE_dt)) ./ (2*p_est(1).*sqrt(max(t_vals,eps))) ));
 
         % dimensionless values 
         % Cd = (C - Ciinit) / (Cj - Cinit)
-        expProcData.(filedataExp.Key(i)).BT.CDimodel = ...
-            (expProcData.(filedataExp.Key(i)).BT.Cimodel - Ci)/(Cj-Ci);
+        expProcData.(filedataExp.Key(i)).BT.CDimodel_fixed = ...
+            (expProcData.(filedataExp.Key(i)).BT.Cimodel_fixed - Ci*100)/(Cj*100-Ci*100);
 
         % Corrected BT with time shift
         expProcData.(filedataExp.Key(i)).BT.SecondsElapsed_corr = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed - dt_fit;
@@ -316,10 +335,8 @@ end
 % creating table all in cm2 and min, and mol %
 % Pe alone is Pe in respect to KL and not D0
 fitting_results_simple = fitting_results(:, {'Key', 'C1init_pcmol', ...
-    'C1j_pcmol', 'Q_mlmin', 'u_cmmin', 'RMSE_dtfixed', 'R2_dtfixed', ...
-    'KL_dtfixed_cm2min','SE_KL_dtfixed_cm2min', 'sd_KL_dtfixed_avg_cm2min', ...
-    'error_pc_KL_dtfixed_avg_cm2min',  'KL_vs_D0', 'dKL_vs_D0', 'Pe_dtfixed', 'SE_Pe_dtfixed', ...
-    'dt_dtfixed_min', 'SE_dt_min', 'dtD_dtfixed_min', 'SE_dtD', ...
+    'C1j_pcmol', 'Q_mlmin', 'u_cmmin', 'SE_KL_dtfixed_cm2min', 'KL_vs_D0', 'dKL_vs_D0', 'Pe_dtfixed', 'SE_Pe_dtfixed', ...
+    'dt_dtfixed_min', 'SE_dt_min', 'SE_dtD', ...
     'Pe_D0', 'dPe_D0', 'Pe_alpha', 'dPe_alpha', 'T_mean', 'T_std'});
 
 fitting_params_simple = table("Berea", unique(fitting_results.Fluid1), unique(fitting_results.Fluid2),...
@@ -377,23 +394,30 @@ for i = 1:length(filedataExp.Key)
 
     % Extract pred values
     C_pred_free   = expProcData.(filedataExp.Key(i)).BT.Cimodel;
+    C_pred_freeMax = expProcData.(filedataExp.Key(i)).BT.CimodelMax;
+    C_pred_freeMin = expProcData.(filedataExp.Key(i)).BT.CimodelMin;
+
     C_pred_fixed  = expProcData.(filedataExp.Key(i)).BT.Cimodel_fixed;
+    C_pred_fixedMax = expProcData.(filedataExp.Key(i)).BT.Cimodel_fixedMax;
+    C_pred_fixedMin = expProcData.(filedataExp.Key(i)).BT.Cimodel_fixedMin;
 
     % Plot
     figure
-    scatter(expProcData.(key).BT.TimeElapsed, ...
+    % errorbar(t_vals, C_pred_free, C_pred_free-C_pred_freeMin, C_pred_freeMax - C_pred_free, 'LineStyle', 'none', 'Color', [0.88 0.88 0.88],'HandleVisibility','off')
+    % hold on 
+    % errorbar(t_vals, C_pred_fixed, C_pred_fixed-C_pred_fixedMin, C_pred_fixedMax - C_pred_fixed, 'LineStyle', 'none', 'Color', [0.88 0.88 0.88],'HandleVisibility','off')
+    scatter(expProcData.(key).BT.SecondsElapsed, ...
             expProcData.(key).BT.Ci, ...
             10, 'filled', 'MarkerFaceColor', 'red')
     hold on
-
-    plot(expProcData.(key).BT.TimeElapsed, C_pred_fixed, ...
+    plot(expProcData.(key).BT.SecondsElapsed, C_pred_fixed, ...
          'LineWidth', 1.5, 'Color', 'k')
 
-    plot(expProcData.(key).BT.TimeElapsed, C_pred_free, ...
+    plot(expProcData.(key).BT.SecondsElapsed, C_pred_free, ...
          'LineWidth', 1.5, 'Color', [0.5 0.5 0.5])
 
     xlabel('Time elapsed [hh:mm:ss]')
-    xtickformat('hh:mm:ss')
+    % xtickformat('hh:mm:ss')
     ylabel('Molar concentration C_1 [mol %]')
     ylim([-0.1, 100.1])
     title(key + " fitting", 'Interpreter', 'none')
@@ -404,8 +428,8 @@ for i = 1:length(filedataExp.Key)
             "BT model (dt free)"], ...
             'Location', 'southeast')
 
-    % saveas(gcf, pathExportAll + key + "_fitting", 'png')
-    % savefig(gcf, pathExportAll + key + "_fitting")
+    saveas(gcf, pathExportAll + key + "_fitting", 'png')
+    savefig(gcf, pathExportAll + key + "_fitting")
 
 end
 
@@ -525,17 +549,18 @@ for i = 1:length(filedataExp.Key)
     C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
     C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
     C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
-    cond = (expProcData.(filedataExp.Key(i)).BT.Cimodel>=10)&(expProcData.(filedataExp.Key(i)).BT.Cimodel<=90);
-    errorbar(t(cond), expProcData.(filedataExp.Key(i)).BT.Cimodel(cond), ...
-       expProcData.(filedataExp.Key(i)).exp_params.C_fit_dtfixed.RMSE*100*ones(size(t(cond))), ...
-       'LineStyle', 'none', ...
+    cond = (expProcData.(filedataExp.Key(i)).BT.Cimodel_fixed>=10)&(expProcData.(filedataExp.Key(i)).BT.Cimodel_fixed<=90);
+    % errorbar(t(cond), expProcData.(filedataExp.Key(i)).BT.Cimodel(cond), ...
+    %    expProcData.(filedataExp.Key(i)).exp_params.C_fit_dtfixed.RMSE*100*ones(size(t(cond))), ...
+    %    'LineStyle', 'none', ...
+    %     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
+    
+    errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', ...
         'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
     hold on
-    errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', ...
-        'Color', [1 0.78 0.88],'HandleVisibility','Off')
     h1 = scatter(t,C1,5,'filled','MarkerFaceColor',colors(i,:), ...
         'DisplayName',"Q"+filedataExp.Q(i)+": C_{MFM} \pm \DeltaC_{MFM}");
-    h2 = plot(t(cond), expProcData.(filedataExp.Key(i)).BT.Cimodel(cond), ...
+    h2 = plot(t(cond), expProcData.(filedataExp.Key(i)).BT.Cimodel_fixed(cond), ...
         'LineWidth',1.0,'Color', 'k','DisplayName',"C_{fit} \pm \DeltaC_{fit}");
     xlabel('Time elapsed [hh:mm:ss]');
     xtickformat('hh:mm:ss')
@@ -560,18 +585,18 @@ for i = 1:length(filedataExp.Key)
     CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
     CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
     CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
-    cond = (expProcData.(filedataExp.Key(i)).BT.Cimodel>=10)&(expProcData.(filedataExp.Key(i)).BT.Cimodel<=90);
+    cond = (expProcData.(filedataExp.Key(i)).BT.Cimodel_fixed>=10)&(expProcData.(filedataExp.Key(i)).BT.Cimodel_fixed<=90);
     % errorbar(tD(cond), expProcData.(filedataExp.Key(i)).BT.CDimodel(cond), ...
     %    expProcData.(filedataExp.Key(i)).exp_params.C_fit_dtfixed.RMSE*ones(size(tD(cond))), ...
     %    'LineStyle', 'none', ...
     %     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
     % hold on
     % errorbar(tD, CD1, CD1-CD1min, CD1max - CD1, 'LineStyle', 'none', ...
-    %     'Color', [1 0.78 0.88],'HandleVisibility','Off')
+    %     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
     h1 = scatter(tD,CD1,5,'filled','MarkerFaceColor',colors(i,:), ...
         'DisplayName',"Q"+filedataExp.Q(i)+": C_{D}");
     hold on
-    h2 = plot(tD(cond), expProcData.(filedataExp.Key(i)).BT.CDimodel(cond), ...
+    h2 = plot(tD(cond), expProcData.(filedataExp.Key(i)).BT.CDimodel_fixed(cond), ...
         'LineWidth',1.0,'Color', 'k','DisplayName',"C_D_{fit} \pm \DeltaC_D_{fit}");
     xlabel('Dimensionless Time [-]');
     ylabel('C_{D}[-]');
@@ -680,15 +705,15 @@ savefig(gcf,pathExportAll + "KLvsVel-alpha_all")
 
 %% Plot Kl/Dl vs Pe
 
-% all params in SI
-Pe_array = Pe_alpha_array; % Pe in respect to D0
-dPe_array = fitting_results.dPe_alpha;
-KL_vs_D0_array = fitting_results.KL_vs_D0;
-dKL_vs_D0_array = fitting_results.dKL_vs_D0;
-D0 = unique(fitting_results.D0_SI);
-dD0 = unique(fitting_results.dD0_SI);
-KL_array = fitting_results.KL_SI; % KL and D0 must have same units
-dKL_array = fitting_results.SE_KL_SI/(60*10^4);
+% % all params in SI
+% Pe_array = Pe_alpha_array; % Pe in respect to D0
+% dPe_array = fitting_results.dPe_alpha;
+% KL_vs_D0_array = fitting_results.KL_vs_D0;
+% dKL_vs_D0_array = fitting_results.dKL_vs_D0;
+% D0 = unique(fitting_results.D0_SI);
+% dD0 = unique(fitting_results.dD0_SI);
+% KL_array = fitting_results.KL_SI; % KL and D0 must have same units
+% dKL_array = fitting_results.SE_KL_SI/(60*10^4);
 
 figure
 plot(0:0.1:max(Pe_D0_array),KL_D0_vs_Pe_fit.feval(0:0.1:max(Pe_D0_array))/D0, ...
