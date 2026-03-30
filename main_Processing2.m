@@ -66,7 +66,7 @@ for i = 1:length(filedataExp.Key)
         dt_guess = (filedataExp.Vlinesbefore(i)+filedataExp.Vlinesafter(i))*60/filedataExp.Q(i); % time in seconds
         p_guess = [1,dt_guess];
 
-        KL_all_out = fit_dispersion_dt_lines_error(C1_vals,dCi_vals,t_vals,u,Cj,Ci,L,v_lines,p_guess);
+        KL_all_out = fit_dispersion_dt_lines_error(C1_vals,dCi_vals,t_vals,u,Cj,Ci,L,KL_lines,v_lines,p_guess);
 
         KL = KL_all_out.KL;
         SE_KL = KL_all_out.dKL;
@@ -150,9 +150,9 @@ for i = 1:length(filedataExp.Key)
         dt_fixed = dt_guess;
         ddt_all = expProcData.(filedataExp.Key(i)).exp_params.SE_dt_SI;
 
-        KL_all_dtfixed_out = fit_dispersion_dtfixed_lines_error(C1_vals,dCi_vals,t_vals,u,Cj,Ci,L,v_lines,dt_guess,p_guess);
-        KL_all_dtfixed_out_plus  = fit_dispersion_dtfixed_lines_error(C1_vals,dCi_vals,t_vals,u,Cj,Ci,L,v_lines,dt_fixed + ddt_all,p_guess);
-        KL_all_dtfixed_out_minus = fit_dispersion_dtfixed_lines_error(C1_vals,dCi_vals,t_vals,u,Cj,Ci,L,v_lines,dt_fixed - ddt_all,p_guess);
+        KL_all_dtfixed_out = fit_dispersion_dtfixed_lines_error(C1_vals,dCi_vals,t_vals,u,Cj,Ci,L,KL_lines,v_lines,dt_guess,p_guess);
+        KL_all_dtfixed_out_plus  = fit_dispersion_dtfixed_lines_error(C1_vals,dCi_vals,t_vals,u,Cj,Ci,L,KL_lines,v_lines,dt_fixed + ddt_all,p_guess);
+        KL_all_dtfixed_out_minus = fit_dispersion_dtfixed_lines_error(C1_vals,dCi_vals,t_vals,u,Cj,Ci,L,KL_lines,v_lines,dt_fixed - ddt_all,p_guess);
 
         KL = KL_all_dtfixed_out.KL;
         SE_KL = KL_all_dtfixed_out.dKL;
@@ -253,10 +253,10 @@ KL = KL_array;
 dKL = dKL_array;
 
 % KL/D0 vs Pe fitting, Pe = UL/D0
-% KL_D0_vs_Pe_function = @(p1,Pe)D0 *((1/p1(1)) + ((p1(2)^(1/p1(3)))*Pe).^p1(3));
-% p1 = [1,1,1];
-KL_D0_vs_Pe_function = @(p1,Pe)D0 *((1/p1(1)) + p1(2)*Pe);
-p1 = [1,1];
+KL_D0_vs_Pe_function = @(p1,Pe)D0 *((1/p1(1)) + ((p1(2)^(1/p1(3)))*Pe).^p1(3));
+p1 = [1,1,1];
+% KL_D0_vs_Pe_function = @(p1,Pe)D0 *((1/p1(1)) + p1(2)*Pe);
+% p1 = [1,1];
 % KL_D0_vs_Pe_function = @(p1,Pe)D0 *(p1(2)*Pe);
 % p1 = [1,1];
 % fitting not uncertainties

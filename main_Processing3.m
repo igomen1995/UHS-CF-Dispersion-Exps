@@ -249,8 +249,8 @@ dp = sqrt(diag(CovB));   % 1-sigma on parameters
 q_tau     = p_est(1);
 dq_tau    = sqrt(CovB(1,1));
 
-tau   = 1 + q^2;
-dtau  = 2*q * dq;   % derivative of tau wrt q
+tau   = 1 + q_tau^2;
+dtau  = 2*q_tau * dq_tau;   % derivative of tau wrt q
 
 q_beta = p_est(3);
 dq_beta = sqrt(CovB(3,3));

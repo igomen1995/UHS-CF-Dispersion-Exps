@@ -1,8 +1,12 @@
-function out = fit_dispersion_dtfixed_lines_error(C,dCi, t,u,Cj,Ci,L,vlines,dt_fixed,p0)
+function out = fit_dispersion_dtfixed_lines_error(C,dCi, t,u,Cj,Ci,L,KLlines,vlines,dt_fixed,p0)
 
-    % p0 now contains only p(1) = sqrt(KL)
+    % % p0 now contains only p(1) = sqrt(KL)
+    % C_model = @(p,t) Ci + (Cj/2).*erfc( ...
+    %     (L - u.*t + vlines.*dt_fixed) ./ (2*p(1).*sqrt(max(t,eps))) );
+
+    % Model KL lines
     C_model = @(p,t) Ci + (Cj/2).*erfc( ...
-        (L - u.*t + vlines.*dt_fixed) ./ (2*p(1).*sqrt(max(t,eps))) );
+        (L - u.*t + vlines.*dt_fixed) ./ (2*(p(1).*sqrt(max(t,eps)))-sqrt(max(KLlines.*dt_fixed,eps))) );
 
     opts = statset('nlinfit');
     [p_est,res,J,CovB,mse] = nlinfit(t, C, C_model, p0, opts, ...

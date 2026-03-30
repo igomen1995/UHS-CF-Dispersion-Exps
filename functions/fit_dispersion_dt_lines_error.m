@@ -1,8 +1,15 @@
-function out = fit_dispersion_dt_lines_error(C,dCi,t,u,Cj,Ci,L,vlines,p0)
+function out = fit_dispersion_dt_lines_error(C,dCi,t,u,Cj,Ci,L,KLlines,vlines,p0)
 
-    % Model
+    % % Model
+    % C_model = @(p,t) Ci + (Cj/2).*erfc( ...
+    %     (L - u.*t + vlines.*p(2)) ./ (2*p(1).*sqrt(max(t,eps))) );
+
+    % Model KL lines
     C_model = @(p,t) Ci + (Cj/2).*erfc( ...
-        (L - u.*t + vlines.*p(2)) ./ (2*p(1).*sqrt(max(t,eps))) );
+        (L - u.*t + vlines.*p(2)) ./ (2*(p(1).*sqrt(max(t,eps)))-sqrt(max(KLlines.*p(2),eps))) );
+
+    %C_function = @(p,t)(Ci + (Cj/2)*erfc((L-u.*(t-p(2)))./(2*(max((t-p(2)),eps).^(1/2)).*p(1)))); % dt numerator and denominator
+
 
    % Weighted fit
     opts = statset('nlinfit');
