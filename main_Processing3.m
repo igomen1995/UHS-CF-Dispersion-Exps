@@ -66,7 +66,7 @@ for i = 1:length(filedataExp.Key)
         dt_guess = (filedataExp.Vlinesbefore(i)+filedataExp.Vlinesafter(i))*60/filedataExp.Q(i); % time in seconds
         p_guess = [1,dt_guess];
 
-        KL_all_out = fit_dispersion_dt_lines_error(C1_vals,dCi_vals,t_vals,u,Cj,Ci,L,v_lines,p_guess);
+        KL_all_out = fit_dispersion_dt_lines_error(C1_vals,dCi_vals,t_vals,u,Cj,Ci,L,KL_lines,v_lines,p_guess);
 
         KL = KL_all_out.KL;
         SE_KL = KL_all_out.dKL;

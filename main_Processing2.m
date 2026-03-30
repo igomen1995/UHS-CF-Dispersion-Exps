@@ -253,12 +253,12 @@ KL = KL_array;
 dKL = dKL_array;
 
 % KL/D0 vs Pe fitting, Pe = UL/D0
-KL_D0_vs_Pe_function = @(p1,Pe)D0 *((1/p1(1)) + ((p1(2)^(1/p1(3)))*Pe).^p1(3));
-p1 = [1,1,1];
+% KL_D0_vs_Pe_function = @(p1,Pe)D0 *((1/p1(1)) + ((p1(2)^(1/p1(3)))*Pe).^p1(3));
+% p1 = [1,1,1];
 % KL_D0_vs_Pe_function = @(p1,Pe)D0 *((1/p1(1)) + p1(2)*Pe);
 % p1 = [1,1];
-% KL_D0_vs_Pe_function = @(p1,Pe)D0 *(p1(2)*Pe);
-% p1 = [1,1];
+KL_D0_vs_Pe_function = @(p1,Pe)D0 *(p1(2)*Pe);
+p1 = [1,1];
 % fitting not uncertainties
 KL_D0_vs_Pe_fit = fitnlm(Pe,KL_array,KL_D0_vs_Pe_function,p1);
 
@@ -330,6 +330,9 @@ for i = 1:length(filedataExp.Key)
     expProcData.(filedataExp.Key(i)).exp_params.dKL_vs_D0 = dKL_vs_D0_array(i);
 end
 
+% save updated expProcData
+save(pathExportAll + "expProcFullData.mat",'expProcData')
+
 %% Table results
 
 % creating table all in cm2 and min, and mol %
@@ -373,9 +376,6 @@ delete(table_name2 + '.xlsx');
 % save fitting_results
 writetable(fitting_results,table_name + ".xlsx");
 save(table_name + ".mat",'fitting_results')
-
-% save updated expProcData
-save(pathExportAll + "expProcFullData.mat",'expProcData')
 
 % save fitting table
 writetable(fitting_results_simple,table_name1 + ".xlsx");
