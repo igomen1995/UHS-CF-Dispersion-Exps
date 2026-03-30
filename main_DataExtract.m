@@ -320,8 +320,10 @@ for i = 1:length(filedataExp.Key)
         expProcData.(filedataExp.Key(i)).BT.rho_corrMax);
     % absolute error % 
     expProcData.(filedataExp.Key(i)).BT.dC = ...
-        abs(expProcData.(filedataExp.Key(i)).BT.CiMax ...
-        -expProcData.(filedataExp.Key(i)).BT.Ci)/2;
+        (abs(expProcData.(filedataExp.Key(i)).BT.CiMax ...
+        -expProcData.(filedataExp.Key(i)).BT.Ci)+ ...
+        abs(expProcData.(filedataExp.Key(i)).BT.CiMin ...
+        -expProcData.(filedataExp.Key(i)).BT.Ci))/2;
 
     % at rho corr value
     expProcData.(filedataExp.Key(i)).BT.Z = ...
@@ -508,12 +510,12 @@ for i = 1:length(filedataExp.Key)
         C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
         C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
         C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
-        errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', 'Color', [1 0.7 0.8])
+        errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', 'Color', [0.88 0.88 0.88])
         hold on 
         h3 = scatter(t,C1,5,'filled','MarkerFaceColor','r','DisplayName','C_{MFM} \pm \DeltaC_{MFM}');
     end
     if isempty(expProcData.(filedataExp.Key(i)).PGD2Data) == 0 && ismissing(PGD2_data_name) == 0
-        h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,5,'filled','MarkerFaceColor',[0.7 0.7 0.7],'DisplayName','C_{PGD2}');
+        h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,5,'filled','MarkerFaceColor',[1 0.88 0.43],'DisplayName','C_{PGD2}');
         hold on 
     end
     if isempty(expProcData.(filedataExp.Key(i)).PGD1Data) == 0 && ismissing(PGD1_data_name) == 0
@@ -524,8 +526,8 @@ for i = 1:length(filedataExp.Key)
     xtickformat('hh:mm:ss')
     ylabel('C_{H_2} [mol %]','FontSize', 14);
     ylim([0,100]);
-    legend([h3,h2,h1], 'Location','southeast');
-    title (filedataExp.Key(i), 'Interpreter', 'none','FontSize', 16)
+    lgd = legend([h3,h2,h1], 'Location','southeast');
+    title (lgd, "Q = " + filedataExp.Q(i) + " ml/min")
     grid on;
     saveas(gcf,pathExportAll + filedataExp.Key(i) + "_dens_conc",'png')
 end

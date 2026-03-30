@@ -186,7 +186,6 @@ for i = 1:length(filedataExp.Key)
         expProcData.(filedataExp.Key(i)).exp_params.L_lines_min = L_lines_min;
         expProcData.(filedataExp.Key(i)).exp_params.SE_L_lines_min = SE_L_lines_min;
 
-
         % error
         expProcData.(filedataExp.Key(i)).exp_params.sd_KL_max_cm2min = abs(KL-KL_max)*60*10^4;
         expProcData.(filedataExp.Key(i)).exp_params.sd_KL_min_cm2min = abs(KL-KL_min)*60*10^4;
