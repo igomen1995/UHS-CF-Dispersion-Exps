@@ -68,9 +68,9 @@ for i = 1:length(filedataExp.Key)
         dt_guess = (filedataExp.Vlinesbefore(i)+filedataExp.Vlinesafter(i))*60/filedataExp.Q(i); % time in seconds
         p_guess = [1,dt_guess];
 
-        [KL,dt_fit, u_fit, Cj_fit, Ci_fit, C_fit] = fit_dispersion_dt_lines(C1_vals,t_vals,u,Cj,Ci,L,v_lines,KL_lines,p_guess);
-        [KL_max,dt_fit_max, u_fit_max, Cj_fit_max, Ci_fit_max, C_fit_max] = fit_dispersion_dt_lines(C1_max_vals,t_vals,u,Cj,Ci,L,v_lines,KL_lines,p_guess); %max Ci
-        [KL_min,dt_fit_min, u_fit_min, Cj_fit_min, Ci_fit_min, C_fit_min] = fit_dispersion_dt_lines(C1_min_vals,t_vals,u,Cj,Ci,L,v_lines,KL_lines,p_guess); %min Ci
+        [KL,dt_fit, u_fit, Cj_fit, Ci_fit, C_fit] = fit_dispersion_dt(C1_vals,t_vals,u,Cj,Ci,L,p_guess);
+        [KL_max,dt_fit_max, u_fit_max, Cj_fit_max, Ci_fit_max, C_fit_max] = fit_dispersion_dt(C1_max_vals,t_vals,u,Cj,Ci,L,p_guess); %max Ci
+        [KL_min,dt_fit_min, u_fit_min, Cj_fit_min, Ci_fit_min, C_fit_min] = fit_dispersion_dt(C1_min_vals,t_vals,u,Cj,Ci,L,p_guess); %min Ci
         
         % exp params for table
         expProcData.(filedataExp.Key(i)).exp_params.u_cmmin = u*60*(10^2);
@@ -235,15 +235,15 @@ for i = 1:length(filedataExp.Key)
         v_lines = expProcData.(filedataExp.Key(i)).exp_params.v_lines_SI;
         % Vtotal = expProcData.(filedataExp.Key(i)).exp_params.Vtotal_cc;
         % %dtD_guess = fitting_results_temp.dtD(fitting_results_temp.SE_dtD == min(fitting_results_temp.SE_dtD)); % dtD fixed where SE is smallest time in seconds
-        % dtD_guess = (fitting_results_temp.dtD')*(fitting_results_temp.SE_dtD/sum(fitting_results_temp.SE_dtD)); % dtD fixed is a weigthed average
-        % % dt_guess = dtD_guess*L/u; %  dt estimate according to velocity of each experiment
-        L_guess = (fitting_results_temp.L_lines')*(fitting_results_temp.SE_L_lines/sum(fitting_results_temp.SE_L_lines)); % dtD fixed is a weigthed average
-        dt_guess = L_guess/v_lines; %  dt estimate according to velocity of each experiment
+        dtD_guess = (fitting_results_temp.dtD')*(fitting_results_temp.SE_dtD/sum(fitting_results_temp.SE_dtD)); % dtD fixed is a weigthed average
+        dt_guess = dtD_guess*L/u; %  dt estimate according to velocity of each experiment
+        % L_guess = (fitting_results_temp.L_lines')*(fitting_results_temp.SE_L_lines/sum(fitting_results_temp.SE_L_lines)); % dtD fixed is a weigthed average
+        % dt_guess = L_guess/v_lines; %  dt estimate according to velocity of each experiment
         p_guess = sqrt(expProcData.(filedataExp.Key(i)).exp_params.KL_SI);
 
-        [KL,dt_fit, u_fit, Cj_fit, Ci_fit, C_fit] = fit_dispersion_dtfixed_lines(C1_vals,t_vals,u,Cj,Ci,L,v_lines,KL_lines,dt_guess,p_guess);
-        [KL_max,dt_fit_max, u_fit_max, Cj_fit_max, Ci_fit_max, C_fit_max] = fit_dispersion_dtfixed_lines(C1_max_vals,t_vals,u,Cj,Ci,L,v_lines,KL_lines,dt_guess,p_guess); %max Ci
-        [KL_min,dt_fit_min, u_fit_min, Cj_fit_min, Ci_fit_min, C_fit_min] = fit_dispersion_dtfixed_lines(C1_min_vals,t_vals,u,Cj,Ci,L,v_lines,KL_lines,dt_guess,p_guess); %min Ci
+        [KL,dt_fit, u_fit, Cj_fit, Ci_fit, C_fit] = fit_dispersion_dtfixed(C1_vals,t_vals,u,Cj,Ci,L,dt_guess,p_guess);
+        [KL_max,dt_fit_max, u_fit_max, Cj_fit_max, Ci_fit_max, C_fit_max] = fit_dispersion_dtfixed(C1_max_vals,t_vals,u,Cj,Ci,L,dt_guess,p_guess); %max Ci
+        [KL_min,dt_fit_min, u_fit_min, Cj_fit_min, Ci_fit_min, C_fit_min] = fit_dispersion_dtfixed(C1_min_vals,t_vals,u,Cj,Ci,L,dt_guess,p_guess); %min Ci
 
         % exp params for table
         expProcData.(filedataExp.Key(i)).exp_params.u_fit_dtfixed_SI = u_fit;
@@ -580,7 +580,7 @@ for i = 1:length(filedataExp.Key)
         ylim([-0.1,100.1]);
         title(filedataExp.Key(i) + " fitting", 'Interpreter', 'none')
         grid on;
-        legend(["Experimental data", "BT model fitting"],'Location','southeast');
+        legend(["Experimental data", "BT model fitting - dt fixed", "BT model fitting - dt free"],'Location','southeast');
         saveas(gcf,pathExportAll + filedataExp.Key(i) + "_fitting",'png')
         savefig(gcf,pathExportAll + filedataExp.Key(i) + "_fitting")
 end
@@ -702,13 +702,14 @@ for i = 1:length(filedataExp.Key)
     C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
     C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
     cond = (expProcData.(filedataExp.Key(i)).BT.Cimodel>=10)&(expProcData.(filedataExp.Key(i)).BT.Cimodel<=90);
-    errorbar(t(cond), expProcData.(filedataExp.Key(i)).BT.Cimodel(cond), ...
-       expProcData.(filedataExp.Key(i)).exp_params.C_fit_dtfixed.RMSE*100*ones(size(t(cond))), ...
-       'LineStyle', 'none', ...
+    % errorbar(t(cond), expProcData.(filedataExp.Key(i)).BT.Cimodel(cond), ...
+    %    expProcData.(filedataExp.Key(i)).exp_params.C_fit_dtfixed.RMSE*100*ones(size(t(cond))), ...
+    %    'LineStyle', 'none', ...
+    %     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
+    % hold on
+    errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', ...
         'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
     hold on
-    errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', ...
-        'Color', [1 0.78 0.88],'HandleVisibility','Off')
     h1 = scatter(t,C1,5,'filled','MarkerFaceColor',colors(i,:), ...
         'DisplayName',"Q"+filedataExp.Q(i)+": C_{MFM} \pm \DeltaC_{MFM}");
     h2 = plot(t(cond), expProcData.(filedataExp.Key(i)).BT.Cimodel(cond), ...
@@ -780,7 +781,7 @@ for i = 1:length(filedataExp.Key)
     % errorbar(tDtotal, CD1, CD1-CD1min, CD1max - CD1, 'LineStyle', 'none', ...
     %     'Color', [1 0.78 0.88],'HandleVisibility','Off')
     h1 = scatter(tDtotal,CD1,5,'filled','MarkerFaceColor',colors(i,:), ...
-        'DisplayName',"Q"+filedataExp.Q(i)+": C_{D}");
+        'DisplayName',"Q"+filedataExp.Q(i));
     hold on
     % h2 = plot(tDtotal(cond), expProcData.(filedataExp.Key(i)).BT.CDimodel(cond), ...
     %     'LineWidth',1.0,'Color', 'k','DisplayName',"C_D_{fit} \pm \DeltaC_D_{fit}");
@@ -829,8 +830,10 @@ dtortuosity = dtortosityPe1;
 
 figure % dispersivity
 x = 0:1:ceil(max(Pe_D0_array));
+% plot((x*D0/Dp_SI)*(60*10^2),KL_D0_vs_Pe_fit.feval(x)*(60*10^4), ...
+%     'DisplayName','K_L = D_0/\tau + \alpha_Lu_x','Color','k'); % Kl_vs_u fitting
 plot((x*D0/Dp_SI)*(60*10^2),KL_D0_vs_Pe_fit.feval(x)*(60*10^4), ...
-    'DisplayName','K_L = D_0/\tau + \alpha_Lu_x','Color','k'); % Kl_vs_u fitting
+    'DisplayName','K_L \approx \alpha_Lu_x','Color','k'); % Kl_vs_u fitting
 hold on
 for i = 1:length(u_array_cm2min)
     errorbar(u_array_cm2min(i),KL_array(i),dKLneg_array(i),dKLpos_array(i), ...
@@ -848,8 +851,8 @@ annotText1 = sprintf('\\alpha_{L} = %.2f \\pm %.2f cm', alpha_L, dalpha_L);
 annotText2 = sprintf('\\tau = %.2f \\pm %.2f', tortuosity, dtortuosity);
 annotation('textbox', [0.25, 0.18, 0.8, 0.06], 'String', annotText1, ...
     'Interpreter', 'tex', 'FontSize', 9, 'EdgeColor', 'none','FaceAlpha',0.1);
-annotation('textbox', [0.265, 0.13, 0.8, 0.06], 'String', annotText2, ...
-    'Interpreter', 'tex', 'FontSize', 9, 'EdgeColor', 'none','FaceAlpha',0.1);
+% annotation('textbox', [0.265, 0.13, 0.8, 0.06], 'String', annotText2, ...
+%     'Interpreter', 'tex', 'FontSize', 9, 'EdgeColor', 'none','FaceAlpha',0.1);
 legend('Location','southeast');
 saveas(gcf,pathExportAll + "KLvsVel-alpha_all",'png')
 savefig(gcf,pathExportAll + "KLvsVel-alpha_all")
@@ -867,8 +870,10 @@ KL_array = fitting_results.KL_SI; % KL and D0 must have same units
 dKL_array = fitting_results.sd_KL_dtfixed_avg_cm2min/(60*10^4);
 
 figure
+% plot(0:0.1:max(Pe_D0_array),KL_D0_vs_Pe_fit.feval(0:0.1:max(Pe_D0_array))/D0, ...
+%     'DisplayName','K_L/D_0 = 1/\tau + \alpha_Lu_x/D_0','Color','k'); % Kl_vs_u fitting
 plot(0:0.1:max(Pe_D0_array),KL_D0_vs_Pe_fit.feval(0:0.1:max(Pe_D0_array))/D0, ...
-    'DisplayName','K_L/D_0 = 1/\tau + \alpha_Lu_x/D_0','Color','k'); % Kl_vs_u fitting
+    'DisplayName','K_L/D_0 \approx \alpha_Lu_x/D_0','Color','k'); % Kl_vs_u fitting
 hold on
 for i = 1:length(Pe_D0_array)
     errorbar(Pe_D0_array(i),KL_vs_D0_array(i), ...
