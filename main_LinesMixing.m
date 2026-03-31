@@ -35,35 +35,17 @@ filedataExp = import_inputExp(filenameExp); % import input to a local variable
 
 load(pathImportAll+"expProcFullData.mat")
 
-%% adding lines data to exp_params
-
-rlines_cm = 0.147;
-Llinesbefore_cm = 445;
-Llinesafter_cm = 192;
-Deff = 0.411; % cm2/min
-
-for i = 1:length(filedataExp.Key)
-    expProcFullData.(filedataExp.Key(i)).exp_params.rlines_cm = rlines_cm;
-    expProcFullData.(filedataExp.Key(i)).exp_params.Deff_cm2min = Deff;
-    expProcFullData.(filedataExp.Key(i)).exp_params.Llinesbefore_cm = Llinesbefore_cm;
-    expProcFullData.(filedataExp.Key(i)).exp_params.Llinesafter_cm = Llinesafter_cm;
-    expProcFullData.(filedataExp.Key(i)).exp_params.Alinesbefore_cm = pi*rlines_cm^2;
-    expProcFullData.(filedataExp.Key(i)).exp_params.Alinesafter_cm = pi*rlines_cm^2;
-    expProcFullData.(filedataExp.Key(i)).exp_params.Dlinesbefore_cm = expProcFullData.(filedataExp.Key(i)).exp_params.KL_lines_cm2min;
-    expProcFullData.(filedataExp.Key(i)).exp_params.Dlinesafter_cm = expProcFullData.(filedataExp.Key(i)).exp_params.KL_lines_cm2min;
-end
-
 %%
 
 for i = 1:length(filedataExp.Key)
     exp_params = expProcFullData.(filedataExp.Key(i)).exp_params;
     model = @(Dc,t) three_segment_model(t, Dc, ...
-        exp_params.Q_mlmin/(60*10^6), exp_params.Alinesbefore_cm*(10^-4), ...
-        exp_params.A_SI, exp_params.phi, exp_params.Alinesafter_cm*(10^-4), ...
-        exp_params.Llinesbefore_cm*(10^-2), exp_params.L_SI, ...
-        exp_params.Llinesafter_cm*(10^-2), ...
-        expProcFullData.(filedataExp.Key(i)).exp_params.Dlinesbefore_cm/(60*10^4), ...
-        expProcFullData.(filedataExp.Key(i)).exp_params.Dlinesafter_cm/(60*10^4), 1);
+        exp_params.q_SI, exp_params.A_lines_SI, ...
+        exp_params.A_SI, exp_params.phi, exp_params.A_lines_SI, ...
+        exp_params.L_linesbefore_SI-0.8, exp_params.L_SI, ...
+        exp_params.L_linesafter_SI-0.8, ...
+        0, ...
+        0, 1);
     
     t_vals_aux = expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed;
     C1_vals_aux = expProcFullData.(filedataExp.Key(i)).BT.Ci/100;
@@ -95,7 +77,7 @@ for i = 1:length(filedataExp.Key)
     C1_ob = ob_step(t_vals,exp_params.L_SI,exp_params.u_SI,Dc_fit,1);
     expProcFullData.(filedataExp.Key(i)).BT_fit.Ci_ob = C1_ob*100;
 
-    C1_ob_lines = ob_step(t_vals,(exp_params.Llinesbefore_cm*(10^-2)+exp_params.Llinesafter_cm*(10^-2)),exp_params.v_lines_SI,exp_params.KL_lines_SI,1);
+    C1_ob_lines = ob_step(t_vals,exp_params.L_linestotal_SI,exp_params.v_lines_SI,exp_params.KL_lines_SI,1);
     expProcFullData.(filedataExp.Key(i)).BT_fit.Ci_ob_lines = C1_ob_lines*100;
 end
 
