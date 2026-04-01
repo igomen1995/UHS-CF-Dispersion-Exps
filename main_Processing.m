@@ -301,16 +301,16 @@ p2 = [1,1];
 KL_D0_vs_Pe_function_alpha = @(p,Pe)D0 *(p(1)*Pe);
 p3 = 1;
 
-KL_D0_vs_Pe_fit = fitnlm(Pe_D0_array,KL_array,KL_D0_vs_Pe_function_full,p1);
-tortosityPe1 = KL_D0_vs_Pe_fit.Coefficients.Estimate(1);
-betaPe1 = KL_D0_vs_Pe_fit.Coefficients.Estimate(3);
-alphaPe1 = (KL_D0_vs_Pe_fit.Coefficients.Estimate(2)^(betaPe1))*Dp_SI; % SI
-dtortosityPe1 = KL_D0_vs_Pe_fit.Coefficients.SE(1);
-dbetaPe1 = KL_D0_vs_Pe_fit.Coefficients.SE(3);
-dalphaPe1 = ((Dp_SI^2)*(KL_D0_vs_Pe_fit.Coefficients.SE(2)^2))^(1/2); % SI
+% KL_D0_vs_Pe_fit = fitnlm(Pe_D0_array,KL_array,KL_D0_vs_Pe_function_full,p1);
+% tortosityPe1 = KL_D0_vs_Pe_fit.Coefficients.Estimate(1);
+% betaPe1 = KL_D0_vs_Pe_fit.Coefficients.Estimate(3);
+% alphaPe1 = (KL_D0_vs_Pe_fit.Coefficients.Estimate(2)^(betaPe1))*Dp_SI; % SI
+% dtortosityPe1 = KL_D0_vs_Pe_fit.Coefficients.SE(1);
+% dbetaPe1 = KL_D0_vs_Pe_fit.Coefficients.SE(3);
+% dalphaPe1 = ((Dp_SI^2)*(KL_D0_vs_Pe_fit.Coefficients.SE(2)^2))^(1/2); % SI
 
 % Fitting
-%fit_dispersion_params_all_out = fit_dispersion_params_all(KL_array,Pe_D0_array,D0,Dp_SI,p1,dKL_array);
+fit_dispersion_params_all_out = fit_dispersion_params_all(KL_array,Pe_D0_array,D0,Dp_SI,p1,dKL_array);
 
 % % KL/D0 vs Pe fitting, Pe = UL/D0
 % % KL_D0_vs_Pe_function = @(p1,Pe)D0 *((1/p1(1)) + ((p1(2)^(1/p1(3)))*Pe).^p1(3));
