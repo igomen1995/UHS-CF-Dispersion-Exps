@@ -14,7 +14,7 @@ tbl = table(Pe_fromD0, KL, 'VariableNames', {'Pe','KL'});
 modelfun = @(b,Pe) D0 * b(1) .* Pe;
 
 % Fit (unweighted)
-mdl = fitnlm(tbl, modelfun, p0);%'Weights',w);
+mdl = fitnlm(tbl, modelfun, p0,'Weights',w);
 
 % Extract parameter
 C2 = mdl.Coefficients.Estimate(1);

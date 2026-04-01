@@ -18,7 +18,7 @@ C_function = @(p,tvals)(Ci + (Cj/2)*erfc((L-u.*(tvals-dt_fixed))./(2*(max((tvals
 
 % Weighted nonlinear fit
 opts = statset('nlinfit');
-[p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t, C, C_function, p0, opts);%, 'Weights', w);
+[p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t, C, C_function, p0, opts, 'Weights', w);
 
 % Confidence intervals for parameters 95%
 ci = nlparci(p_est, R, 'jacobian', J);
