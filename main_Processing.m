@@ -310,7 +310,7 @@ p3 = 1;
 % dalphaPe1 = ((Dp_SI^2)*(KL_D0_vs_Pe_fit.Coefficients.SE(2)^2))^(1/2); % SI
 
 % Fitting
-fit_dispersion_params_all_out = fit_dispersion_params_all(KL_array,Pe_D0_array,D0,Dp_SI,p1,dKL_array);
+fit_dispersion_params_all_out = fit_dispersion_params_all(KL_array,Pe_D0_array,D0,Dp_SI,p2,dKL_array);
 
 % % KL/D0 vs Pe fitting, Pe = UL/D0
 % % KL_D0_vs_Pe_function = @(p1,Pe)D0 *((1/p1(1)) + ((p1(2)^(1/p1(3)))*Pe).^p1(3));
