@@ -1,95 +1,72 @@
 function out = fit_dispersion_params_all(KL,Pe_fromD0,D0,Dp,p0,dKL)
-% Reduced model for 3-point datasets:
-%   KL = D0 * C2 * Pe^beta
-% with constraints:
-%   C2 > 0
-%   1 <= beta <= 1.25
+% Reduced model with beta = 1 exactly:
+%   KL = D0 * C2 * Pe
+% Only parameter: C2 > 0
 
-    % Weights = 1/variance
-    w = 1./(dKL.^2);
+% Weights = 1/variance
+w = 1./(dKL.^2);
 
-    % Parameter transforms
-    C2_fun   = @(p1) exp(p1);                        % C2 > 0
-    beta_fun = @(p2) 1 + 0.25./(1 + exp(-p2));       % 1 <= beta <= 1.25
+% Model with beta = 1
+KL_model = @(p,Pe_vals) D0 * ((1/p(2)) + ( p(1) .* Pe_vals ));
 
-    % Reduced model
-    KL_model = @(p,Pe_vals) ...
-        D0 * ( C2_fun(p(1)) .* (Pe_vals.^beta_fun(p(2))) );
+% Nonlinear fit (unweighted or weighted)
+opts = statset('nlinfit');
+[p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(Pe_fromD0, KL, KL_model, p0, opts,'Weights', w);
 
-    % Weighted nonlinear fit
-    opts = statset('nlinfit');
-    [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit( ...
-        Pe_fromD0, KL, KL_model, p0, opts, 'Weights', w);
+% Confidence interval for p1
+ci = nlparci(p_est, R, 'jacobian', J);
 
-    % Confidence intervals for unconstrained parameters
-    ci = nlparci(p_est, R, 'jacobian', J);
+% Extract parameter
+C2 = p_est(1);
+tau = p_est(2);
 
-    % Extract unconstrained parameters
-    p1 = p_est(1);
-    p2 = p_est(2);
+% Alpha (dispersivity)
+alpha = C2 * Dp;
 
-    % Physical parameters
-    C2   = C2_fun(p1);
-    beta = beta_fun(p2);
+% Uncertainty in C2
+dC2 = (ci(1,2) - ci(1,1))/2;
+d_tau = (ci(2,2) - ci(2,1))/2;
 
-    % Alpha (dispersivity)
-    alpha = (C2^(1/beta)) * Dp;
+% Uncertainty in alpha
+d_alpha = Dp * dC2;
 
-    % Uncertainties in unconstrained parameters
-    dp1 = (ci(1,2) - ci(1,1))/2;
-    dp2 = (ci(2,2) - ci(2,1))/2;
+% Fitted curve
+KL_fit = KL_model(p_est, Pe_fromD0);
 
-    % Propagate to physical parameters
-    dC2 = C2 * dp1;
+% Prediction intervals
+[KL_pred, dKL_pred] = nlpredci(KL_model, Pe_fromD0, p_est, R, 'jacobian', J);
 
-    dbeta_dp2 = 0.25 * exp(-p2) / (1 + exp(-p2))^2;
-    d_beta = dbeta_dp2 * dp2;
+% Weighted RMSE and R2
+RMSE = sqrt( sum(w .* (KL - KL_fit).^2) / sum(w) );
+R2 = 1 - (sum(w .* (KL - KL_fit).^2))/(sum(w .* (KL - (sum(w .* KL) / sum(w))).^2));
 
-    % Alpha uncertainty
-    dalpha_dC2   = Dp * (1/beta) * C2^(1/beta - 1);
-    dalpha_dbeta = -alpha * (log(C2)/beta^2);
+% Output
+out.C2 = C2;
+out.d_C2 = dC2;
 
-    d_alpha = sqrt( (dalpha_dC2*dC2)^2 + (dalpha_dbeta*d_beta)^2 );
+out.beta = 1;        % fixed
+out.d_beta = 0;      % no uncertainty
 
-    % Fitted curve
-    KL_fit = KL_model(p_est, Pe_fromD0);
+out.tau = tau;        % fixed
+out.d_tau = d_tau;      % no uncertainty
 
-    % Prediction intervals (now valid!)
-    [KL_pred, dKL_pred] = nlpredci(KL_model, Pe_fromD0, p_est, R, 'jacobian', J);
+out.alpha_SI = alpha;
+out.d_alpha_SI = d_alpha;
+out.alpha_cm = alpha * 100;
+out.d_alpha_cm = d_alpha * 100;
 
-    % Weighted RMSE and R2
-    RMSE = sqrt( sum(w .* (KL - KL_fit).^2) / sum(w) );
+out.KL_fit = KL_fit;
+out.KL_pred = KL_pred;
+out.dKL_pred = dKL_pred;
 
-    KL_wmean = sum(w .* KL) / sum(w);
-    SS_res = sum(w .* (KL - KL_fit).^2);
-    SS_tot = sum(w .* (KL - KL_wmean).^2);
-    R2 = 1 - SS_res/SS_tot;
+out.RMSE = RMSE;
+out.R2 = R2;
 
-    % Output
-    out.C2 = C2;
-    out.d_C2 = dC2;
+out.Cfun = KL_model;
+out.R = R;
+out.J = J;
+out.CovB = CovB;
+out.MSE = MSE;
+out.ErrorModelInfo = ErrorModelInfo;
 
-    out.beta = beta;
-    out.d_beta = d_beta;
-
-    out.alpha_SI = alpha;
-    out.d_alpha_SI = d_alpha;
-    out.alpha_cm = alpha * 100;
-    out.d_alpha_cm = d_alpha * 100;
-
-    out.KL_fit = KL_fit;
-    out.KL_pred = KL_pred;
-    out.dKL_pred = dKL_pred;
-
-    out.RMSE = RMSE;
-    out.R2 = R2;
-
-    out.Cfun = KL_model;
-    out.R = R;
-    out.J = J;
-    out.CovB = CovB;
-    out.MSE = MSE;
-    out.ErrorModelInfo = ErrorModelInfo;
-
-        
 end

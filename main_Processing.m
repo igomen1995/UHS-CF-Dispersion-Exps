@@ -280,118 +280,81 @@ dD0 = unique(fitting_results.dD0_SI);
 Pe_D0_array = fitting_results.Pe_D0; % Pe in respect to D0
 dPe_D0_array = fitting_results.dPe_D0;
 
-% Pe_array = fitting_results.Pe; % Pe in respect to KL
-% dPe_array = fitting_results.SE_Pe;
-Pe_array = fitting_results.Pe_dtfixed; % Pe in respect to KL
-dPe_array = fitting_results.SE_Pe_dtfixed;
-
 % KL_array = fitting_results.KL_SI; % KL and D0 must have same units
 % dKL_array = fitting_results.SE_KL_SI;
 KL_array = fitting_results.KL_dtfixed_SI; % KL and D0 must have same units
 dKL_array = fitting_results.SE_KL_total_dtfixed_SI;
 
-% Models
-% Model full with beta
-KL_D0_vs_Pe_function_full = @(p,Pe)D0 *((1/p(1)) + ((p(2)^(1/p(3)))*Pe).^p(3));
-p1 = [1,1,1];
-% Model no beta
-KL_D0_vs_Pe_function_nobeta = @(p,Pe)D0 *((1/p(1)) + p(2)*Pe);
-p2 = [1,1];
-% Model only alpha
-KL_D0_vs_Pe_function_alpha = @(p,Pe)D0 *(p(1)*Pe);
-p3 = 1;
-
-% KL_D0_vs_Pe_fit = fitnlm(Pe_D0_array,KL_array,KL_D0_vs_Pe_function_full,p1);
-% tortosityPe1 = KL_D0_vs_Pe_fit.Coefficients.Estimate(1);
-% betaPe1 = KL_D0_vs_Pe_fit.Coefficients.Estimate(3);
-% alphaPe1 = (KL_D0_vs_Pe_fit.Coefficients.Estimate(2)^(betaPe1))*Dp_SI; % SI
-% dtortosityPe1 = KL_D0_vs_Pe_fit.Coefficients.SE(1);
-% dbetaPe1 = KL_D0_vs_Pe_fit.Coefficients.SE(3);
-% dalphaPe1 = ((Dp_SI^2)*(KL_D0_vs_Pe_fit.Coefficients.SE(2)^2))^(1/2); % SI
-
 % Fitting
-fit_dispersion_params_all_out = fit_dispersion_params_all(KL_array,Pe_D0_array,D0,Dp_SI,p2,dKL_array);
+p_guess = [1,1];
+fit_dispersion_params_all_out = fit_dispersion_params_all(KL_array,Pe_D0_array,D0,Dp_SI,p_guess,dKL_array);
 
-% % KL/D0 vs Pe fitting, Pe = UL/D0
-% % KL_D0_vs_Pe_function = @(p1,Pe)D0 *((1/p1(1)) + ((p1(2)^(1/p1(3)))*Pe).^p1(3));
-% % p1 = [1,1,1];
-% % KL_D0_vs_Pe_function = @(p1,Pe)D0 *((1/p1(1)) + p1(2)*Pe);
-% % p1 = [1,1];
-% KL_D0_vs_Pe_function = @(p1,Pe)D0 *(p1(2)*Pe);
-% p1 = [1,1];
-% % fitting not uncertainties
-% KL_D0_vs_Pe_fit = fitnlm(Pe,KL_array,KL_D0_vs_Pe_function,p1);
-% 
-% tortosityPe1 = KL_D0_vs_Pe_fit.Coefficients.Estimate(1);
-% % betaPe1 = KL_D0_vs_Pe_fit.Coefficients.Estimate(3);
-% betaPe1 = 1;
-% alphaPe1 = (KL_D0_vs_Pe_fit.Coefficients.Estimate(2)^(betaPe1))*Dp_SI; % SI
-% dtortosityPe1 = KL_D0_vs_Pe_fit.Coefficients.SE(1);
-% % dbetaPe1 = KL_D0_vs_Pe_fit.Coefficients.SE(3);
-% dbetaPe1 = 0;
-% dalphaPe1 = ((Dp_SI^2)*(KL_D0_vs_Pe_fit.Coefficients.SE(2)^2))^(1/2); % SI
-% 
-% % % fitting with uncertainties
-% % resKL_D0_vs_Pe_function = @(p,Pe) (KL - KL_D0_vs_Pe_function(p,Pe)) ./ dKL;
-% % p1 = [1,1];
-% % [p1_fit,~,~,~,~,~,J] = lsqcurvefit(resKL_D0_vs_Pe_function, p1, Pe, zeros(size(KL)));
-% % resKL_D0_vs_Pe = resKL_D0_vs_Pe_function(p1_fit,Pe);
-% % p1_fit_uncert = nlparci(p1_fit, resKL_D0_vs_Pe, 'jacobian', J);
-% % 
-% % tortosityPe2 = p1_fit(1);
-% % % betaPe2 = p1_fit(3);
-% % betaPe2 = 1;
-% % alphaPe2 = (p1_fit(2)^(betaPe1))*Dp_SI; % SI
-% % dtortosityPe2 = (p1_fit_uncert(1,2)-p1_fit_uncert(1,1))/(2*1.96);
-% % % dbetaPe2 = (p1_fit_uncert(3,2)-p1_fit_uncert(3,1))/(2*1.96);
-% % dbetaPe2 = 0;
-% % dalphaPe2 = ((Dp_SI^2)*(((p1_fit_uncert(1,2)-p1_fit_uncert(1,1))/(2*1.96))^2))^(1/2); % SI
-% 
-% % alpha lin fitting Kl with v not needed since we can use the one that also
-% % depends on tortuosity
-% 
-% % % alpha lin fitting
-% % KL_D0_vs_u_function = @(p2,u)(p2(1)*u);
-% % resKL_D0_vs_u_function = @(p,u) max((KL - KL_D0_vs_u_function(p,u)) ./ dKL);
-% % p2 = 1;
-% % % fitting not uncertainties
-% % KL_D0_vs_u_fit = fitnlm(u_array,KL_array,KL_D0_vs_u,p2);
-% % % fitting with uncertainties
-% % [p2_fit,~,~,~,~,~,J] = lsqcurvefit(resKL_D0_vs_u_function, p2, u, 0);
-% % resKL_D0_vs_u = resKL_D0_vs_u_function(p2_fit,u);
-% % p2_fit_uncert = nlparci(p2_fit, resKL_D0_vs_u, 'jacobian', J);
-% % 
-% % alphau1_SI = KL_D0_vs_u_fit.Coefficients.Estimate(1);
-% % alphau1_cm = KL_D0_vs_u_fit.Coefficients.Estimate(1)*100; %cm
-% % dalphau1_SI = KL_D0_vs_u_fit.Coefficients.SE(1); % error
-% % dalphau1_cm = KL_D0_vs_u_fit.Coefficients.SE(1)*100; %cm
-% % 
-% % alphau2_SI = p2_fit;
-% % alphau2_cm = p2_fit*100; %cm
-% 
-% % Peclet with Dp = alpha instead of L
-% Pe_alpha_array = u_array*alphaPe1/D0;
-% dPe_alpha_array = (((u_array/D0).^2)*(dalphaPe1^2)+((-u_array*alphaPe1/(D0^2)).^2)*(dD0^2)).^(1/2);
-% % Peclet/D0
-% KL_vs_D0_array = KL_array/D0;
-% dKL_vs_D0_array = (((1/D0).^2)*(dKL_array.^2)+((-KL_array/(D0^2)).^2)*(dD0^2)).^(1/2);
-% 
-% % add KL/D0 uncertainty as well
-% 
-% % Add Pe_alpha in exp_params and fitting results
-% fitting_results.Pe_alpha = Pe_alpha_array;
-% fitting_results.dPe_alpha = dPe_alpha_array;
-% fitting_results.KL_vs_D0 = KL_vs_D0_array;
-% fitting_results.dKL_vs_D0 = dKL_vs_D0_array;
-% for i = 1:length(filedataExp.Key)
-%     expProcData.(filedataExp.Key(i)).exp_params.Pe_alpha = Pe_alpha_array(i);
-%     expProcData.(filedataExp.Key(i)).exp_params.dPe_alpha = dPe_alpha_array(i);
-%     expProcData.(filedataExp.Key(i)).exp_params.KL_vs_D0 = KL_vs_D0_array(i);
-%     expProcData.(filedataExp.Key(i)).exp_params.dKL_vs_D0 = dKL_vs_D0_array(i);
-% end
-% 
-% % save updated expProcData
-% save(pathExportAll + "expProcFullData.mat",'expProcData')
+% Propagation of uncertainty from D0 error
+D0max = D0 + dD0;
+D0min = D0 - dD0;
+Pe_D0max_array = Pe_D0_array*(D0/D0max); % Pe in respect to D0max
+Pe_D0min_array = Pe_D0_array*(D0/D0min); % Pe in respect to D0min
+
+% Fitting KL with different Pe ranges
+fit_dispersion_params_all_Pe_D0max_out = fit_dispersion_params_all(KL_array,Pe_D0max_array,D0max,Dp_SI,p_guess,dKL_array);
+fit_dispersion_params_all_Pe_D0min_out = fit_dispersion_params_all(KL_array,Pe_D0min_array,D0min,Dp_SI,p_guess,dKL_array);
+
+% Params from fitting
+beta = fit_dispersion_params_all_out.beta;
+d_beta = fit_dispersion_params_all_out.d_beta;
+alpha_SI = fit_dispersion_params_all_out.alpha_SI;
+d_alpha_SI = fit_dispersion_params_all_out.d_alpha_SI;
+alpha_cm = fit_dispersion_params_all_out.alpha_cm;
+d_alpha_cm = fit_dispersion_params_all_out.d_alpha_cm;
+
+KL_fit = fit_dispersion_params_all_out.KL_fit;
+KL_pred = fit_dispersion_params_all_out.KL_pred;
+dKL_pred = fit_dispersion_params_all_out.dKL_pred;
+
+alpha_D0max_SI = fit_dispersion_params_all_Pe_D0max_out.alpha_SI;
+alpha_D0min_SI = fit_dispersion_params_all_Pe_D0min_out.alpha_SI;
+d_alpha_D0uncert_SI = abs(alpha_D0max_SI - alpha_D0min_SI)/2;
+alpha_D0max_cm = fit_dispersion_params_all_Pe_D0max_out.alpha_cm;
+alpha_D0min_cm = fit_dispersion_params_all_Pe_D0min_out.alpha_cm;
+d_alpha_D0uncert_cm = abs(alpha_D0max_cm - alpha_D0min_cm)/2;
+
+KL_D0max_fit = fit_dispersion_params_all_Pe_D0max_out.KL_fit;
+KL_D0min_fit = fit_dispersion_params_all_Pe_D0min_out.KL_fit;
+dKL_D0uncert = abs(KL_D0max_fit - KL_D0min_fit)/2;
+
+d_alpha_total_SI = (d_alpha_SI.^2 +d_alpha_D0uncert_SI.^2).^(1/2);
+d_alpha_total_cm = (d_alpha_cm.^2 +d_alpha_D0uncert_cm.^2).^(1/2);
+dKL_total = (dKL_pred.^2 +dKL_D0uncert.^2).^(1/2);
+
+RMSE = fit_dispersion_params_all_out.RMSE;
+R2 = fit_dispersion_params_all_out.R2;
+
+KL_model = fit_dispersion_params_all_out.Cfun;
+
+% Peclet with Dp = alpha instead of L
+Pe_alpha_array = u_array*alpha_SI/D0;
+dPe_alpha_array = (((u_array/D0).^2)*(d_alpha_total_SI^2)+((-u_array*alpha_SI/(D0^2)).^2)*(dD0^2)).^(1/2);
+% KL/D0, must be same units
+KL_vs_D0_array = KL_array/D0;
+dKL_vs_D0_array = (((1/D0).^2)*(dKL_array.^2)+((-KL_array/(D0^2)).^2)*(dD0^2)).^(1/2); %dKL array instead of dKL total
+% since it is the result from fitting C vs t, not plotting the results from this fitting
+
+% Add dispersion parameters in exp_params and fitting results
+fitting_results.Pe_alpha = Pe_alpha_array;
+fitting_results.dPe_alpha = dPe_alpha_array;
+fitting_results.KL_vs_D0 = KL_vs_D0_array;
+fitting_results.dKL_vs_D0 = dKL_vs_D0_array;
+for i = 1:length(filedataExp.Key)
+    expProcData.(filedataExp.Key(i)).exp_params.Pe_alpha = Pe_alpha_array(i);
+    expProcData.(filedataExp.Key(i)).exp_params.dPe_alpha = dPe_alpha_array(i);
+    expProcData.(filedataExp.Key(i)).exp_params.KL_vs_D0 = KL_vs_D0_array(i);
+    expProcData.(filedataExp.Key(i)).exp_params.dKL_vs_D0 = dKL_vs_D0_array(i);
+end
+
+expProcFullData = expProcData;
+
+% save updated expProcData
+save(pathExportAll + "expProcFullData.mat",'expProcFullData')
 
 %% Table results
 
@@ -399,10 +362,13 @@ fit_dispersion_params_all_out = fit_dispersion_params_all(KL_array,Pe_D0_array,D
 % Pe alone is Pe in respect to KL and not D0
 fitting_results_simple = fitting_results(:, {'Key', 'C1init_pcmol', ...
     'C1j_pcmol', 'Q_mlmin', 'u_cmmin', 'RMSE_dtfixed', 'R2_dtfixed', ...
-    'KL_dtfixed_cm2min','SE_KL_dtfixed_cm2min', 'sd_KL_dtfixed_avg_cm2min', ...
-    'error_pc_KL_dtfixed_avg_cm2min',  'KL_vs_D0', 'dKL_vs_D0', 'Pe_dtfixed', 'SE_Pe_dtfixed', ...
-    'dt_dtfixed_min', 'SE_dt_min', 'dtD_dtfixed_min', 'SE_dtD', ...
+    'KL_dtfixed_cm2min','SE_KL_total_dtfixed_cm2min','Pe_dtfixed', 'SE_Pe_dtfixed', ...
+    'dt_dtfixed_min', 'SE_dt_min', 'dtD_dtfixed', 'SE_dtD', ...
     'Pe_D0', 'dPe_D0', 'Pe_alpha', 'dPe_alpha', 'T_mean', 'T_std'});
+
+L_dtfixed_lines SI
+L_dtfixed_lines*100 cm
+Vol lines before cc V_dtfixed_lines_cc
 
 fitting_params_simple = table("Berea", unique(fitting_results.Fluid1), unique(fitting_results.Fluid2),...
     unique(fitting_results.T_C),unique(fitting_results.P_psig), (unique(fitting_results.P_psig)+14.7)*0.00689476,...
