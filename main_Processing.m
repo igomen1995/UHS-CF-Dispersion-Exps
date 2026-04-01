@@ -286,8 +286,9 @@ KL_array = fitting_results.KL_dtfixed_SI; % KL and D0 must have same units
 dKL_array = fitting_results.SE_KL_total_dtfixed_SI;
 
 % Fitting
-p_guess = [1,1];
+p_guess = 1;
 fit_dispersion_params_all_out = fit_dispersion_params_all(KL_array,Pe_D0_array,D0,Dp_SI,p_guess,dKL_array);
+fit_dispersion_params_all_fitnlm_out = fit_dispersion_params_all_fitnlm(KL_array,Pe_D0_array,D0,Dp_SI,p_guess,dKL_array);
 
 % Propagation of uncertainty from D0 error
 D0max = D0 + dD0;

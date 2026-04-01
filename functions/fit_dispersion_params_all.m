@@ -7,7 +7,7 @@ function out = fit_dispersion_params_all(KL,Pe_fromD0,D0,Dp,p0,dKL)
 w = 1./(dKL.^2);
 
 % Model with beta = 1
-KL_model = @(p,Pe_vals) D0 * ((1/p(2)) + ( p(1) .* Pe_vals ));
+KL_model = @(p,Pe_vals) D0 * ( p(1) .* Pe_vals );
 
 % Nonlinear fit (unweighted or weighted)
 opts = statset('nlinfit');
@@ -18,14 +18,12 @@ ci = nlparci(p_est, R, 'jacobian', J);
 
 % Extract parameter
 C2 = p_est(1);
-tau = p_est(2);
 
 % Alpha (dispersivity)
 alpha = C2 * Dp;
 
 % Uncertainty in C2
 dC2 = (ci(1,2) - ci(1,1))/2;
-d_tau = (ci(2,2) - ci(2,1))/2;
 
 % Uncertainty in alpha
 d_alpha = Dp * dC2;
@@ -46,9 +44,6 @@ out.d_C2 = dC2;
 
 out.beta = 1;        % fixed
 out.d_beta = 0;      % no uncertainty
-
-out.tau = tau;        % fixed
-out.d_tau = d_tau;      % no uncertainty
 
 out.alpha_SI = alpha;
 out.d_alpha_SI = d_alpha;

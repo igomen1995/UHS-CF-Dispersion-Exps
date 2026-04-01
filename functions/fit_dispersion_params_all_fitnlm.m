@@ -4,27 +4,26 @@ function out = fit_dispersion_params_all_fitnlm(KL,Pe_fromD0,D0,Dp,p0,dKL)
 % KL = D0 * C2 * Pe
 % Parameter: C2 > 0
 
+% Weights = 1/variance
+w = 1./(dKL.^2);
+
 % Table for fitnlm
 tbl = table(Pe_fromD0, KL, 'VariableNames', {'Pe','KL'});
 
 % Model function for fitnlm (C2 = exp(b1))
-modelfun = @(b,x) D0 * exp(b(1)) .* x;
+modelfun = @(b,Pe) D0 * b(1) .* Pe;
 
 % Fit (unweighted)
-mdl = fitnlm(tbl, modelfun, p0);
+mdl = fitnlm(tbl, modelfun, p0);%'Weights',w);
 
 % Extract parameter
-p1 = mdl.Coefficients.Estimate(1);
-C2 = exp(p1);
+C2 = mdl.Coefficients.Estimate(1);
 
 % Alpha
 alpha = C2 * Dp;
 
-% Uncertainty in p1
-dp1 = mdl.Coefficients.SE(1);
-
 % Uncertainty in C2
-dC2 = C2 * dp1;
+dC2 = mdl.Coefficients.SE(1);
 
 % Uncertainty in alpha
 d_alpha = Dp * dC2;
