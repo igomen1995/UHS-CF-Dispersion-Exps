@@ -45,7 +45,7 @@ R2 = 1 - (sum(w .* (C - C_fit).^2))/(sum(w .* (C - (sum(w .* C) / sum(w))).^2));
 out.KL = KL;
 out.dKL = dKL;
 out.dt = dt_fixed;
-out.ddt = d_dt;
+out.ddt = 0;
 
 out.C_fit = C_fit; % Best fit model prediction using estimated parameters
 out.C_pred = C_pred; % 95% prediction interval, which includes paramters uncertainty and residual variance
