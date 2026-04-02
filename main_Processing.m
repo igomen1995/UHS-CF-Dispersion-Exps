@@ -68,7 +68,7 @@ for i = 1:length(filedataExp.Key)
         dt_guess = (filedataExp.Vlinesbefore(i)+filedataExp.Vlinesafter(i))*60/filedataExp.Q(i); % time in seconds
         p_guess = [1,dt_guess];
 
-        KL_out = fit_dispersion_dt_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,p_guess,dC_vals);
+        KL_out = fit_dispersion_dt_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,p_guess,dC_vals);%ones(size(C1_vals)))
 
         % exp params for table
         expProcData.(filedataExp.Key(i)).exp_params.u_cmmin = u*60*(10^2);
@@ -176,7 +176,7 @@ for i = 1:length(filedataExp.Key)
         dt_fixed = dtD_guess*L/u; %  dt estimate according to velocity of each experiment
         p_guess = sqrt(expProcData.(filedataExp.Key(i)).exp_params.KL_SI);
 
-        KL_dt_fixed_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals);
+        KL_dt_fixed_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals);%ones(size(C1_vals)));
 
         % Fitting parameters mean
         KL_fit = KL_dt_fixed_out.KL;
@@ -231,8 +231,8 @@ for i = 1:length(filedataExp.Key)
         % Uncertainty propagation from dt_free error
         d_dt_free = expProcData.(filedataExp.Key(i)).exp_params.SE_dt_SI;
 
-        KL_dt_fixed_max_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed+d_dt_free,p_guess,dC_vals);
-        KL_dt_fixed_min_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed-d_dt_free,p_guess,dC_vals);
+        KL_dt_fixed_max_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed+d_dt_free,p_guess,dC_vals);%ones(size(C1_vals)));
+        KL_dt_fixed_min_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed-d_dt_free,p_guess,dC_vals);%ones(size(C1_vals)));
 
         KL_max_fit = KL_dt_fixed_max_out.KL;
         KL_min_fit = KL_dt_fixed_min_out.KL;
@@ -332,17 +332,17 @@ d_alpha_nw_cm = fit_dispersion_params_all_nw_out.d_alpha_cm;
 % alpha weigthed D0 effect
 alpha_D0max_w_SI = fit_dispersion_params_all_Pe_D0max_out.alpha_SI;
 alpha_D0min_w_SI = fit_dispersion_params_all_Pe_D0min_out.alpha_SI;
-d_alpha_D0uncert_w_SI = abs(alpha_D0max_SI - alpha_D0min_SI)/2;
+d_alpha_D0uncert_w_SI = abs(alpha_D0max_w_SI - alpha_D0min_w_SI)/2;
 alpha_D0max_w_cm = fit_dispersion_params_all_Pe_D0max_out.alpha_cm;
 alpha_D0min_w_cm = fit_dispersion_params_all_Pe_D0min_out.alpha_cm;
-d_alpha_D0uncert_w_cm = abs(alpha_D0max_cm - alpha_D0min_cm)/2;
+d_alpha_D0uncert_w_cm = abs(alpha_D0max_w_cm - alpha_D0min_w_cm)/2;
 % alpha non weigthed D0 effect
 alpha_D0max_nw_SI = fit_dispersion_params_all_Pe_D0max_nw_out.alpha_SI;
 alpha_D0min_nw_SI = fit_dispersion_params_all_Pe_D0min_nw_out.alpha_SI;
-d_alpha_D0uncert_nw_SI = abs(alpha_D0max_SI - alpha_D0min_SI)/2;
+d_alpha_D0uncert_nw_SI = abs(alpha_D0max_nw_SI - alpha_D0min_nw_SI)/2;
 alpha_D0max_nw_cm = fit_dispersion_params_all_Pe_D0max_nw_out.alpha_cm;
 alpha_D0min_nw_cm = fit_dispersion_params_all_Pe_D0min_nw_out.alpha_cm;
-d_alpha_D0uncert_nw_cm = abs(alpha_D0max_cm - alpha_D0min_cm)/2;
+d_alpha_D0uncert_nw_cm = abs(alpha_D0max_nw_cm - alpha_D0min_nw_cm)/2;
 
 alphas_SI = [alpha_w_SI,alpha_nw_SI,alpha_D0max_w_SI,alpha_D0min_w_SI,alpha_D0max_nw_SI,alpha_D0min_nw_SI];
 alphas_cm = [alpha_w_cm,alpha_nw_cm,alpha_D0max_w_cm,alpha_D0min_w_cm,alpha_D0max_nw_cm,alpha_D0min_nw_cm];
@@ -405,8 +405,8 @@ fitting_params_simple = table("Berea", unique(fitting_results.Fluid1), unique(fi
     unique(fitting_results.D12_cm2min), unique(fitting_results.dD12_cm2min), ...
     unique(fitting_results.D_in)*2.54, unique(fitting_results.L_cm), ...
     unique(fitting_results.phi),unique(fitting_results.K_mD), ...
-    unique(fitting_results.dtD_dtfixed), unique(fitting_results.L_dtfixed_lines_cm),max(fitting_results.SE_L_dtfixed_lines_cm),...
-    unique(fitting_results.Vlinesbefore_cc), max(fitting_results.V_dtfixed_lines_cc),max(fitting_results.SE_V_dtfixed_lines_cc*10),...
+    unique(fitting_results.dtD_dtfixed), max(fitting_results.L_dtfixed_lines_cm),max(fitting_results.SE_L_dtfixed_lines_cm),...
+    unique(fitting_results.Vlinesbefore_cc), max(fitting_results.V_dtfixed_lines_cc),max(fitting_results.SE_V_dtfixed_lines_cc),...
     alpha_mean_cm, d_alpha_sens_cm, beta, ...
     'VariableNames',{'Sample', 'Fluid1','Fluid2', ...
     'T_C','P_psig','P_MPa', ...
@@ -440,7 +440,7 @@ writetable(fitting_results,table_name + ".xlsx");
 save(table_name + ".mat",'fitting_results')
 
 % save updated expProcData
-save(pathExportAll + "expProcFullData.mat",'expProcData')
+save(pathExportAll + "expProcFullData.mat",'expProcFullData')
 
 % save fitting table
 writetable(fitting_results_simple,table_name1 + ".xlsx");
