@@ -517,7 +517,8 @@ KL_mean_array = fitting_results.KL_mean_SI; % KL and D0 must have same units
 dKL_mean_array = fitting_results.SE_KL_mean_SI;
 
 % Fitting
-p_guess = [1,1];
+p_guess = 1;
+% p_guess = [1,1]; % with tau
 
 % KL weigthed
 % weighted
@@ -541,21 +542,21 @@ fit_dispersion_params_all_Pe_D0min_nw_out = fit_dispersion_params_all(KL_array,P
 beta = fit_dispersion_params_all_out.beta;
 d_beta = fit_dispersion_params_all_out.d_beta;
 
-% taus KL weigthed
-% tau weigthed
-tau_w = fit_dispersion_params_all_out.tau;
-d_tau_w = fit_dispersion_params_all_out.d_tau;
-% tau non weigthed
-tau_nw = fit_dispersion_params_all_nw_out.tau;
-d_tau_nw = fit_dispersion_params_all_nw_out.d_tau;
-% tau weigthed D0 effect
-tau_D0max_w = fit_dispersion_params_all_Pe_D0max_out.tau;
-tau_D0min_w = fit_dispersion_params_all_Pe_D0min_out.tau;
-d_tau_D0uncert_w = abs(tau_D0max_w - tau_D0min_w)/2;
-% tau non weigthed D0 effect
-tau_D0max_nw = fit_dispersion_params_all_Pe_D0max_nw_out.tau;
-tau_D0min_nw = fit_dispersion_params_all_Pe_D0min_nw_out.tau;
-d_tau_D0uncert_nw = abs(tau_D0max_nw - tau_D0min_nw)/2;
+% % taus KL weigthed
+% % tau weigthed
+% tau_w = fit_dispersion_params_all_out.tau;
+% d_tau_w = fit_dispersion_params_all_out.d_tau;
+% % tau non weigthed
+% tau_nw = fit_dispersion_params_all_nw_out.tau;
+% d_tau_nw = fit_dispersion_params_all_nw_out.d_tau;
+% % tau weigthed D0 effect
+% tau_D0max_w = fit_dispersion_params_all_Pe_D0max_out.tau;
+% tau_D0min_w = fit_dispersion_params_all_Pe_D0min_out.tau;
+% d_tau_D0uncert_w = abs(tau_D0max_w - tau_D0min_w)/2;
+% % tau non weigthed D0 effect
+% tau_D0max_nw = fit_dispersion_params_all_Pe_D0max_nw_out.tau;
+% tau_D0min_nw = fit_dispersion_params_all_Pe_D0min_nw_out.tau;
+% d_tau_D0uncert_nw = abs(tau_D0max_nw - tau_D0min_nw)/2;
 
 % alphas KL weigthed
 % alpha weigthed
@@ -605,21 +606,21 @@ fit_dispersion_params_all_Pe_D0min_nw_KLnw_out = fit_dispersion_params_all(KL_nw
 beta_KLnw = fit_dispersion_params_all_KLnw_out.beta;
 d_beta_KLnw = fit_dispersion_params_all_KLnw_out.d_beta;
 
-% taus KL weigthed
-% tau weigthed
-tau_w_KLnw = fit_dispersion_params_all_KLnw_out.tau;
-d_tau_w_KLnw = fit_dispersion_params_all_KLnw_out.d_tau;
-% tau non weigthed
-tau_nw_KLnw = fit_dispersion_params_all_nw_KLnw_out.tau;
-d_tau_nw_KLnw = fit_dispersion_params_all_nw_KLnw_out.d_tau;
-% tau weigthed D0 effect
-tau_D0max_w_KLnw = fit_dispersion_params_all_Pe_D0max_KLnw_out.tau;
-tau_D0min_w_KLnw = fit_dispersion_params_all_Pe_D0min_KLnw_out.tau;
-d_tau_D0uncert_w_KLnw = abs(tau_D0max_w_KLnw - tau_D0min_w_KLnw)/2;
-% tau non weigthed D0 effect
-tau_D0max_nw_KLnw = fit_dispersion_params_all_Pe_D0max_KLnw_out.tau;
-tau_D0min_nw_KLnw = fit_dispersion_params_all_Pe_D0min_KLnw_out.tau;
-d_tau_D0uncert_nw_KLnw = abs(tau_D0max_nw_KLnw - tau_D0min_nw_KLnw)/2;
+% % taus KL weigthed
+% % tau weigthed
+% tau_w_KLnw = fit_dispersion_params_all_KLnw_out.tau;
+% d_tau_w_KLnw = fit_dispersion_params_all_KLnw_out.d_tau;
+% % tau non weigthed
+% tau_nw_KLnw = fit_dispersion_params_all_nw_KLnw_out.tau;
+% d_tau_nw_KLnw = fit_dispersion_params_all_nw_KLnw_out.d_tau;
+% % tau weigthed D0 effect
+% tau_D0max_w_KLnw = fit_dispersion_params_all_Pe_D0max_KLnw_out.tau;
+% tau_D0min_w_KLnw = fit_dispersion_params_all_Pe_D0min_KLnw_out.tau;
+% d_tau_D0uncert_w_KLnw = abs(tau_D0max_w_KLnw - tau_D0min_w_KLnw)/2;
+% % tau non weigthed D0 effect
+% tau_D0max_nw_KLnw = fit_dispersion_params_all_Pe_D0max_KLnw_out.tau;
+% tau_D0min_nw_KLnw = fit_dispersion_params_all_Pe_D0min_KLnw_out.tau;
+% d_tau_D0uncert_nw_KLnw = abs(tau_D0max_nw_KLnw - tau_D0min_nw_KLnw)/2;
 
 % alphas KL non weigthed
 % alpha weigthed
@@ -669,21 +670,21 @@ fit_dispersion_params_all_Pe_D0min_nw_KLmean_out = fit_dispersion_params_all(KL_
 beta_KLmean = fit_dispersion_params_all_KLmean_out.beta;
 d_beta_KLmean = fit_dispersion_params_all_KLmean_out.d_beta;
 
-% taus KL weigthed
-% tau weigthed
-tau_w_KLmean = fit_dispersion_params_all_KLmean_out.tau;
-d_tau_w_KLmean = fit_dispersion_params_all_KLmean_out.d_tau;
-% tau non weigthed
-tau_nw_KLmean = fit_dispersion_params_all_nw_KLmean_out.tau;
-d_tau_nw_KLmean = fit_dispersion_params_all_nw_KLmean_out.d_tau;
-% tau weigthed D0 effect
-tau_D0max_w_KLmean = fit_dispersion_params_all_Pe_D0max_KLmean_out.tau;
-tau_D0min_w_KLmean = fit_dispersion_params_all_Pe_D0min_KLmean_out.tau;
-d_tau_D0uncert_w_KLmean = abs(tau_D0max_w_KLmean - tau_D0min_w_KLmean)/2;
-% tau non weigthed D0 effect
-tau_D0max_nw_KLmean = fit_dispersion_params_all_Pe_D0max_KLmean_out.tau;
-tau_D0min_nw_KLmean = fit_dispersion_params_all_Pe_D0min_KLmean_out.tau;
-d_tau_D0uncert_nw_KLmean = abs(tau_D0max_nw_KLmean - tau_D0min_nw_KLmean)/2;
+% % taus KL weigthed
+% % tau weigthed
+% tau_w_KLmean = fit_dispersion_params_all_KLmean_out.tau;
+% d_tau_w_KLmean = fit_dispersion_params_all_KLmean_out.d_tau;
+% % tau non weigthed
+% tau_nw_KLmean = fit_dispersion_params_all_nw_KLmean_out.tau;
+% d_tau_nw_KLmean = fit_dispersion_params_all_nw_KLmean_out.d_tau;
+% % tau weigthed D0 effect
+% tau_D0max_w_KLmean = fit_dispersion_params_all_Pe_D0max_KLmean_out.tau;
+% tau_D0min_w_KLmean = fit_dispersion_params_all_Pe_D0min_KLmean_out.tau;
+% d_tau_D0uncert_w_KLmean = abs(tau_D0max_w_KLmean - tau_D0min_w_KLmean)/2;
+% % tau non weigthed D0 effect
+% tau_D0max_nw_KLmean = fit_dispersion_params_all_Pe_D0max_KLmean_out.tau;
+% tau_D0min_nw_KLmean = fit_dispersion_params_all_Pe_D0min_KLmean_out.tau;
+% d_tau_D0uncert_nw_KLmean = abs(tau_D0max_nw_KLmean - tau_D0min_nw_KLmean)/2;
 
 % alphas KL average
 % alpha weigthed
@@ -711,23 +712,22 @@ alpha_D0max_nw_KLmean_cm = fit_dispersion_params_all_Pe_D0max_nw_KLmean_out.alph
 alpha_D0min_nw_KLmean_cm = fit_dispersion_params_all_Pe_D0min_nw_KLmean_out.alpha_cm;
 d_alpha_D0uncert_nw_KLmean_cm = abs(alpha_D0max_nw_KLmean_cm - alpha_D0min_nw_KLmean_cm)/2;
 
-% all taus
-% KL weigthed
-taus = [tau_w,tau_nw,tau_D0max_w,tau_D0min_w,tau_D0max_nw,tau_D0min_nw];
-d_taus = [d_tau_w,d_tau_nw,d_tau_D0uncert_w,d_tau_D0uncert_nw];
-% KL non weigthed
-taus_KLnw = [tau_w_KLnw,tau_nw_KLnw,tau_D0max_w_KLnw,tau_D0min_w_KLnw,tau_D0max_nw_KLnw,tau_D0min_nw_KLnw];
-d_taus_KLnw = [d_tau_w_KLnw,d_tau_nw_KLnw,d_tau_D0uncert_w_KLnw,d_tau_D0uncert_nw_KLnw];
-% KL mean
-taus_KLmean = [tau_w_KLmean,tau_nw_KLmean,tau_D0max_w_KLmean,tau_D0min_w_KLmean,tau_D0max_nw_KLmean,tau_D0min_nw_KLmean];
-d_taus_KLmean = [d_tau_w_KLmean,d_tau_nw_KLmean,d_tau_D0uncert_w_KLmean,d_tau_D0uncert_nw_KLmean];
-
-% all taus and dtaus
-taus_all = [taus_KLnw,taus_KLmean];
-d_taus_all = [d_taus_KLnw,d_taus_KLmean];
-
-tau_mean = mean(taus_all);
-d_tau_sens = max(abs(taus_all - tau_mean));
+% % all taus
+% % KL weigthed
+% taus = [tau_w,tau_nw,tau_D0max_w,tau_D0min_w,tau_D0max_nw,tau_D0min_nw];
+% d_taus = [d_tau_w,d_tau_nw,d_tau_D0uncert_w,d_tau_D0uncert_nw];
+% % KL non weigthed
+% taus_KLnw = [tau_w_KLnw,tau_nw_KLnw,tau_D0max_w_KLnw,tau_D0min_w_KLnw,tau_D0max_nw_KLnw,tau_D0min_nw_KLnw];
+% d_taus_KLnw = [d_tau_w_KLnw,d_tau_nw_KLnw,d_tau_D0uncert_w_KLnw,d_tau_D0uncert_nw_KLnw];
+% % KL mean
+% taus_KLmean = [tau_w_KLmean,tau_nw_KLmean,tau_D0max_w_KLmean,tau_D0min_w_KLmean,tau_D0max_nw_KLmean,tau_D0min_nw_KLmean];
+% d_taus_KLmean = [d_tau_w_KLmean,d_tau_nw_KLmean,d_tau_D0uncert_w_KLmean,d_tau_D0uncert_nw_KLmean];
+% 
+% % all taus and dtaus
+% taus_all = [taus_KLnw,taus_KLmean];
+% d_taus_all = [d_taus_KLnw,d_taus_KLmean];
+% tau_mean = mean(taus_all);
+% d_tau_sens = max(abs(taus_all - tau_mean));
 
 % all alphas
 % KL weigthed
@@ -759,12 +759,12 @@ d_alpha_sens_cm = max(abs(alphas_all_cm - alpha_mean_cm));
 
 % C2 in model is alpha/Dp Dp is characterstic legth L
 KL_fun = fit_dispersion_params_all_out.Cfun; 
-% KL_fit = KL_fun(alpha_mean_SI/Dp_SI,Pe_D0_array);
-KL_fit = KL_fun([alpha_mean_SI/Dp_SI,tau_mean],Pe_D0_array);
-% KL_alphamax_fit = KL_fun((alpha_mean_SI+d_alpha_sens_SI)/Dp_SI,Pe_D0_array);
-% KL_alphamin_fit = KL_fun((alpha_mean_SI-d_alpha_sens_SI)/Dp_SI,Pe_D0_array);
-KL_alphamax_fit = KL_fun([(alpha_mean_SI+d_alpha_sens_SI)/Dp_SI,tau_mean+d_tau_sens],Pe_D0_array);
-KL_alphamin_fit = KL_fun([(alpha_mean_SI-d_alpha_sens_SI)/Dp_SI,tau_mean-d_tau_sens],Pe_D0_array);
+KL_fit = KL_fun(alpha_mean_SI/Dp_SI,Pe_D0_array);
+% KL_fit = KL_fun([alpha_mean_SI/Dp_SI,tau_mean],Pe_D0_array);
+KL_alphamax_fit = KL_fun((alpha_mean_SI+d_alpha_sens_SI)/Dp_SI,Pe_D0_array);
+KL_alphamin_fit = KL_fun((alpha_mean_SI-d_alpha_sens_SI)/Dp_SI,Pe_D0_array);
+% KL_alphamax_fit = KL_fun([(alpha_mean_SI+d_alpha_sens_SI)/Dp_SI,tau_mean+d_tau_sens],Pe_D0_array);
+% KL_alphamin_fit = KL_fun([(alpha_mean_SI-d_alpha_sens_SI)/Dp_SI,tau_mean-d_tau_sens],Pe_D0_array);
 dKL_alpha_sens = abs(KL_alphamax_fit - KL_alphamin_fit)/2;
 
 % RMSE = fit_dispersion_params_all_out.RMSE;
@@ -1121,12 +1121,12 @@ alpha_SI = alpha_mean_SI;
 dalpha_SI = d_alpha_sens_SI;
 alpha_L = alpha_mean_cm;
 dalpha_L = d_alpha_sens_cm;
-tau = tau_mean;
-dtau = d_tau_sens;
+% tau = tau_mean;
+% dtau = d_tau_sens;
 
 x = 0:1:ceil(max(Pe_D0_array));
-% KL_plot = KL_fun(alpha_SI/Dp_SI,x);
-KL_plot = KL_fun([alpha_SI/Dp_SI,tau],x);
+KL_plot = KL_fun(alpha_SI/Dp_SI,x);
+% KL_plot = KL_fun([alpha_SI/Dp_SI,tau],x);
 
 figure % dispersivity
 plot((x*D0/Dp_SI)*(60*10^2),KL_plot*(60*10^4), ...
@@ -1145,7 +1145,7 @@ ylabel('Longitudinal Dispersion Coefficient (K_L) [cm^2/s]');
 ylim([0,4.5])
 grid on;
 annotText1 = sprintf('\\alpha_{L} = %.2f \\pm %.2f cm', alpha_L, dalpha_L);
-annotText2 = sprintf('\\tau = %.2f \\pm %.2f', tau, dtau);
+% annotText2 = sprintf('\\tau = %.2f \\pm %.2f', tau, dtau);
 annotation('textbox', [0.25, 0.18, 0.8, 0.06], 'String', annotText1, ...
     'Interpreter', 'tex', 'FontSize', 9, 'EdgeColor', 'none','FaceAlpha',0.1);
 % annotation('textbox', [0.265, 0.13, 0.8, 0.06], 'String', annotText2, ...
@@ -1168,6 +1168,7 @@ dKL_array = fitting_results.SE_KL_mean_SI;
 
 x = 0:1:ceil(max(Pe_D0_array));
 KL_plot = KL_fun(alpha_SI/Dp_SI,x);
+% KL_plot = KL_fun([alpha_SI/Dp_SI,tau],x);
 
 figure % dispersivity
 plot(x,KL_plot/D0, ...
