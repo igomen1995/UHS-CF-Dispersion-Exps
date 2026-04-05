@@ -35,7 +35,29 @@ filedataExp = import_inputExp(filenameExp); % import input to a local variable
 
 load(pathImportAll+"expProcFullData.mat")
 
-%%
+%% mean residence time
+
+for i = 1:length(filedataExp.Key)
+    exp_params = expProcFullData.(filedataExp.Key(i)).exp_params;
+    
+    t_vals_aux = expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed;
+    C1_vals_aux = expProcFullData.(filedataExp.Key(i)).BT.Ci/100;
+
+    %resampling to have constant dt
+    idx = isfinite(t_vals_aux) & isfinite(C1_vals_aux);
+    t = t_vals_aux(idx);
+    C = C1_vals_aux(idx);
+    
+    [t, k] = sort(t);
+    C = C(k);
+    
+    t_mean_meas = trapz(t, 1 - C);   % [s]
+
+end
+
+
+
+%% mixing models
 
 for i = 1:length(filedataExp.Key)
     exp_params = expProcFullData.(filedataExp.Key(i)).exp_params;
@@ -88,6 +110,14 @@ for i = 1:length(filedataExp.Key)
 
     C1_eval = model(Dc_fit,t_vals);
 
+    E = [0; diff(C1_eval)] / dt;   % numerical derivative
+    E(E < 0) = 0;               % clip tiny negatives from noise
+
+    % Normalize to unit area
+    area_E = trapz(t_vals, E);
+    E = E / area_E;
+    t_mean_model = trapz(t_vals, t_vals .* E); 
+
     model2 = @(Dc,t) three_segment_model(t, Dc, ...
     exp_params.q_SI, A_before, ...
     exp_params.A_SI, exp_params.phi, A_after, ...
@@ -116,6 +146,53 @@ for i = 1:length(filedataExp.Key)
 
     C1_ob_linesafter = ob_step(t_vals,L_line_after,exp_params.v_lines_SI,exp_params.KL_lines_SI,1);
     expProcFullData.(filedataExp.Key(i)).BT_fit.C1_ob_linesafter = C1_ob_linesafter*100;
+
+    % variances
+    % Upstream RTD
+    G_up = impulse_from_step(t_vals, L_line_before, v_lines_before, KL_lines_before);
+    G_up(G_up < 0) = 0;
+    G_up = G_up / trapz(t_vals, G_up);
+    
+    % Core RTD
+    G_core = impulse_from_step(t_vals, exp_params.L_SI, exp_params.u_SI, Dc_fit);
+    G_core(G_core < 0) = 0;
+    G_core = G_core / trapz(t_vals, G_core);
+    
+    % Downstream RTD
+    G_down = impulse_from_step(t_vals, L_line_after, v_lines_after, KL_lines_after);
+    G_down(G_down < 0) = 0;
+    G_down = G_down / trapz(t_vals, G_down);
+
+    % Means
+    mu_up   = trapz(t_vals, t_vals .* G_up);
+    mu_core = trapz(t_vals, t_vals .* G_core);
+    mu_down = trapz(t_vals, t_vals .* G_down);
+    
+    % Variances
+    sigma2_up   = trapz(t_vals, (t_vals - mu_up  ).^2 .* G_up);
+    sigma2_core = trapz(t_vals, (t_vals - mu_core).^2 .* G_core);
+    sigma2_down = trapz(t_vals, (t_vals - mu_down).^2 .* G_down);
+    
+    % Total variance (by convolution theory)
+    sigma2_tot = sigma2_up + sigma2_core + sigma2_down;
+    
+    frac_up   = sigma2_up   / sigma2_tot * 100;
+    frac_core = sigma2_core / sigma2_tot * 100;
+    frac_down = sigma2_down / sigma2_tot * 100;
+    
+    fprintf('Variance contributions:\n');
+    fprintf('  Upstream:   %.1f %%\n', frac_up);
+    fprintf('  Core:       %.1f %%\n', frac_core);
+    fprintf('  Downstream: %.1f %%\n', frac_down);
+    
+    figure 
+    plot(t_vals, G_up,'DisplayName','Gup')
+    hold on
+    plot(t_vals, G_core,'DisplayName','Gcore')
+    plot(t_vals, G_down,'DisplayName','Gdown')
+    legend()
+    
+
 end
 
 %%
