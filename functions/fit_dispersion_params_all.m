@@ -6,11 +6,11 @@ function out = fit_dispersion_params_all(KL,Pe_fromD0,D0,Dp,p0,dKL)
 % Weights = 1/variance
 w = 1./(dKL.^2);
 
-% % Model with beta = 1 no tortuosity
-% KL_model = @(p,Pe_vals) D0 * ( p(1) .* Pe_vals );
+% Model with beta = 1 no tortuosity
+KL_model = @(p,Pe_vals) D0 * ( p(1) .* Pe_vals );
 
 % Model with beta = 1 tortuosity
-KL_model = @(p,Pe_vals) D0 * ( 1/p(2) + p(1) .* (Pe_vals.^1) );
+% KL_model = @(p,Pe_vals) D0 * ( 1/p(2) + p(1) .* (Pe_vals.^1) );
 
 % Nonlinear fit (unweighted or weighted)
 opts = statset('nlinfit');
@@ -22,12 +22,12 @@ ci = nlparci(p_est, R, 'jacobian', J);
 % Extract parameters
 C2 = p_est(1);
 alpha = C2 * Dp; % Alpha (dispersivity)
-tau = p_est(2); % tortuosity > 1
+% tau = p_est(2); % tortuosity > 1
 
 % Uncertainties
 dC2 = (ci(1,2) - ci(1,1))/2;
 d_alpha = Dp * dC2;
-dtau = (ci(2,2) - ci(2,1))/2;
+% dtau = (ci(2,2) - ci(2,1))/2;
 
 % Fitted curve
 KL_fit = KL_model(p_est, Pe_fromD0);
@@ -46,8 +46,8 @@ out.d_C2 = dC2;
 out.beta = 1;        % fixed
 out.d_beta = 0;      % no uncertainty
 
-out.tau = tau;      
-out.d_tau = dtau;      
+% out.tau = tau;      
+% out.d_tau = dtau;      
 
 out.alpha_SI = alpha;
 out.d_alpha_SI = d_alpha;

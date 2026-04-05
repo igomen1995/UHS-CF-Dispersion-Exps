@@ -522,14 +522,14 @@ KL_mean_array = fitting_results.KL_mean_SI; % KL and D0 must have same units
 dKL_mean_array = fitting_results.SE_KL_mean_SI;
 
 % Fitting
-% p_guess = 1;
-p_guess = [1,1]; % with tau
+p_guess = 1;
+% p_guess = [1,1]; % with tau
 
 % KL weigthed
 % weighted
-fit_dispersion_params_all_out = fit_dispersion_params_all(KL_array-D0,Pe_D0_array,D0,Dp_SI,p_guess,dKL_array);
+fit_dispersion_params_all_out = fit_dispersion_params_all(KL_array,Pe_D0_array,D0,Dp_SI,p_guess,dKL_array);
 %nonweighted
-fit_dispersion_params_all_nw_out = fit_dispersion_params_all(KL_array-D0,Pe_D0_array,D0,Dp_SI,p_guess,ones(size(KL_array)));
+fit_dispersion_params_all_nw_out = fit_dispersion_params_all(KL_array,Pe_D0_array,D0,Dp_SI,p_guess,ones(size(KL_array)));
 
 % Propagation of uncertainty from D0 error
 D0max = D0 + dD0;
@@ -538,10 +538,10 @@ Pe_D0max_array = Pe_D0_array*(D0/D0max); % Pe in respect to D0max
 Pe_D0min_array = Pe_D0_array*(D0/D0min); % Pe in respect to D0min
 
 % Fitting KL with different Pe ranges
-fit_dispersion_params_all_Pe_D0max_out = fit_dispersion_params_all(KL_array-D0,Pe_D0max_array,D0max,Dp_SI,p_guess,dKL_array);
-fit_dispersion_params_all_Pe_D0min_out = fit_dispersion_params_all(KL_array-D0,Pe_D0min_array,D0min,Dp_SI,p_guess,dKL_array);
-fit_dispersion_params_all_Pe_D0max_nw_out = fit_dispersion_params_all(KL_array-D0,Pe_D0max_array,D0max,Dp_SI,p_guess,ones(size(KL_array)));
-fit_dispersion_params_all_Pe_D0min_nw_out = fit_dispersion_params_all(KL_array-D0,Pe_D0min_array,D0min,Dp_SI,p_guess,ones(size(KL_array)));
+fit_dispersion_params_all_Pe_D0max_out = fit_dispersion_params_all(KL_array,Pe_D0max_array,D0max,Dp_SI,p_guess,dKL_array);
+fit_dispersion_params_all_Pe_D0min_out = fit_dispersion_params_all(KL_array,Pe_D0min_array,D0min,Dp_SI,p_guess,dKL_array);
+fit_dispersion_params_all_Pe_D0max_nw_out = fit_dispersion_params_all(KL_array,Pe_D0max_array,D0max,Dp_SI,p_guess,ones(size(KL_array)));
+fit_dispersion_params_all_Pe_D0min_nw_out = fit_dispersion_params_all(KL_array,Pe_D0min_array,D0min,Dp_SI,p_guess,ones(size(KL_array)));
 
 % Params from fitting
 beta = fit_dispersion_params_all_out.beta;
@@ -591,9 +591,9 @@ d_alpha_D0uncert_nw_cm = abs(alpha_D0max_nw_cm - alpha_D0min_nw_cm)/2;
 
 % KL non weigthed
 % weighted
-fit_dispersion_params_all_KLnw_out = fit_dispersion_params_all(KL_nw_array-D0,Pe_D0_array,D0,Dp_SI,p_guess,dKL_nw_array);
+fit_dispersion_params_all_KLnw_out = fit_dispersion_params_all(KL_nw_array,Pe_D0_array,D0,Dp_SI,p_guess,dKL_nw_array);
 %nonweighted
-fit_dispersion_params_all_nw_KLnw_out = fit_dispersion_params_all(KL_nw_array-D0,Pe_D0_array,D0,Dp_SI,p_guess,ones(size(KL_nw_array)));
+fit_dispersion_params_all_nw_KLnw_out = fit_dispersion_params_all(KL_nw_array,Pe_D0_array,D0,Dp_SI,p_guess,ones(size(KL_nw_array)));
 
 % Propagation of uncertainty from D0 error
 D0max = D0 + dD0;
@@ -602,10 +602,10 @@ Pe_D0max_array = Pe_D0_array*(D0/D0max); % Pe in respect to D0max
 Pe_D0min_array = Pe_D0_array*(D0/D0min); % Pe in respect to D0min
 
 % Fitting KL with different Pe ranges
-fit_dispersion_params_all_Pe_D0max_KLnw_out = fit_dispersion_params_all(KL_nw_array-D0,Pe_D0max_array,D0max,Dp_SI,p_guess,dKL_nw_array);
-fit_dispersion_params_all_Pe_D0min_KLnw_out = fit_dispersion_params_all(KL_nw_array-D0,Pe_D0min_array,D0min,Dp_SI,p_guess,dKL_nw_array);
-fit_dispersion_params_all_Pe_D0max_nw_KLnw_out = fit_dispersion_params_all(KL_nw_array-D0,Pe_D0max_array,D0max,Dp_SI,p_guess,ones(size(KL_nw_array)));
-fit_dispersion_params_all_Pe_D0min_nw_KLnw_out = fit_dispersion_params_all(KL_nw_array-D0,Pe_D0min_array,D0min,Dp_SI,p_guess,ones(size(KL_nw_array)));
+fit_dispersion_params_all_Pe_D0max_KLnw_out = fit_dispersion_params_all(KL_nw_array,Pe_D0max_array,D0max,Dp_SI,p_guess,dKL_nw_array);
+fit_dispersion_params_all_Pe_D0min_KLnw_out = fit_dispersion_params_all(KL_nw_array,Pe_D0min_array,D0min,Dp_SI,p_guess,dKL_nw_array);
+fit_dispersion_params_all_Pe_D0max_nw_KLnw_out = fit_dispersion_params_all(KL_nw_array,Pe_D0max_array,D0max,Dp_SI,p_guess,ones(size(KL_nw_array)));
+fit_dispersion_params_all_Pe_D0min_nw_KLnw_out = fit_dispersion_params_all(KL_nw_array,Pe_D0min_array,D0min,Dp_SI,p_guess,ones(size(KL_nw_array)));
 
 % Params from fitting
 beta_KLnw = fit_dispersion_params_all_KLnw_out.beta;
@@ -655,9 +655,9 @@ d_alpha_D0uncert_nw_KLnw_cm = abs(alpha_D0max_nw_KLnw_cm - alpha_D0min_nw_KLnw_c
 
 % KL mean
 % weighted
-fit_dispersion_params_all_KLmean_out = fit_dispersion_params_all(KL_mean_array-D0,Pe_D0_array,D0,Dp_SI,p_guess,dKL_mean_array);
+fit_dispersion_params_all_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0_array,D0,Dp_SI,p_guess,dKL_mean_array);
 %nonweighted
-fit_dispersion_params_all_nw_KLmean_out = fit_dispersion_params_all(KL_mean_array-D0,Pe_D0_array,D0,Dp_SI,p_guess,ones(size(KL_mean_array)));
+fit_dispersion_params_all_nw_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0_array,D0,Dp_SI,p_guess,ones(size(KL_mean_array)));
 
 % Propagation of uncertainty from D0 error
 D0max = D0 + dD0;
@@ -666,10 +666,10 @@ Pe_D0max_array = Pe_D0_array*(D0/D0max); % Pe in respect to D0max
 Pe_D0min_array = Pe_D0_array*(D0/D0min); % Pe in respect to D0min
 
 % Fitting KL with different Pe ranges
-fit_dispersion_params_all_Pe_D0max_KLmean_out = fit_dispersion_params_all(KL_mean_array-D0,Pe_D0max_array,D0max,Dp_SI,p_guess,dKL_mean_array);
-fit_dispersion_params_all_Pe_D0min_KLmean_out = fit_dispersion_params_all(KL_mean_array-D0,Pe_D0min_array,D0min,Dp_SI,p_guess,dKL_mean_array);
-fit_dispersion_params_all_Pe_D0max_nw_KLmean_out = fit_dispersion_params_all(KL_mean_array-D0,Pe_D0max_array,D0max,Dp_SI,p_guess,ones(size(KL_mean_array)));
-fit_dispersion_params_all_Pe_D0min_nw_KLmean_out = fit_dispersion_params_all(KL_mean_array-D0,Pe_D0min_array,D0min,Dp_SI,p_guess,ones(size(KL_mean_array)));
+fit_dispersion_params_all_Pe_D0max_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0max_array,D0max,Dp_SI,p_guess,dKL_mean_array);
+fit_dispersion_params_all_Pe_D0min_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0min_array,D0min,Dp_SI,p_guess,dKL_mean_array);
+fit_dispersion_params_all_Pe_D0max_nw_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0max_array,D0max,Dp_SI,p_guess,ones(size(KL_mean_array)));
+fit_dispersion_params_all_Pe_D0min_nw_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0min_array,D0min,Dp_SI,p_guess,ones(size(KL_mean_array)));
 
 % Params from fitting
 beta_KLmean = fit_dispersion_params_all_KLmean_out.beta;
@@ -762,43 +762,43 @@ alpha_mean_cm = mean(alphas_all_cm);
 d_alpha_sens_SI = max(abs(alphas_all_SI - alpha_mean_SI));
 d_alpha_sens_cm = max(abs(alphas_all_cm - alpha_mean_cm));
 
-% % C2 in model is alpha/Dp Dp is characterstic legth L
-% KL_fun = fit_dispersion_params_all_out.Cfun; 
-% KL_fit = KL_fun(alpha_mean_SI/Dp_SI,Pe_D0_array);
-% % KL_fit = KL_fun([alpha_mean_SI/Dp_SI,tau_mean],Pe_D0_array);
-% KL_alphamax_fit = KL_fun((alpha_mean_SI+d_alpha_sens_SI)/Dp_SI,Pe_D0_array);
-% KL_alphamin_fit = KL_fun((alpha_mean_SI-d_alpha_sens_SI)/Dp_SI,Pe_D0_array);
-% % KL_alphamax_fit = KL_fun([(alpha_mean_SI+d_alpha_sens_SI)/Dp_SI,tau_mean+d_tau_sens],Pe_D0_array);
-% % KL_alphamin_fit = KL_fun([(alpha_mean_SI-d_alpha_sens_SI)/Dp_SI,tau_mean-d_tau_sens],Pe_D0_array);
-% dKL_alpha_sens = abs(KL_alphamax_fit - KL_alphamin_fit)/2;
-% 
-% % RMSE = fit_dispersion_params_all_out.RMSE;
-% % R2 = fit_dispersion_params_all_out.R2;
-% 
-% % Peclet with Dp = alpha instead of L
-% Pe_alpha_array = u_array*alpha_mean_SI/D0;
-% dPe_alpha_array = (((u_array/D0).^2)*(d_alpha_sens_SI^2)+((-u_array*alpha_mean_SI/(D0^2)).^2)*(dD0^2)).^(1/2);
-% % KL/D0, must be same units
-% KL_vs_D0_array = KL_array/D0;
-% dKL_vs_D0_array = (((1/D0).^2)*(dKL_alpha_sens.^2)+((-KL_array/(D0^2)).^2)*(dD0^2)).^(1/2); %dKL array instead of dKL total
-% % since it is the result from fitting C vs t, not plotting the results from this fitting
-% 
-% % Add dispersion parameters in exp_params and fitting results
-% fitting_results.Pe_alpha = Pe_alpha_array;
-% fitting_results.dPe_alpha = dPe_alpha_array;
-% fitting_results.KL_vs_D0 = KL_vs_D0_array;
-% fitting_results.dKL_vs_D0 = dKL_vs_D0_array;
-% for i = 1:length(filedataExp.Key)
-%     expProcData.(filedataExp.Key(i)).exp_params.Pe_alpha = Pe_alpha_array(i);
-%     expProcData.(filedataExp.Key(i)).exp_params.dPe_alpha = dPe_alpha_array(i);
-%     expProcData.(filedataExp.Key(i)).exp_params.KL_vs_D0 = KL_vs_D0_array(i);
-%     expProcData.(filedataExp.Key(i)).exp_params.dKL_vs_D0 = dKL_vs_D0_array(i);
-% end
-% 
-% expProcFullData = expProcData;
-% 
-% % save updated expProcData
-% save(pathExportAll + "expProcFullData.mat",'expProcFullData')
+% C2 in model is alpha/Dp Dp is characterstic legth L
+KL_fun = fit_dispersion_params_all_out.Cfun; 
+KL_fit = KL_fun(alpha_mean_SI/Dp_SI,Pe_D0_array);
+% KL_fit = KL_fun([alpha_mean_SI/Dp_SI,tau_mean],Pe_D0_array);
+KL_alphamax_fit = KL_fun((alpha_mean_SI+d_alpha_sens_SI)/Dp_SI,Pe_D0_array);
+KL_alphamin_fit = KL_fun((alpha_mean_SI-d_alpha_sens_SI)/Dp_SI,Pe_D0_array);
+% KL_alphamax_fit = KL_fun([(alpha_mean_SI+d_alpha_sens_SI)/Dp_SI,tau_mean+d_tau_sens],Pe_D0_array);
+% KL_alphamin_fit = KL_fun([(alpha_mean_SI-d_alpha_sens_SI)/Dp_SI,tau_mean-d_tau_sens],Pe_D0_array);
+dKL_alpha_sens = abs(KL_alphamax_fit - KL_alphamin_fit)/2;
+
+% RMSE = fit_dispersion_params_all_out.RMSE;
+% R2 = fit_dispersion_params_all_out.R2;
+
+% Peclet with Dp = alpha instead of L
+Pe_alpha_array = u_array*alpha_mean_SI/D0;
+dPe_alpha_array = (((u_array/D0).^2)*(d_alpha_sens_SI^2)+((-u_array*alpha_mean_SI/(D0^2)).^2)*(dD0^2)).^(1/2);
+% KL/D0, must be same units
+KL_vs_D0_array = KL_array/D0;
+dKL_vs_D0_array = (((1/D0).^2)*(dKL_alpha_sens.^2)+((-KL_array/(D0^2)).^2)*(dD0^2)).^(1/2); %dKL array instead of dKL total
+% since it is the result from fitting C vs t, not plotting the results from this fitting
+
+% Add dispersion parameters in exp_params and fitting results
+fitting_results.Pe_alpha = Pe_alpha_array;
+fitting_results.dPe_alpha = dPe_alpha_array;
+fitting_results.KL_vs_D0 = KL_vs_D0_array;
+fitting_results.dKL_vs_D0 = dKL_vs_D0_array;
+for i = 1:length(filedataExp.Key)
+    expProcData.(filedataExp.Key(i)).exp_params.Pe_alpha = Pe_alpha_array(i);
+    expProcData.(filedataExp.Key(i)).exp_params.dPe_alpha = dPe_alpha_array(i);
+    expProcData.(filedataExp.Key(i)).exp_params.KL_vs_D0 = KL_vs_D0_array(i);
+    expProcData.(filedataExp.Key(i)).exp_params.dKL_vs_D0 = dKL_vs_D0_array(i);
+end
+
+expProcFullData = expProcData;
+
+% save updated expProcData
+save(pathExportAll + "expProcFullData.mat",'expProcFullData')
 
 %% Table results
 
@@ -1119,30 +1119,52 @@ Dp_SI = unique(fitting_results.L_SI);
 D0 = unique(fitting_results.D0_SI);
 Pe_D0_array = fitting_results.Pe_D0; % Pe in respect to D0
 u_array_cmmin = fitting_results.u_cmmin;
+
+% weigthed
 KL_array = fitting_results.KL_dtfixed_cm2min; % KL and D0 must have same units
-dKLneg_array = fitting_results.SE_KL_mean_cm2min;
-dKLpos_array = fitting_results.SE_KL_mean_cm2min;
-alpha_SI = alpha_w_SI;
-dalpha_SI = d_alpha_sens_SI;
-alpha_L = alpha_mean_cm;
-dalpha_L = d_alpha_sens_cm;
-% tau = tau_mean;
-% dtau = d_tau_sens;
+dKLneg_array = fitting_results.SE_KL_dtfixed_cm2min;
+dKLpos_array = fitting_results.SE_KL_dtfixed_cm2min;
+alpha_SI = alpha_nw_SI;
+dalpha_SI = d_alpha_nw_SI;
+alpha_L = alpha_nw_cm;
+dalpha_L = d_alpha_nw_cm;
+
+% non weigthed
+KL_array_nw = fitting_results.KL_dtfixed_nw_cm2min; % KL and D0 must have same units
+dKLneg_array_nw = fitting_results.SE_KL_dtfixed_nw_cm2min;
+dKLpos_array_nw = fitting_results.SE_KL_dtfixed_nw_cm2min;
+alpha_SI_nw = alpha_nw_KLnw_SI;
+dalpha_SI_nw = d_alpha_nw_KLnw_SI;
+alpha_L_nw = alpha_nw_KLnw_cm;
+dalpha_L_nw = d_alpha_nw_KLnw_cm;
 
 x = 0:1:ceil(max(Pe_D0_array));
-KL_plot = KL_fun(alpha_SI/Dp_SI,x)+D0;
-% KL_plot = KL_fun([alpha_SI/Dp_SI,tau],x);
+KL_plot = KL_fun(alpha_SI/Dp_SI,x);
+KL_plot_nw = KL_fun(alpha_SI_nw/Dp_SI,x);
 
 figure % dispersivity
+% KL fit weighted
 plot((x*D0/Dp_SI)*(60*10^2),KL_plot*(60*10^4), ...
-    'DisplayName','K_L \approx \alpha_Lu_x','Color','k'); % Kl_vs_u fitting
+    'DisplayName','K_L \approx \alpha_L fit u_x','Color','k'); % Kl_vs_u fitting
 hold on
 for i = 1:length(u_array_cmmin)
-    errorbar(u_array_cmmin(i),KL_array(i)-D0*(60*10^4),dKLneg_array(i),dKLpos_array(i), ...
+    errorbar(u_array_cmmin(i),KL_array(i),dKLneg_array(i),dKLpos_array(i), ...
         'Color','k','HandleVisibility','off')
     hold on
-    scatter(u_array_cmmin(i),KL_array(i)-D0*(60*10^4),'filled', ...
-        'DisplayName',"Q = " + filedataExp.Q(i) +" ml/min", ...
+    scatter(u_array_cmmin(i),KL_array(i),'filled', ...
+        'DisplayName',"K_L for Q = " + filedataExp.Q(i) +" ml/min", ...
+        'Color',colors(i,:))
+end
+% KL fit non weighted
+plot((x*D0/Dp_SI)*(60*10^2),KL_plot_nw*(60*10^4), ...
+    'DisplayName','K_L nw \approx \alpha_L nw u_x','Color',[0.5 0.5 0.5]); % Kl_vs_u fitting
+hold on
+for i = 1:length(u_array_cmmin)
+    errorbar(u_array_cmmin(i),KL_array_nw(i),dKLneg_array(i),dKLpos_array(i), ...
+        'Color','k','HandleVisibility','off')
+    hold on
+    scatter(u_array_cmmin(i),KL_array_nw(i),'filled', ...
+        'Marker','^', 'DisplayName',"K_L nw for Q = " + filedataExp.Q(i) +" ml/min",...
         'Color',colors(i,:))
 end
 xlabel('Interstitial velocity (u_x) [cm/min]');
@@ -1153,9 +1175,13 @@ annotText1 = sprintf('\\alpha_{L} = %.2f \\pm %.2f cm', alpha_L, dalpha_L);
 % annotText2 = sprintf('\\tau = %.2f \\pm %.2f', tau, dtau);
 annotation('textbox', [0.25, 0.18, 0.8, 0.06], 'String', annotText1, ...
     'Interpreter', 'tex', 'FontSize', 9, 'EdgeColor', 'none','FaceAlpha',0.1);
+annotText3 = sprintf('\\alpha_{L} nw = %.2f \\pm %.2f cm', alpha_L_nw, dalpha_L_nw);
+annotation('textbox', [0.25, 0.15, 0.8, 0.06], 'String', annotText3, ...
+    'Interpreter', 'tex', 'FontSize', 9, 'EdgeColor', 'none','FaceAlpha',0.1);
+
 % annotation('textbox', [0.265, 0.13, 0.8, 0.06], 'String', annotText2, ...
 %     'Interpreter', 'tex', 'FontSize', 9, 'EdgeColor', 'none','FaceAlpha',0.1);
-legend('Location','southeast');
+legend('Location','northwest');
 saveas(gcf,pathExportAll + "KLvsVel-alpha_all",'png')
 savefig(gcf,pathExportAll + "KLvsVel-alpha_all")
 
