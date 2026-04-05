@@ -6,3 +6,4 @@ function G = impulse_from_step(t, L, v, D)
     G = [Cstep(1); diff(Cstep)] / dt;
     G(G < 0) = 0;   % clean numerical noise
 end
+

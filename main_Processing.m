@@ -205,6 +205,10 @@ for i = 1:length(filedataExp.Key)
         dD0 = expProcData.(filedataExp.Key(i)).exp_params.dD12_cm2min/(60*10^4);
         Pe_D0 = u*L/D0;
         dPe_D0 = (((-u*L/(D0^2))^2)*(dD0^2))^(1/2);
+        % ID_cm = 0.137;
+        % r_m = ID_cm/(100);
+        % A_lines_m2 = pi*(r_m^2);
+        % v_lines = q/((10^6)*A_lines_m2*60);
         v_lines = expProcData.(filedataExp.Key(i)).exp_params.v_lines_SI;
         KL_lines = expProcData.(filedataExp.Key(i)).exp_params.KL_lines_SI;
         
@@ -243,6 +247,7 @@ for i = 1:length(filedataExp.Key)
         Pe = u*L/KL_fit; Pe_nw = u*L/KL_nw_fit;
         dtD = u*dt_fit/L; dtD_nw = u*dt_nw_fit/L; % respect to Vcore
         L_lines = v_lines*dt_fit; L_lines_nw = v_lines*dt_nw_fit;
+        %L_lines = u*dt_fit; L_lines_nw = u*dt_nw_fit;
         V_lines_cc = q*dt_fit/60; V_lines_cc_nw = q*dt_nw_fit/60;
         dPe = (((-u*L*((KL_fit)^-2))^2)*(dKL_fit^2))^(1/2); dPe_nw = (((-u*L*((KL_nw_fit)^-2))^2)*(dKL_nw_fit^2))^(1/2);
         d_dtD = (((u/L)^2)*(d_dt_fit^2))^(1/2); d_dtD_nw = (((u/L)^2)*(d_dt_nw_fit^2))^(1/2);

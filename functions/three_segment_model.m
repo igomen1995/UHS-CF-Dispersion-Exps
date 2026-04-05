@@ -27,3 +27,4 @@ function Cout = three_segment_model(t, Dcore, ...
     Cfull = conv(Ccore_in, Gdown) * dt;
     Cout = Cfull(1:numel(t));
 end
+
