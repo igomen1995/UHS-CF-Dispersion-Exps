@@ -867,13 +867,13 @@ for i = 1:length(filedataExp.Key)
         scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.Ci,10,'filled','MarkerFaceColor','red','DisplayName','Experimental Data')
         hold on
         % KL weigthed 
-        plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.C_fit_dt_free,'LineWidth',1.5,'Color', [0.5 0.5 0.5],'DisplayName',"BT model fitting - dt free - KL weigthed")
-        plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed,'LineWidth',1.5,'Color', 'k', 'DisplayName',"BT model fitting - dt fixed - KL weigthed")
+        % plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.C_fit_dt_free,'LineWidth',1.5,'Color', [0.5 0.5 0.5],'DisplayName',"BT model fitting - dt free - KL weigthed")
+        plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed,'LineWidth',1.5,'Color', 'k', 'DisplayName',"BT model fitting - KL weighted fitting")
         % KL non weigthed
-        plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_free,'LineStyle','--','LineWidth',1.5,'Color', [0.5 0.5 0.5],'DisplayName',"BT model fitting - dt free - KL non weigthed")
-        plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed,'LineStyle','--','LineWidth',1.5,'Color', 'k', 'DisplayName',"BT model fitting - dt fixed - KL non weigthed")
+        % plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_free,'LineStyle','--','LineWidth',1.5,'Color', [0.5 0.5 0.5],'DisplayName',"BT model fitting - dt free - KL non weigthed")
+        plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed,'LineStyle','--','LineWidth',1.5,'Color', 'k', 'DisplayName',"BT model fitting - KL non weighted fitting")
         % KL mean
-        plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed,'LineWidth',1.5,'Color', 'blue', 'DisplayName',"BT model fitting - dt fixed - KL mean")
+        % plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed,'LineWidth',1.5,'Color', 'blue', 'DisplayName',"BT model fitting - dt fixed - KL mean")
         xlabel('Time elapsed [hh:mm:ss]');
         xtickformat('hh:mm:ss')
         ylabel('Molar concentration C_1 [mol %]');
@@ -1013,7 +1013,8 @@ for i = 1:length(filedataExp.Key)
     C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
     C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
     C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
-    cond = (expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed>=10)&(expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed<=90);
+    cond = (expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed>=0)&(expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed<=100);
+    cond_nw = (expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed>=0)&(expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed<=100);
     % errorbar(t(cond), expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed(cond), ...
     %    expProcData.(filedataExp.Key(i)).exp_params.RMSE_mean*100*ones(size(t(cond))), ...
     %    'LineStyle', 'none', ...
@@ -1024,17 +1025,19 @@ for i = 1:length(filedataExp.Key)
     hold on
     h1 = scatter(t,C1,5,'filled','MarkerFaceColor',colors(i,:), ...
         'DisplayName',"Q"+filedataExp.Q(i)+": C_{MFM} \pm \DeltaC_{MFM}");
-    h2 = plot(t(cond), expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed(cond), ...
-        'LineWidth',1.0,'Color', 'k','DisplayName',"C_{fit}");
+    h2 = plot(t(cond), expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed(cond), ...
+        'LineWidth',0.8,'Color', 'k','DisplayName',"C_{weigthed fitting}");
+    h3 = plot(t(cond_nw), expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed(cond_nw), ...
+        'LineWidth',0.8,'LineStyle','--', 'Color', 'k','DisplayName',"C_{non weigthed fitting}");
     xlabel('Time elapsed [hh:mm:ss]');
     xtickformat('hh:mm:ss')
-    ylabel('Molar concentration C_1 [mol %]');
+    ylabel('C_{H_2} [mol %]');
     ylim([-0.1,100.1]);
-    title("Breakthrough curves fitting", 'Interpreter', 'none')
+    % title("Breakthrough curves fitting", 'Interpreter', 'none')
     grid on;
     h = [h; h1];
 end
-legend([h;h2], 'Location','southeast');
+legend([h;h2;h3], 'Location','southeast');
 saveas(gcf,pathExportAll + "BTfitting",'png')
 savefig(gcf,pathExportAll + "BTfitting")
 
