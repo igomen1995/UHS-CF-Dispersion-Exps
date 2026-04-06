@@ -322,7 +322,7 @@ for i = 1:length(filedataExp.Key)
         V_lines_cc_max = q*(dt_fixed+d_dt_free)/60;
         V_lines_cc_min = q*(dt_fixed+d_dt_free)/60;
 
-        % Uncertainty propagation from dt_free error now weigthed
+        % Uncertainty propagation from dt_free error non weigthed
         d_dt_free_nw = d_dt_dtfixed_nw_SI;
         KL_dt_fixed_max_nw_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed_nw+d_dt_free_nw,p_guess_nw,ones(size(C1_vals))); %non weigthed
         KL_dt_fixed_min_nw_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed_nw-d_dt_free_nw,p_guess_nw,ones(size(C1_vals))); %non weigthed
@@ -388,83 +388,83 @@ for i = 1:length(filedataExp.Key)
         d_V_liness_cc = [dV_lines_cc,dV_lines_cc_nw];
         d_V_liness_SI = d_V_liness_cc*(10^-6);
 
-        % mean for final results
-            % KL
-        KL_mean_SI = mean(KLs_SI);
-        KL_mean_cm2min = mean(KLs_cm2min);
-        dKL_stat_mean_SI = mean(dKLs_SI);
-        dKL_stat_mean_cm2min = mean(dKLs_cm2min);
-        dKL_sens_SI = max(abs(KLs_SI - KL_mean_SI));
-        dKL_sens_cm2min = max(abs(KLs_cm2min - KL_mean_cm2min));
-        dKL_mean_SI = (dKL_stat_mean_SI^2  + dKL_sens_SI^2)^(1/2);
-        dKL_mean_cm2min = (dKL_stat_mean_cm2min^2  + dKL_sens_cm2min^2)^(1/2);
-            % Pe
-        Pe_mean = mean(Pes);
-        dPe_stat_mean = mean(d_Pes);
-        dPe_sens = max(abs(Pes - Pe_mean));
-        dPe_mean = (dPe_stat_mean^2  + dPe_sens^2)^(1/2);           
-            % dt
-        dt_mean_SI = mean(dts_SI);
-        dt_mean_min = mean(dts_min);
-        d_dt_stat_mean_SI = mean(d_dts_SI);
-        d_dt_stat_mean_min = mean(d_dts_min);
-        d_dt_sens_SI = max(abs(dts_SI-dt_mean_SI));
-        d_dt_sens_min = max(abs(dts_min-dt_mean_min));
-        d_dt_mean_SI = (d_dt_stat_mean_SI^2  + d_dt_sens_SI^2)^(1/2);
-        d_dt_mean_min = (d_dt_stat_mean_min^2  + d_dt_sens_min^2)^(1/2);
-            % tD
-        dtD_mean = mean(dtDs);
-        d_dtD_stat_mean = mean(d_dtDs);
-        d_dtD_sens = max(abs(dtDs - dtD_mean));
-        d_dtD_mean = (d_dtD_stat_mean^2  + d_dtD_sens^2)^(1/2);   
-            % L_lines
-        L_lines_mean_SI = mean(L_liness_SI);
-        L_lines_mean_cm = mean(L_liness_cm);
-        d_L_lines_stat_mean_SI = mean(d_L_liness_SI);
-        d_L_lines_stat_mean_cm = mean(d_L_liness_cm);
-        d_L_lines_sens_SI = max(abs(L_liness_SI - L_lines_mean_SI));
-        d_L_lines_sens_cm = max(abs(L_liness_cm - L_lines_mean_cm));
-        d_L_lines_mean_SI = (d_L_lines_stat_mean_SI^2  + d_L_lines_sens_SI^2)^(1/2);
-        d_L_lines_mean_cm = (d_L_lines_stat_mean_cm^2  + d_L_lines_sens_cm^2)^(1/2);
-             % V_lines
-        V_lines_mean_SI = mean(V_liness_SI);
-        V_lines_mean_cc = mean(V_liness_cc);
-        d_V_lines_stat_mean_SI = mean(d_V_liness_SI);
-        d_V_lines_stat_mean_cc = mean(d_V_liness_cc);
-        d_V_lines_sens_SI = max(abs(V_liness_SI - V_lines_mean_SI));
-        d_V_lines_sens_cc = max(abs(V_liness_cc - V_lines_mean_cc));
-        d_V_lines_mean_SI = (d_V_lines_stat_mean_SI^2  + d_V_lines_sens_SI^2)^(1/2);
-        d_V_lines_mean_cc = (d_V_lines_stat_mean_cc^2  + d_V_lines_sens_cc^2)^(1/2);
-            % RMSE, R2
-        p = sqrt(KL_mean_SI);
-        C_fit_mean = C_function(p,t_vals);
-        R_mean = C1_vals - C_fit_mean; 
-        RMSE_mean = sqrt(mean(R_mean.^2));
-        R2_mean = 1 - sum(R_mean.^2) / sum((C1_vals - mean(C1_vals)).^2);
-        
-        % params to save
-        expProcData.(filedataExp.Key(i)).exp_params.KL_mean_SI = KL_mean_SI;
-        expProcData.(filedataExp.Key(i)).exp_params.SE_KL_mean_SI = dKL_mean_SI;
-        expProcData.(filedataExp.Key(i)).exp_params.KL_mean_cm2min = KL_mean_cm2min;
-        expProcData.(filedataExp.Key(i)).exp_params.SE_KL_mean_cm2min = dKL_mean_cm2min;
-        expProcData.(filedataExp.Key(i)).exp_params.Pe_mean = Pe_mean;
-        expProcData.(filedataExp.Key(i)).exp_params.SE_Pe_mean = dPe_mean;
-        expProcData.(filedataExp.Key(i)).exp_params.dt_mean_SI = dt_mean_SI;
-        expProcData.(filedataExp.Key(i)).exp_params.SE_dt_mean_SI = d_dt_mean_SI;
-        expProcData.(filedataExp.Key(i)).exp_params.dt_mean_min = dt_mean_min;
-        expProcData.(filedataExp.Key(i)).exp_params.SE_dt_mean_min = d_dt_mean_min;
-        expProcData.(filedataExp.Key(i)).exp_params.dtD_mean = dtD_mean;
-        expProcData.(filedataExp.Key(i)).exp_params.SE_dtD_mean = d_dtD_mean;
-        expProcData.(filedataExp.Key(i)).exp_params.L_lines_mean_SI = L_lines_mean_SI;
-        expProcData.(filedataExp.Key(i)).exp_params.SE_L_lines_mean_SI = d_L_lines_mean_SI;
-        expProcData.(filedataExp.Key(i)).exp_params.L_lines_mean_cm = L_lines_mean_cm;
-        expProcData.(filedataExp.Key(i)).exp_params.SE_L_lines_mean_cm = d_L_lines_mean_cm;
-        expProcData.(filedataExp.Key(i)).exp_params.V_lines_mean_SI = V_lines_mean_SI;
-        expProcData.(filedataExp.Key(i)).exp_params.SE_V_lines_mean_SI = d_V_lines_mean_SI;
-        expProcData.(filedataExp.Key(i)).exp_params.V_lines_mean_cc = V_lines_mean_cc;
-        expProcData.(filedataExp.Key(i)).exp_params.SE_V_lines_mean_cc = d_V_lines_mean_cc;
-        expProcData.(filedataExp.Key(i)).exp_params.RMSE_mean = RMSE_mean;
-        expProcData.(filedataExp.Key(i)).exp_params.R2_mean = R2_mean;
+        % % mean for final results
+        %     % KL
+        % KL_mean_SI = mean(KLs_SI);
+        % KL_mean_cm2min = mean(KLs_cm2min);
+        % dKL_stat_mean_SI = mean(dKLs_SI);
+        % dKL_stat_mean_cm2min = mean(dKLs_cm2min);
+        % dKL_sens_SI = max(abs(KLs_SI - KL_mean_SI));
+        % dKL_sens_cm2min = max(abs(KLs_cm2min - KL_mean_cm2min));
+        % dKL_mean_SI = (dKL_stat_mean_SI^2  + dKL_sens_SI^2)^(1/2);
+        % dKL_mean_cm2min = (dKL_stat_mean_cm2min^2  + dKL_sens_cm2min^2)^(1/2);
+        %     % Pe
+        % Pe_mean = mean(Pes);
+        % dPe_stat_mean = mean(d_Pes);
+        % dPe_sens = max(abs(Pes - Pe_mean));
+        % dPe_mean = (dPe_stat_mean^2  + dPe_sens^2)^(1/2);           
+        %     % dt
+        % dt_mean_SI = mean(dts_SI);
+        % dt_mean_min = mean(dts_min);
+        % d_dt_stat_mean_SI = mean(d_dts_SI);
+        % d_dt_stat_mean_min = mean(d_dts_min);
+        % d_dt_sens_SI = max(abs(dts_SI-dt_mean_SI));
+        % d_dt_sens_min = max(abs(dts_min-dt_mean_min));
+        % d_dt_mean_SI = (d_dt_stat_mean_SI^2  + d_dt_sens_SI^2)^(1/2);
+        % d_dt_mean_min = (d_dt_stat_mean_min^2  + d_dt_sens_min^2)^(1/2);
+        %     % tD
+        % dtD_mean = mean(dtDs);
+        % d_dtD_stat_mean = mean(d_dtDs);
+        % d_dtD_sens = max(abs(dtDs - dtD_mean));
+        % d_dtD_mean = (d_dtD_stat_mean^2  + d_dtD_sens^2)^(1/2);   
+        %     % L_lines
+        % L_lines_mean_SI = mean(L_liness_SI);
+        % L_lines_mean_cm = mean(L_liness_cm);
+        % d_L_lines_stat_mean_SI = mean(d_L_liness_SI);
+        % d_L_lines_stat_mean_cm = mean(d_L_liness_cm);
+        % d_L_lines_sens_SI = max(abs(L_liness_SI - L_lines_mean_SI));
+        % d_L_lines_sens_cm = max(abs(L_liness_cm - L_lines_mean_cm));
+        % d_L_lines_mean_SI = (d_L_lines_stat_mean_SI^2  + d_L_lines_sens_SI^2)^(1/2);
+        % d_L_lines_mean_cm = (d_L_lines_stat_mean_cm^2  + d_L_lines_sens_cm^2)^(1/2);
+        %      % V_lines
+        % V_lines_mean_SI = mean(V_liness_SI);
+        % V_lines_mean_cc = mean(V_liness_cc);
+        % d_V_lines_stat_mean_SI = mean(d_V_liness_SI);
+        % d_V_lines_stat_mean_cc = mean(d_V_liness_cc);
+        % d_V_lines_sens_SI = max(abs(V_liness_SI - V_lines_mean_SI));
+        % d_V_lines_sens_cc = max(abs(V_liness_cc - V_lines_mean_cc));
+        % d_V_lines_mean_SI = (d_V_lines_stat_mean_SI^2  + d_V_lines_sens_SI^2)^(1/2);
+        % d_V_lines_mean_cc = (d_V_lines_stat_mean_cc^2  + d_V_lines_sens_cc^2)^(1/2);
+        %     % RMSE, R2
+        % p = sqrt(KL_mean_SI);
+        % C_fit_mean = C_function(p,t_vals);
+        % R_mean = C1_vals - C_fit_mean; 
+        % RMSE_mean = sqrt(mean(R_mean.^2));
+        % R2_mean = 1 - sum(R_mean.^2) / sum((C1_vals - mean(C1_vals)).^2);
+        % 
+        % % params to save
+        % expProcData.(filedataExp.Key(i)).exp_params.KL_mean_SI = KL_mean_SI;
+        % expProcData.(filedataExp.Key(i)).exp_params.SE_KL_mean_SI = dKL_mean_SI;
+        % expProcData.(filedataExp.Key(i)).exp_params.KL_mean_cm2min = KL_mean_cm2min;
+        % expProcData.(filedataExp.Key(i)).exp_params.SE_KL_mean_cm2min = dKL_mean_cm2min;
+        % expProcData.(filedataExp.Key(i)).exp_params.Pe_mean = Pe_mean;
+        % expProcData.(filedataExp.Key(i)).exp_params.SE_Pe_mean = dPe_mean;
+        % expProcData.(filedataExp.Key(i)).exp_params.dt_mean_SI = dt_mean_SI;
+        % expProcData.(filedataExp.Key(i)).exp_params.SE_dt_mean_SI = d_dt_mean_SI;
+        % expProcData.(filedataExp.Key(i)).exp_params.dt_mean_min = dt_mean_min;
+        % expProcData.(filedataExp.Key(i)).exp_params.SE_dt_mean_min = d_dt_mean_min;
+        % expProcData.(filedataExp.Key(i)).exp_params.dtD_mean = dtD_mean;
+        % expProcData.(filedataExp.Key(i)).exp_params.SE_dtD_mean = d_dtD_mean;
+        % expProcData.(filedataExp.Key(i)).exp_params.L_lines_mean_SI = L_lines_mean_SI;
+        % expProcData.(filedataExp.Key(i)).exp_params.SE_L_lines_mean_SI = d_L_lines_mean_SI;
+        % expProcData.(filedataExp.Key(i)).exp_params.L_lines_mean_cm = L_lines_mean_cm;
+        % expProcData.(filedataExp.Key(i)).exp_params.SE_L_lines_mean_cm = d_L_lines_mean_cm;
+        % expProcData.(filedataExp.Key(i)).exp_params.V_lines_mean_SI = V_lines_mean_SI;
+        % expProcData.(filedataExp.Key(i)).exp_params.SE_V_lines_mean_SI = d_V_lines_mean_SI;
+        % expProcData.(filedataExp.Key(i)).exp_params.V_lines_mean_cc = V_lines_mean_cc;
+        % expProcData.(filedataExp.Key(i)).exp_params.SE_V_lines_mean_cc = d_V_lines_mean_cc;
+        % expProcData.(filedataExp.Key(i)).exp_params.RMSE_mean = RMSE_mean;
+        % expProcData.(filedataExp.Key(i)).exp_params.R2_mean = R2_mean;
 
         % creating table
         row_temp = expProcData.(filedataExp.Key(i)).exp_params;  
@@ -476,8 +476,8 @@ for i = 1:length(filedataExp.Key)
         % with non weigthed
         expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed = 100*C_nw_fit;
         expProcData.(filedataExp.Key(i)).BT.C_nw_pred__dt_fixed = 100*C_nw_pred;
-        % with mean values
-        expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed = 100*C_fit_mean;
+        % % with mean values
+        % expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed = 100*C_fit_mean;
         % dimensionless values 
         % Cd = (C - Ciinit) / (Cj - Cinit)
         expProcData.(filedataExp.Key(i)).BT.CD_fit_dt_fixed = ...
@@ -518,8 +518,8 @@ KL_array = fitting_results.KL_dtfixed_SI; % KL and D0 must have same units
 dKL_array = fitting_results.SE_KL_total_dtfixed_SI;
 KL_nw_array = fitting_results.KL_dtfixed_nw_SI; % KL and D0 must have same units
 dKL_nw_array = fitting_results.SE_KL_total_dtfixed_nw_SI;
-KL_mean_array = fitting_results.KL_mean_SI; % KL and D0 must have same units
-dKL_mean_array = fitting_results.SE_KL_mean_SI;
+% KL_mean_array = fitting_results.KL_mean_SI; % KL and D0 must have same units
+% dKL_mean_array = fitting_results.SE_KL_mean_SI;
 
 % Fitting
 % p_guess = 1;
@@ -653,134 +653,134 @@ alpha_D0max_nw_KLnw_cm = fit_dispersion_params_all_Pe_D0max_nw_KLnw_out.alpha_cm
 alpha_D0min_nw_KLnw_cm = fit_dispersion_params_all_Pe_D0min_nw_KLnw_out.alpha_cm;
 d_alpha_D0uncert_nw_KLnw_cm = abs(alpha_D0max_nw_KLnw_cm - alpha_D0min_nw_KLnw_cm)/2;
 
-% KL mean
-% weighted
-fit_dispersion_params_all_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0_array,D0,Dp_SI,p_guess,dKL_mean_array);
-%nonweighted
-fit_dispersion_params_all_nw_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0_array,D0,Dp_SI,p_guess,ones(size(KL_mean_array)));
-
-% Propagation of uncertainty from D0 error
-D0max = D0 + dD0;
-D0min = D0 - dD0;
-Pe_D0max_array = Pe_D0_array*(D0/D0max); % Pe in respect to D0max
-Pe_D0min_array = Pe_D0_array*(D0/D0min); % Pe in respect to D0min
-
-% Fitting KL with different Pe ranges
-fit_dispersion_params_all_Pe_D0max_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0max_array,D0max,Dp_SI,p_guess,dKL_mean_array);
-fit_dispersion_params_all_Pe_D0min_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0min_array,D0min,Dp_SI,p_guess,dKL_mean_array);
-fit_dispersion_params_all_Pe_D0max_nw_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0max_array,D0max,Dp_SI,p_guess,ones(size(KL_mean_array)));
-fit_dispersion_params_all_Pe_D0min_nw_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0min_array,D0min,Dp_SI,p_guess,ones(size(KL_mean_array)));
-
-% Params from fitting
-beta_KLmean = fit_dispersion_params_all_KLmean_out.beta;
-d_beta_KLmean = fit_dispersion_params_all_KLmean_out.d_beta;
-
-% % taus KL weigthed
-% % tau weigthed
-% tau_w_KLmean = fit_dispersion_params_all_KLmean_out.tau;
-% d_tau_w_KLmean = fit_dispersion_params_all_KLmean_out.d_tau;
-% % tau non weigthed
-% tau_nw_KLmean = fit_dispersion_params_all_nw_KLmean_out.tau;
-% d_tau_nw_KLmean = fit_dispersion_params_all_nw_KLmean_out.d_tau;
-% % tau weigthed D0 effect
-% tau_D0max_w_KLmean = fit_dispersion_params_all_Pe_D0max_KLmean_out.tau;
-% tau_D0min_w_KLmean = fit_dispersion_params_all_Pe_D0min_KLmean_out.tau;
-% d_tau_D0uncert_w_KLmean = abs(tau_D0max_w_KLmean - tau_D0min_w_KLmean)/2;
-% % tau non weigthed D0 effect
-% tau_D0max_nw_KLmean = fit_dispersion_params_all_Pe_D0max_KLmean_out.tau;
-% tau_D0min_nw_KLmean = fit_dispersion_params_all_Pe_D0min_KLmean_out.tau;
-% d_tau_D0uncert_nw_KLmean = abs(tau_D0max_nw_KLmean - tau_D0min_nw_KLmean)/2;
-
-% alphas KL average
-% alpha weigthed
-alpha_w_KLmean_SI = fit_dispersion_params_all_KLmean_out.alpha_SI;
-d_alpha_w_KLmean_SI = fit_dispersion_params_all_KLmean_out.d_alpha_SI;
-alpha_w_KLmean_cm = fit_dispersion_params_all_KLmean_out.alpha_cm;
-d_alpha_w_KLmean_cm = fit_dispersion_params_all_KLmean_out.d_alpha_cm;
-% alpha non weigthed
-alpha_nw_KLmean_SI = fit_dispersion_params_all_nw_KLmean_out.alpha_SI;
-d_alpha_nw_KLmean_SI = fit_dispersion_params_all_nw_KLmean_out.d_alpha_SI;
-alpha_nw_KLmean_cm = fit_dispersion_params_all_nw_KLmean_out.alpha_cm;
-d_alpha_nw_KLmean_cm = fit_dispersion_params_all_nw_KLmean_out.d_alpha_cm;
-% alpha weigthed D0 effect
-alpha_D0max_w_KLmean_SI = fit_dispersion_params_all_Pe_D0max_KLmean_out.alpha_SI;
-alpha_D0min_w_KLmean_SI = fit_dispersion_params_all_Pe_D0min_KLmean_out.alpha_SI;
-d_alpha_D0uncert_w_KLmean_SI = abs(alpha_D0max_w_KLmean_SI - alpha_D0min_w_KLmean_SI)/2;
-alpha_D0max_w_KLmean_cm = fit_dispersion_params_all_Pe_D0max_KLmean_out.alpha_cm;
-alpha_D0min_w_KLmean_cm = fit_dispersion_params_all_Pe_D0min_KLmean_out.alpha_cm;
-d_alpha_D0uncert_w_KLmean_cm = abs(alpha_D0max_w_KLmean_cm - alpha_D0min_w_KLmean_cm)/2;
-% alpha non weigthed D0 effect
-alpha_D0max_nw_KLmean_SI = fit_dispersion_params_all_Pe_D0max_nw_KLmean_out.alpha_SI;
-alpha_D0min_nw_KLmean_SI = fit_dispersion_params_all_Pe_D0min_nw_KLmean_out.alpha_SI;
-d_alpha_D0uncert_nw_KLmean_SI = abs(alpha_D0max_nw_KLmean_SI - alpha_D0min_nw_KLmean_SI)/2;
-alpha_D0max_nw_KLmean_cm = fit_dispersion_params_all_Pe_D0max_nw_KLmean_out.alpha_cm;
-alpha_D0min_nw_KLmean_cm = fit_dispersion_params_all_Pe_D0min_nw_KLmean_out.alpha_cm;
-d_alpha_D0uncert_nw_KLmean_cm = abs(alpha_D0max_nw_KLmean_cm - alpha_D0min_nw_KLmean_cm)/2;
-
-% % all taus
-% % KL weigthed
-% taus = [tau_w,tau_nw,tau_D0max_w,tau_D0min_w,tau_D0max_nw,tau_D0min_nw];
-% d_taus = [d_tau_w,d_tau_nw,d_tau_D0uncert_w,d_tau_D0uncert_nw];
-% % KL non weigthed
-% taus_KLnw = [tau_w_KLnw,tau_nw_KLnw,tau_D0max_w_KLnw,tau_D0min_w_KLnw,tau_D0max_nw_KLnw,tau_D0min_nw_KLnw];
-% d_taus_KLnw = [d_tau_w_KLnw,d_tau_nw_KLnw,d_tau_D0uncert_w_KLnw,d_tau_D0uncert_nw_KLnw];
 % % KL mean
-% taus_KLmean = [tau_w_KLmean,tau_nw_KLmean,tau_D0max_w_KLmean,tau_D0min_w_KLmean,tau_D0max_nw_KLmean,tau_D0min_nw_KLmean];
-% d_taus_KLmean = [d_tau_w_KLmean,d_tau_nw_KLmean,d_tau_D0uncert_w_KLmean,d_tau_D0uncert_nw_KLmean];
+% % weighted
+% fit_dispersion_params_all_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0_array,D0,Dp_SI,p_guess,dKL_mean_array);
+% %nonweighted
+% fit_dispersion_params_all_nw_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0_array,D0,Dp_SI,p_guess,ones(size(KL_mean_array)));
 % 
-% % all taus and dtaus
-% taus_all = [taus_KLnw,taus_KLmean];
-% d_taus_all = [d_taus_KLnw,d_taus_KLmean];
-% tau_mean = mean(taus_all);
-% d_tau_sens = max(abs(taus_all - tau_mean));
-
-% all alphas
-% KL weigthed
-alphas_SI = [alpha_w_SI,alpha_nw_SI,alpha_D0max_w_SI,alpha_D0min_w_SI,alpha_D0max_nw_SI,alpha_D0min_nw_SI];
-alphas_cm = [alpha_w_cm,alpha_nw_cm,alpha_D0max_w_cm,alpha_D0min_w_cm,alpha_D0max_nw_cm,alpha_D0min_nw_cm];
-d_alphas_SI = [d_alpha_w_SI,d_alpha_nw_SI,d_alpha_D0uncert_w_SI,d_alpha_D0uncert_nw_SI];
-d_alphas_cm = [d_alpha_w_cm,d_alpha_nw_cm,d_alpha_D0uncert_w_cm,d_alpha_D0uncert_nw_cm];
-% KL non weigthed
-alphas_KLnw_SI = [alpha_w_KLnw_SI,alpha_nw_KLnw_SI,alpha_D0max_w_KLnw_SI,alpha_D0min_w_KLnw_SI,alpha_D0max_nw_KLnw_SI,alpha_D0min_nw_KLnw_SI];
-alphas_KLnw_cm = [alpha_w_KLnw_cm,alpha_nw_KLnw_cm,alpha_D0max_w_KLnw_cm,alpha_D0min_w_KLnw_cm,alpha_D0max_nw_KLnw_cm,alpha_D0min_nw_KLnw_cm];
-d_alphas_KLnw_SI = [d_alpha_w_KLnw_SI,d_alpha_nw_KLnw_SI,d_alpha_D0uncert_w_KLnw_SI,d_alpha_D0uncert_nw_KLnw_SI];
-d_alphas_KLnw_cm = [d_alpha_w_KLnw_cm,d_alpha_nw_KLnw_cm,d_alpha_D0uncert_w_KLnw_cm,d_alpha_D0uncert_nw_KLnw_cm];
-% KL mean
-alphas_KLmean_SI = [alpha_w_KLmean_SI,alpha_nw_KLmean_SI,alpha_D0max_w_KLmean_SI,alpha_D0min_w_KLmean_SI,alpha_D0max_nw_KLmean_SI,alpha_D0min_nw_KLmean_SI];
-alphas_KLmean_cm = [alpha_w_KLmean_cm,alpha_nw_KLmean_cm,alpha_D0max_w_KLmean_cm,alpha_D0min_w_KLmean_cm,alpha_D0max_nw_KLmean_cm,alpha_D0min_nw_KLmean_cm];
-d_alphas_KLmean_SI = [d_alpha_w_KLmean_SI,d_alpha_nw_KLmean_SI,d_alpha_D0uncert_w_KLmean_SI,d_alpha_D0uncert_nw_KLmean_SI];
-d_alphas_KLmean_cm = [d_alpha_w_KLmean_cm,d_alpha_nw_KLmean_cm,d_alpha_D0uncert_w_KLmean_cm,d_alpha_D0uncert_nw_KLmean_cm];
-
-% all alphas and dalphas
-alphas_all_SI = [alphas_SI,alphas_KLnw_SI,alphas_KLmean_SI];
-alphas_all_cm = [alphas_cm,alphas_KLnw_cm,alphas_KLmean_cm];
-d_alphas_all_SI = [d_alphas_SI,d_alphas_KLnw_SI,d_alphas_KLmean_SI];
-d_alphas_all_cm = [d_alphas_SI,d_alphas_KLnw_SI,d_alphas_KLmean_SI];
-
-alpha_mean_SI = mean(alphas_all_SI);
-alpha_mean_cm = mean(alphas_all_cm);
-d_alpha_sens_SI = max(abs(alphas_all_SI - alpha_mean_SI));
-d_alpha_sens_cm = max(abs(alphas_all_cm - alpha_mean_cm));
-
+% % Propagation of uncertainty from D0 error
+% D0max = D0 + dD0;
+% D0min = D0 - dD0;
+% Pe_D0max_array = Pe_D0_array*(D0/D0max); % Pe in respect to D0max
+% Pe_D0min_array = Pe_D0_array*(D0/D0min); % Pe in respect to D0min
+% 
+% % Fitting KL with different Pe ranges
+% fit_dispersion_params_all_Pe_D0max_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0max_array,D0max,Dp_SI,p_guess,dKL_mean_array);
+% fit_dispersion_params_all_Pe_D0min_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0min_array,D0min,Dp_SI,p_guess,dKL_mean_array);
+% fit_dispersion_params_all_Pe_D0max_nw_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0max_array,D0max,Dp_SI,p_guess,ones(size(KL_mean_array)));
+% fit_dispersion_params_all_Pe_D0min_nw_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0min_array,D0min,Dp_SI,p_guess,ones(size(KL_mean_array)));
+% 
+% % Params from fitting
+% beta_KLmean = fit_dispersion_params_all_KLmean_out.beta;
+% d_beta_KLmean = fit_dispersion_params_all_KLmean_out.d_beta;
+% 
+% % % taus KL weigthed
+% % % tau weigthed
+% % tau_w_KLmean = fit_dispersion_params_all_KLmean_out.tau;
+% % d_tau_w_KLmean = fit_dispersion_params_all_KLmean_out.d_tau;
+% % % tau non weigthed
+% % tau_nw_KLmean = fit_dispersion_params_all_nw_KLmean_out.tau;
+% % d_tau_nw_KLmean = fit_dispersion_params_all_nw_KLmean_out.d_tau;
+% % % tau weigthed D0 effect
+% % tau_D0max_w_KLmean = fit_dispersion_params_all_Pe_D0max_KLmean_out.tau;
+% % tau_D0min_w_KLmean = fit_dispersion_params_all_Pe_D0min_KLmean_out.tau;
+% % d_tau_D0uncert_w_KLmean = abs(tau_D0max_w_KLmean - tau_D0min_w_KLmean)/2;
+% % % tau non weigthed D0 effect
+% % tau_D0max_nw_KLmean = fit_dispersion_params_all_Pe_D0max_KLmean_out.tau;
+% % tau_D0min_nw_KLmean = fit_dispersion_params_all_Pe_D0min_KLmean_out.tau;
+% % d_tau_D0uncert_nw_KLmean = abs(tau_D0max_nw_KLmean - tau_D0min_nw_KLmean)/2;
+% 
+% % alphas KL average
+% % alpha weigthed
+% alpha_w_KLmean_SI = fit_dispersion_params_all_KLmean_out.alpha_SI;
+% d_alpha_w_KLmean_SI = fit_dispersion_params_all_KLmean_out.d_alpha_SI;
+% alpha_w_KLmean_cm = fit_dispersion_params_all_KLmean_out.alpha_cm;
+% d_alpha_w_KLmean_cm = fit_dispersion_params_all_KLmean_out.d_alpha_cm;
+% % alpha non weigthed
+% alpha_nw_KLmean_SI = fit_dispersion_params_all_nw_KLmean_out.alpha_SI;
+% d_alpha_nw_KLmean_SI = fit_dispersion_params_all_nw_KLmean_out.d_alpha_SI;
+% alpha_nw_KLmean_cm = fit_dispersion_params_all_nw_KLmean_out.alpha_cm;
+% d_alpha_nw_KLmean_cm = fit_dispersion_params_all_nw_KLmean_out.d_alpha_cm;
+% % alpha weigthed D0 effect
+% alpha_D0max_w_KLmean_SI = fit_dispersion_params_all_Pe_D0max_KLmean_out.alpha_SI;
+% alpha_D0min_w_KLmean_SI = fit_dispersion_params_all_Pe_D0min_KLmean_out.alpha_SI;
+% d_alpha_D0uncert_w_KLmean_SI = abs(alpha_D0max_w_KLmean_SI - alpha_D0min_w_KLmean_SI)/2;
+% alpha_D0max_w_KLmean_cm = fit_dispersion_params_all_Pe_D0max_KLmean_out.alpha_cm;
+% alpha_D0min_w_KLmean_cm = fit_dispersion_params_all_Pe_D0min_KLmean_out.alpha_cm;
+% d_alpha_D0uncert_w_KLmean_cm = abs(alpha_D0max_w_KLmean_cm - alpha_D0min_w_KLmean_cm)/2;
+% % alpha non weigthed D0 effect
+% alpha_D0max_nw_KLmean_SI = fit_dispersion_params_all_Pe_D0max_nw_KLmean_out.alpha_SI;
+% alpha_D0min_nw_KLmean_SI = fit_dispersion_params_all_Pe_D0min_nw_KLmean_out.alpha_SI;
+% d_alpha_D0uncert_nw_KLmean_SI = abs(alpha_D0max_nw_KLmean_SI - alpha_D0min_nw_KLmean_SI)/2;
+% alpha_D0max_nw_KLmean_cm = fit_dispersion_params_all_Pe_D0max_nw_KLmean_out.alpha_cm;
+% alpha_D0min_nw_KLmean_cm = fit_dispersion_params_all_Pe_D0min_nw_KLmean_out.alpha_cm;
+% d_alpha_D0uncert_nw_KLmean_cm = abs(alpha_D0max_nw_KLmean_cm - alpha_D0min_nw_KLmean_cm)/2;
+% 
+% % % all taus
+% % % KL weigthed
+% % taus = [tau_w,tau_nw,tau_D0max_w,tau_D0min_w,tau_D0max_nw,tau_D0min_nw];
+% % d_taus = [d_tau_w,d_tau_nw,d_tau_D0uncert_w,d_tau_D0uncert_nw];
+% % % KL non weigthed
+% % taus_KLnw = [tau_w_KLnw,tau_nw_KLnw,tau_D0max_w_KLnw,tau_D0min_w_KLnw,tau_D0max_nw_KLnw,tau_D0min_nw_KLnw];
+% % d_taus_KLnw = [d_tau_w_KLnw,d_tau_nw_KLnw,d_tau_D0uncert_w_KLnw,d_tau_D0uncert_nw_KLnw];
+% % % KL mean
+% % taus_KLmean = [tau_w_KLmean,tau_nw_KLmean,tau_D0max_w_KLmean,tau_D0min_w_KLmean,tau_D0max_nw_KLmean,tau_D0min_nw_KLmean];
+% % d_taus_KLmean = [d_tau_w_KLmean,d_tau_nw_KLmean,d_tau_D0uncert_w_KLmean,d_tau_D0uncert_nw_KLmean];
+% % 
+% % % all taus and dtaus
+% % taus_all = [taus_KLnw,taus_KLmean];
+% % d_taus_all = [d_taus_KLnw,d_taus_KLmean];
+% % tau_mean = mean(taus_all);
+% % d_tau_sens = max(abs(taus_all - tau_mean));
+% 
+% % all alphas
+% % KL weigthed
+% alphas_SI = [alpha_w_SI,alpha_nw_SI,alpha_D0max_w_SI,alpha_D0min_w_SI,alpha_D0max_nw_SI,alpha_D0min_nw_SI];
+% alphas_cm = [alpha_w_cm,alpha_nw_cm,alpha_D0max_w_cm,alpha_D0min_w_cm,alpha_D0max_nw_cm,alpha_D0min_nw_cm];
+% d_alphas_SI = [d_alpha_w_SI,d_alpha_nw_SI,d_alpha_D0uncert_w_SI,d_alpha_D0uncert_nw_SI];
+% d_alphas_cm = [d_alpha_w_cm,d_alpha_nw_cm,d_alpha_D0uncert_w_cm,d_alpha_D0uncert_nw_cm];
+% % KL non weigthed
+% alphas_KLnw_SI = [alpha_w_KLnw_SI,alpha_nw_KLnw_SI,alpha_D0max_w_KLnw_SI,alpha_D0min_w_KLnw_SI,alpha_D0max_nw_KLnw_SI,alpha_D0min_nw_KLnw_SI];
+% alphas_KLnw_cm = [alpha_w_KLnw_cm,alpha_nw_KLnw_cm,alpha_D0max_w_KLnw_cm,alpha_D0min_w_KLnw_cm,alpha_D0max_nw_KLnw_cm,alpha_D0min_nw_KLnw_cm];
+% d_alphas_KLnw_SI = [d_alpha_w_KLnw_SI,d_alpha_nw_KLnw_SI,d_alpha_D0uncert_w_KLnw_SI,d_alpha_D0uncert_nw_KLnw_SI];
+% d_alphas_KLnw_cm = [d_alpha_w_KLnw_cm,d_alpha_nw_KLnw_cm,d_alpha_D0uncert_w_KLnw_cm,d_alpha_D0uncert_nw_KLnw_cm];
+% % KL mean
+% alphas_KLmean_SI = [alpha_w_KLmean_SI,alpha_nw_KLmean_SI,alpha_D0max_w_KLmean_SI,alpha_D0min_w_KLmean_SI,alpha_D0max_nw_KLmean_SI,alpha_D0min_nw_KLmean_SI];
+% alphas_KLmean_cm = [alpha_w_KLmean_cm,alpha_nw_KLmean_cm,alpha_D0max_w_KLmean_cm,alpha_D0min_w_KLmean_cm,alpha_D0max_nw_KLmean_cm,alpha_D0min_nw_KLmean_cm];
+% d_alphas_KLmean_SI = [d_alpha_w_KLmean_SI,d_alpha_nw_KLmean_SI,d_alpha_D0uncert_w_KLmean_SI,d_alpha_D0uncert_nw_KLmean_SI];
+% d_alphas_KLmean_cm = [d_alpha_w_KLmean_cm,d_alpha_nw_KLmean_cm,d_alpha_D0uncert_w_KLmean_cm,d_alpha_D0uncert_nw_KLmean_cm];
+% 
+% % all alphas and dalphas
+% alphas_all_SI = [alphas_SI,alphas_KLnw_SI,alphas_KLmean_SI];
+% alphas_all_cm = [alphas_cm,alphas_KLnw_cm,alphas_KLmean_cm];
+% d_alphas_all_SI = [d_alphas_SI,d_alphas_KLnw_SI,d_alphas_KLmean_SI];
+% d_alphas_all_cm = [d_alphas_SI,d_alphas_KLnw_SI,d_alphas_KLmean_SI];
+% 
+% alpha_mean_SI = mean(alphas_all_SI);
+% alpha_mean_cm = mean(alphas_all_cm);
+% d_alpha_sens_SI = max(abs(alphas_all_SI - alpha_mean_SI));
+% d_alpha_sens_cm = max(abs(alphas_all_cm - alpha_mean_cm));
+% 
 % C2 in model is alpha/Dp Dp is characterstic legth L
 KL_fun = fit_dispersion_params_all_out.Cfun; 
-KL_fit = KL_fun(alpha_mean_SI/Dp_SI,Pe_D0_array);
-% KL_fit = KL_fun([alpha_mean_SI/Dp_SI,tau_mean],Pe_D0_array);
-KL_alphamax_fit = KL_fun((alpha_mean_SI+d_alpha_sens_SI)/Dp_SI,Pe_D0_array);
-KL_alphamin_fit = KL_fun((alpha_mean_SI-d_alpha_sens_SI)/Dp_SI,Pe_D0_array);
-% KL_alphamax_fit = KL_fun([(alpha_mean_SI+d_alpha_sens_SI)/Dp_SI,tau_mean+d_tau_sens],Pe_D0_array);
-% KL_alphamin_fit = KL_fun([(alpha_mean_SI-d_alpha_sens_SI)/Dp_SI,tau_mean-d_tau_sens],Pe_D0_array);
-dKL_alpha_sens = abs(KL_alphamax_fit - KL_alphamin_fit)/2;
-
-% RMSE = fit_dispersion_params_all_out.RMSE;
-% R2 = fit_dispersion_params_all_out.R2;
+% KL_fit = KL_fun(alpha_mean_SI/Dp_SI,Pe_D0_array);
+% % KL_fit = KL_fun([alpha_mean_SI/Dp_SI,tau_mean],Pe_D0_array);
+% KL_alphamax_fit = KL_fun((alpha_mean_SI+d_alpha_sens_SI)/Dp_SI,Pe_D0_array);
+% KL_alphamin_fit = KL_fun((alpha_mean_SI-d_alpha_sens_SI)/Dp_SI,Pe_D0_array);
+% % KL_alphamax_fit = KL_fun([(alpha_mean_SI+d_alpha_sens_SI)/Dp_SI,tau_mean+d_tau_sens],Pe_D0_array);
+% % KL_alphamin_fit = KL_fun([(alpha_mean_SI-d_alpha_sens_SI)/Dp_SI,tau_mean-d_tau_sens],Pe_D0_array);
+% dKL_alpha_sens = abs(KL_alphamax_fit - KL_alphamin_fit)/2;
+% 
+% % RMSE = fit_dispersion_params_all_out.RMSE;
+% % R2 = fit_dispersion_params_all_out.R2;
 
 % Peclet with Dp = alpha instead of L
-Pe_alpha_array = u_array*alpha_mean_SI/D0;
-dPe_alpha_array = (((u_array/D0).^2)*(d_alpha_sens_SI^2)+((-u_array*alpha_mean_SI/(D0^2)).^2)*(dD0^2)).^(1/2);
+Pe_alpha_array = u_array*alpha_nw_SI/D0;
+dPe_alpha_array = (((u_array/D0).^2)*(d_alpha_nw_SI^2)+((-u_array*alpha_nw_SI/(D0^2)).^2)*(dD0^2)).^(1/2);
 % KL/D0, must be same units
 KL_vs_D0_array = KL_array/D0;
-dKL_vs_D0_array = (((1/D0).^2)*(dKL_alpha_sens.^2)+((-KL_array/(D0^2)).^2)*(dD0^2)).^(1/2); %dKL array instead of dKL total
+dKL_vs_D0_array = (((1/D0).^2)*(dKL_nw_array.^2)+((-KL_array/(D0^2)).^2)*(dD0^2)).^(1/2); %dKL array instead of dKL total
 % since it is the result from fitting C vs t, not plotting the results from this fitting
 
 % Add dispersion parameters in exp_params and fitting results
@@ -805,11 +805,15 @@ save(pathExportAll + "expProcFullData.mat",'expProcFullData')
 % creating table all in cm2 and min, and mol %
 % Pe alone is Pe in respect to KL and not D0
 fitting_results_simple = fitting_results(:, {'Key', 'C1init_pcmol', ...
-    'C1j_pcmol', 'Q_mlmin', 'u_cmmin', 'RMSE_mean', 'R2_mean', ...
-    'KL_mean_cm2min','SE_KL_mean_cm2min','Pe_mean', 'SE_Pe_mean', ...
-    'dt_mean_min', 'SE_dt_mean_min', 'dtD_mean', 'SE_dtD_mean', ...
-    'L_lines_mean_cm','SE_L_lines_mean_cm','V_lines_mean_cc','SE_V_lines_mean_cc',......
-    'Pe_D0', 'dPe_D0', 'Pe_alpha', 'dPe_alpha', 'T_mean', 'T_std'});
+    'C1j_pcmol', 'Q_mlmin', 'u_cmmin', 'RMSE_dtfixed', 'R2_dtfixed', ...
+    'KL_dtfixed_cm2min','SE_KL_total_dtfixed_cm2min','Pe_dtfixed', 'SE_Pe_dtfixed', ...
+    'dt_dtfixed_min', 'SE_dt_dtfixed_min', 'dtD_dtfixed', 'SE_dtD_dtfixed', ...
+    'L_lines_cm','SE_L_lines_cm','V_lines_cc','SE_V_lines_cc',...
+    'Pe_D0', 'dPe_D0', 'Pe_alpha', 'dPe_alpha', 'T_mean', 'T_std', ...
+    'RMSE_dtfixed_nw', 'R2_dtfixed_nw', ...
+    'KL_dtfixed_nw_cm2min','SE_KL_total_dtfixed_nw_cm2min','Pe_dtfixed_nw', 'SE_Pe_dtfixed_nw', ...
+    'dt_dtfixed_nw_min', 'SE_dt_dtfixed_nw_min', 'dtD_dtfixed_nw', 'SE_dtD_dtfixed_nw', ...
+    'L_lines_nw_cm','SE_L_lines_nw_cm','V_lines_nw_cc','SE_V_lines_nw_cc'});
 
 fitting_params_simple = table("Berea", unique(fitting_results.Fluid1), unique(fitting_results.Fluid2),...
     unique(fitting_results.T_C),unique(fitting_results.P_psig), (unique(fitting_results.P_psig)+14.7)*0.00689476,...
@@ -818,7 +822,8 @@ fitting_params_simple = table("Berea", unique(fitting_results.Fluid1), unique(fi
     unique(fitting_results.phi),unique(fitting_results.K_mD), ...
     unique(fitting_results.dtD_dtfixed), max(fitting_results.L_dtfixed_lines_cm),max(fitting_results.SE_L_dtfixed_lines_cm),...
     unique(fitting_results.Vlinesbefore_cc), max(fitting_results.V_dtfixed_lines_cc),max(fitting_results.SE_V_dtfixed_lines_cc),...
-    alpha_mean_cm, d_alpha_sens_cm, beta, ...
+    alpha_w_cm, d_alpha_w_cm, alpha_nw_cm, d_alpha_nw_cm, ...
+    alpha_w_KLnw_cm, d_alpha_w_KLnw_cm, alpha_nw_KLnw_cm, d_alpha_nw_KLnw_cm, beta, ...
     'VariableNames',{'Sample', 'Fluid1','Fluid2', ...
     'T_C','P_psig','P_MPa', ...
     'D0_cm2min', 'dD0_cm2min', ...
@@ -826,7 +831,8 @@ fitting_params_simple = table("Berea", unique(fitting_results.Fluid1), unique(fi
     'phi',  'K_mD', ...
     'dtD_fixed','L_lines_before_dtfixed_cm','sd_L_lines_before_dtfixed_cm',...
     'Vlinesbefore_cc','V_lines_before_dtfixed_cc','sd_V_lines_before_dtfixed_cc',...
-    'alpha_cm', 'sd_alpha_cm','beta'});
+    'alpha_w_cm', 'sd_alpha_w_cm','alpha_nw_cm', 'sd_alpha_nw_cm', ...
+    'alpha_w_KLnw_cm', 'd_alpha_w_KLnw_cm', 'alpha_nw_KLnw_cm', 'd_alpha_nw_KLnw_cm','beta'});
 
 fittingDispersionResults.results = fitting_results_simple;
 fittingDispersionResults.params = fitting_params_simple;
@@ -897,8 +903,8 @@ for i = 1:length(filedataExp.Key)
         % KL non weigthed
         plot(expProcData.(filedataExp.Key(i)).BT.tD,expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_free/100,'LineStyle','--','LineWidth',1.5,'Color', [0.5 0.5 0.5],'DisplayName',"BT model fitting - dt free - KL non weigthed")
         plot(expProcData.(filedataExp.Key(i)).BT.tD,expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed/100,'LineStyle','--','LineWidth',1.5,'Color', 'k', 'DisplayName',"BT model fitting - dt fixed - KL non weigthed")
-        % KL mean
-        plot(expProcData.(filedataExp.Key(i)).BT.tD,expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed/100,'LineWidth',1.5,'Color', 'blue', 'DisplayName',"BT model fitting - dt fixed - KL mean")
+        % % KL mean
+        % plot(expProcData.(filedataExp.Key(i)).BT.tD,expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed/100,'LineWidth',1.5,'Color', 'blue', 'DisplayName',"BT model fitting - dt fixed - KL mean")
         xlabel('Dimensionless Time [-]');
         % xlim([0,2]);
         ylabel('C_{D}[-]');
@@ -922,8 +928,8 @@ for i = 1:length(filedataExp.Key)
         % KL non weigthed
         plot(expProcData.(filedataExp.Key(i)).BT.tDtotal,expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_free/100,'LineStyle','--','LineWidth',1.5,'Color', [0.5 0.5 0.5],'DisplayName',"BT model fitting - dt free - KL non weigthed")
         plot(expProcData.(filedataExp.Key(i)).BT.tDtotal,expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed/100,'LineStyle','--','LineWidth',1.5,'Color', 'k', 'DisplayName',"BT model fitting - dt fixed - KL non weigthed")
-        % KL mean
-        plot(expProcData.(filedataExp.Key(i)).BT.tDtotal,expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed/100,'LineWidth',1.5,'Color', 'blue', 'DisplayName',"BT model fitting - dt fixed - KL mean")
+        % % KL mean
+        % plot(expProcData.(filedataExp.Key(i)).BT.tDtotal,expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed/100,'LineWidth',1.5,'Color', 'blue', 'DisplayName',"BT model fitting - dt fixed - KL mean")
         xlabel('Dimensionless Time [-]');
         % xlim([0,2]);
         ylabel('C_{D}[-]');
@@ -1052,8 +1058,8 @@ for i = 1:length(filedataExp.Key)
     CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
     CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
     CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
-    cond = (expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed>=10)&(expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed<=90);
-    % errorbar(tD(cond), expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed(cond)/100, ...
+    cond = (expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed>=10)&(expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed<=90);
+    % errorbar(tD(cond), expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed(cond)/100, ...
     %    expProcData.(filedataExp.Key(i)).exp_params.RMSE_mean*ones(size(tD(cond))), ...
     %    'LineStyle', 'none', ...
     %     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
@@ -1063,7 +1069,7 @@ for i = 1:length(filedataExp.Key)
     h1 = scatter(tD,CD1,5,'filled','MarkerFaceColor',colors(i,:), ...
         'DisplayName',"Q"+filedataExp.Q(i)+": C_{D}");
     hold on
-    h2 = plot(tD(cond), expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed(cond)/100, ...
+    h2 = plot(tD(cond), expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed(cond)/100, ...
         'LineWidth',1.0,'Color', 'k','DisplayName',"C_D_{fit} \pm \DeltaC_D_{fit}");
     xlabel('Dimensionless Time [-]');
     ylabel('C_{D}[-]');
@@ -1087,8 +1093,8 @@ for i = 1:length(filedataExp.Key)
     CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
     CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
     CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
-    cond = (expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed>=10)&(expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed<=90);
-    % errorbar(tDtotal(cond), expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed(cond)/100, ...
+    cond = (expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed>=10)&(expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed<=90);
+    % errorbar(tDtotal(cond), expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed(cond)/100, ...
     %    expProcData.(filedataExp.Key(i)).exp_params.RMSE_mean*ones(size(tDtotal(cond))), ...
     %    'LineStyle', 'none', ...
     %     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
@@ -1098,7 +1104,7 @@ for i = 1:length(filedataExp.Key)
     h1 = scatter(tDtotal,CD1,5,'filled','MarkerFaceColor',colors(i,:), ...
         'DisplayName',"Q"+filedataExp.Q(i));
     hold on
-    % h2 = plot(tDtotal(cond), expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed(cond)/100, ...
+    % h2 = plot(tDtotal(cond), expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed(cond)/100, ...
     %     'LineWidth',1.0,'Color', 'k','DisplayName',"C_D_{fit} \pm \DeltaC_D_{fit}");
     xlabel('Dimensionless Time [-]');
     ylabel('C_{D}[-]');
@@ -1176,10 +1182,10 @@ ylim([0,4.5])
 grid on;
 annotText1 = sprintf('\\alpha_{L} = %.2f \\pm %.2f cm', alpha_L, dalpha_L);
 % annotText2 = sprintf('\\tau = %.2f \\pm %.2f', tau, dtau);
-annotation('textbox', [0.25, 0.18, 0.8, 0.06], 'String', annotText1, ...
+annotation('textbox', [0.285, 0.18, 0.8, 0.06], 'String', annotText1, ...
     'Interpreter', 'tex', 'FontSize', 9, 'EdgeColor', 'none','FaceAlpha',0.1);
 annotText3 = sprintf('\\alpha_{L} nw = %.2f \\pm %.2f cm', alpha_L_nw, dalpha_L_nw);
-annotation('textbox', [0.25, 0.15, 0.8, 0.06], 'String', annotText3, ...
+annotation('textbox', [0.25, 0.14, 0.8, 0.06], 'String', annotText3, ...
     'Interpreter', 'tex', 'FontSize', 9, 'EdgeColor', 'none','FaceAlpha',0.1);
 
 % annotation('textbox', [0.265, 0.13, 0.8, 0.06], 'String', annotText2, ...
@@ -1197,10 +1203,10 @@ KL_vs_D0_array = fitting_results.KL_vs_D0;
 dKL_vs_D0_array = fitting_results.dKL_vs_D0;
 D0 = unique(fitting_results.D0_SI);
 dD0 = unique(fitting_results.dD0_SI);
-KL_array = fitting_results.KL_mean_SI; % KL and D0 must have same units
-dKL_array = fitting_results.SE_KL_mean_SI;
+KL_array = fitting_results.KL_dtfixed_SI; % KL and D0 must have same units
+dKL_array = fitting_results.SE_KL_dtfixed_SI;
 
-x = 0:1:ceil(max(Pe_D0_array));
+x = 0:1:ceil(max(Pe_array));
 KL_plot = KL_fun(alpha_SI/Dp_SI,x);
 % KL_plot = KL_fun([alpha_SI/Dp_SI,tau],x);
 
@@ -1208,12 +1214,12 @@ figure % dispersivity
 plot(x,KL_plot/D0, ...
     'DisplayName','K_L/D_0 \approx \alpha_Lu_x/D_0','Color','k'); % Kl_vs_u fitting
 hold on
-for i = 1:length(Pe_D0_array)
-    errorbar(Pe_D0_array(i),KL_vs_D0_array(i), ...
+for i = 1:length(Pe_array)
+    errorbar(Pe_array(i),KL_vs_D0_array(i), ...
         dKL_vs_D0_array(i),dKL_vs_D0_array(i), dPe_array(i), dPe_array(i), ...
         'Color','k','HandleVisibility','off')
     hold on
-    scatter(Pe_D0_array(i),KL_vs_D0_array(i),'filled', ...
+    scatter(Pe_array(i),KL_vs_D0_array(i),'filled', ...
         'DisplayName',"Q = " + filedataExp.Q(i) +" ml/min", ...
         'Color',colors(i,:))
     hold on
