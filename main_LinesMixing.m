@@ -186,12 +186,17 @@ for i = 1:length(filedataExp.Key)
     fprintf('  Downstream: %.1f %%\n', frac_down);
     
     figure 
-    plot(t_vals, G_up,'DisplayName','Gup')
+    plot(t_vals, G_up,'LineWidth', 1.2,'DisplayName','G_{upstream}')
     hold on
-    plot(t_vals, G_core,'DisplayName','Gcore')
-    plot(t_vals, G_down,'DisplayName','Gdown')
-    legend()
-    
+    plot(t_vals, G_core,'LineWidth', 1.2,'DisplayName','G_{core}')
+    plot(t_vals, G_down,'LineWidth', 1.2,'DisplayName','G_{down}')
+    xlabel('Seconds elapsed [seconds]');
+    ylabel('g [s{-1}]');
+    lgd = legend();
+    title (lgd, "Q = " + filedataExp.Q(i) + " ml/min")
+    grid on    
+    saveas(gcf,pathExportAll + "g_functions" + "Q = " + filedataExp.Q(i),'png')
+    savefig(gcf,pathExportAll + "g_functions" + "Q = " + filedataExp.Q(i))
 
 end
 
@@ -199,13 +204,21 @@ end
 
 for i = 1:length(filedataExp.Key)
         figure
-        scatter(expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed,expProcFullData.(filedataExp.Key(i)).BT.Ci,10,'filled','MarkerFaceColor','red','DisplayName','Experimental Data')
+        scatter(expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed, ...
+            expProcFullData.(filedataExp.Key(i)).BT.Ci,10,'filled', ...
+            'MarkerFaceColor','red','DisplayName','C_{obs}')
         hold on
         % plot(expProcFullData.(filedataExp.Key(i)).BT_fit.SecondsElapsed,expProcFullData.(filedataExp.Key(i)).BT_fit.Ci_ob,'LineWidth',1.0,'Color','green','DisplayName','Ogatta Banks no t shift')
-        plot(expProcFullData.(filedataExp.Key(i)).BT_fit.SecondsElapsed,expProcFullData.(filedataExp.Key(i)).BT_fit.C1_ob_linesbefore,'LineWidth',1.0,'Color',[0.5 0.5 0.5],'DisplayName','Ogatta Banks lines before')
-        plot(expProcFullData.(filedataExp.Key(i)).BT_fit.SecondsElapsed,expProcFullData.(filedataExp.Key(i)).BT_fit.Ci_upscore,'LineWidth',1.0,'Color','k','DisplayName','Two steps conv')
+        plot(expProcFullData.(filedataExp.Key(i)).BT_fit.SecondsElapsed, ...
+            expProcFullData.(filedataExp.Key(i)).BT_fit.C1_ob_linesbefore, ...
+            'LineWidth',1.2,'Color',[0.5 0.5 0.5],'DisplayName','C_{x = L_{upstream}}')
+        plot(expProcFullData.(filedataExp.Key(i)).BT_fit.SecondsElapsed, ...
+            expProcFullData.(filedataExp.Key(i)).BT_fit.Ci_upscore, ...
+            'LineWidth',1.0,'Color','k','DisplayName','C_{x = L_{upstream} + L_{core}}')
         % plot(expProcFullData.(filedataExp.Key(i)).BT_fit.SecondsElapsed,expProcFullData.(filedataExp.Key(i)).BT_fit.C1_ob_linesafter,'LineWidth',1.0,'Color',[0.5 0.5 0.5],'DisplayName','Ogatta Banks lines after alone')
-        plot(expProcFullData.(filedataExp.Key(i)).BT_fit.SecondsElapsed,expProcFullData.(filedataExp.Key(i)).BT_fit.Ci_corr_mean,'LineWidth',2.0,'Color','k','DisplayName','Three steps conv')
+        plot(expProcFullData.(filedataExp.Key(i)).BT_fit.SecondsElapsed, ...
+            expProcFullData.(filedataExp.Key(i)).BT_fit.Ci_corr_mean, ...
+            'LineWidth',2.0,'Color','k','DisplayName','C_{x = L_{total}}')
         plot(expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed,expProcFullData.(filedataExp.Key(i)).BT.C_fit_dt_fixed, 'LineWidth',1.0,'Color','blue','DisplayName','C model w t shift')
         % plot(expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed,expProcFullData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed,'LineStyle','--', 'LineWidth',1.0,'Color','blue','DisplayName','C model mean t shift')
         plot(expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed,expProcFullData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed,'LineStyle','--', 'LineWidth',1.0,'Color','k','DisplayName','C model nw t shift')
@@ -214,7 +227,7 @@ for i = 1:length(filedataExp.Key)
         ylim([-0.1,100.1]);
         grid on;
         legend('Location','southeast');
-        saveas(gcf,pathExportAll + "C_mixing_lines_effect",'png')
-        savefig(gcf,pathExportAll + "C_mixing_lines_effect")
+        saveas(gcf,pathExportAll + "C_mixing_lines_effect" + "Q = " + filedataExp.Q(i),'png')
+        savefig(gcf,pathExportAll + "C_mixing_lines_effect" + "Q = " + filedataExp.Q(i))
 end
 hold off
