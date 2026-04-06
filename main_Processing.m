@@ -194,6 +194,9 @@ for i = 1:length(filedataExp.Key)
         t_vals = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed;
         C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci/100;
         dC_vals = expProcData.(filedataExp.Key(i)).BT.dC/100;
+
+        Cmin = 0.16;
+        Cmax = 0.84;
         
         % experiment params (fixed for fitting)
         Ci = filedataExp.C1init(i)/100;
@@ -224,8 +227,9 @@ for i = 1:length(filedataExp.Key)
         dt_fixed_nw = dtD_guess_nw*L/u; %  dt estimate according to velocity of each experiment
         p_guess_nw = sqrt(expProcData.(filedataExp.Key(i)).exp_params.KL_nw_SI);
 
-        KL_dt_fixed_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals);
-        KL_dt_fixed_nw_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed_nw,p_guess_nw,ones(size(C1_vals))); %non weighted
+        KL_dt_fixed_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals,Cmin,Cmax);
+        KL_dt_fixed_nw_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed_nw,p_guess_nw,ones(size(C1_vals)),Cmin,Cmax); %non weighted
+        KL_dt_fixed_nw_fullrange_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed_nw,p_guess_nw,ones(size(C1_vals)),0,1); %non weighted
 
         % Fitting parameters mean weigthed; non weigthed
         KL_fit = KL_dt_fixed_out.KL; KL_nw_fit = KL_dt_fixed_nw_out.KL;
@@ -233,6 +237,7 @@ for i = 1:length(filedataExp.Key)
         dt_fit = KL_dt_fixed_out.dt; dt_nw_fit = KL_dt_fixed_nw_out.dt;
         d_dt_fit = d_dt_dtfixed_SI; d_dt_nw_fit = d_dt_dtfixed_nw_SI;  %KL_dt_fixed_out.ddt;
         C_fit = KL_dt_fixed_out.C_fit; C_nw_fit = KL_dt_fixed_nw_out.C_fit; % Best fit model prediction using estimated parameters
+        C_fit_fullrange_nw = KL_dt_fixed_nw_fullrange_out.C_fit; 
         C_pred = KL_dt_fixed_out.C_pred; C_nw_pred = KL_dt_fixed_nw_out.C_pred; % 95% prediction interval, which includes paramters uncertainty and residual variance
         dC_pred = KL_dt_fixed_out.dC_pred; dC_nw_pred = KL_dt_fixed_nw_out.dC_pred;
         RMSE = KL_dt_fixed_out.RMSE; RMSE_nw = KL_dt_fixed_nw_out.RMSE;
@@ -307,8 +312,8 @@ for i = 1:length(filedataExp.Key)
 
         % Uncertainty propagation from dt_free error
         d_dt_free = d_dt_dtfixed_SI;
-        KL_dt_fixed_max_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed+d_dt_free,p_guess,dC_vals);
-        KL_dt_fixed_min_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed-d_dt_free,p_guess,dC_vals);
+        KL_dt_fixed_max_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed+d_dt_free,p_guess,dC_vals,Cmin,Cmax);
+        KL_dt_fixed_min_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed-d_dt_free,p_guess,dC_vals,Cmin,Cmax);
         KL_max_fit = KL_dt_fixed_max_out.KL;
         KL_min_fit = KL_dt_fixed_min_out.KL;
         dKL_dtfree = abs(KL_max_fit - KL_min_fit)/2; % (dKL/dt)*dt = ((KL+ -KL-)/(2dt))*dt
@@ -324,8 +329,8 @@ for i = 1:length(filedataExp.Key)
 
         % Uncertainty propagation from dt_free error non weigthed
         d_dt_free_nw = d_dt_dtfixed_nw_SI;
-        KL_dt_fixed_max_nw_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed_nw+d_dt_free_nw,p_guess_nw,ones(size(C1_vals))); %non weigthed
-        KL_dt_fixed_min_nw_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed_nw-d_dt_free_nw,p_guess_nw,ones(size(C1_vals))); %non weigthed
+        KL_dt_fixed_max_nw_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed_nw+d_dt_free_nw,p_guess_nw,ones(size(C1_vals)),Cmin,Cmax); %non weigthed
+        KL_dt_fixed_min_nw_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed_nw-d_dt_free_nw,p_guess_nw,ones(size(C1_vals)),Cmin,Cmax); %non weigthed
         KL_max_nw_fit = KL_dt_fixed_max_nw_out.KL;
         KL_min_nw_fit = KL_dt_fixed_min_nw_out.KL;
         dKL_dtfree_nw = abs(KL_max_nw_fit - KL_min_nw_fit)/2; % (dKL/dt)*dt = ((KL+ -KL-)/(2dt))*dt
@@ -476,6 +481,8 @@ for i = 1:length(filedataExp.Key)
         % with non weigthed
         expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed = 100*C_nw_fit;
         expProcData.(filedataExp.Key(i)).BT.C_nw_pred__dt_fixed = 100*C_nw_pred;
+            % fitted with full range to compare with mixing lines
+        expProcData.(filedataExp.Key(i)).BT.C_nw_fit_fullrange_dt_fixed = 100*C_fit_fullrange_nw;
         % % with mean values
         % expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed = 100*C_fit_mean;
         % dimensionless values 
@@ -777,7 +784,7 @@ KL_fun = fit_dispersion_params_all_out.Cfun;
 
 % Peclet with Dp = alpha instead of L
 Pe_alpha_array = u_array*alpha_nw_SI/D0;
-dPe_alpha_array = (((u_array/D0).^2)*((abs(alpha_nw_SI-alpha_SI))^2)+((-u_array*alpha_nw_SI/(D0^2)).^2)*(dD0^2)).^(1/2);
+dPe_alpha_array = (((u_array/D0).^2)*((abs(alpha_nw_SI-alpha_w_SI))^2)+((-u_array*alpha_nw_SI/(D0^2)).^2)*(dD0^2)).^(1/2);
 % KL/D0, must be same units
 KL_vs_D0_array = KL_array/D0;
 dKL_vs_D0_array = (((1/D0).^2)*(dKL_nw_array.^2)+((-KL_array/(D0^2)).^2)*(dD0^2)).^(1/2); %dKL array instead of dKL total

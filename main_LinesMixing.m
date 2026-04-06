@@ -52,12 +52,10 @@ for i = 1:length(filedataExp.Key)
     C = C(k);
     
     t_mean_meas = trapz(t, 1 - C);   % [s]
-
 end
 
-
-
-%% mixing models
+% mixing models
+fitting_mixinglines_results = table();
 
 for i = 1:length(filedataExp.Key)
     exp_params = expProcFullData.(filedataExp.Key(i)).exp_params;
@@ -71,7 +69,7 @@ for i = 1:length(filedataExp.Key)
     v_lines_before = exp_params.q_SI/A_before;
     v_lines_after = exp_params.q_SI/A_after;
     KL_lines_before = KL_lines_taylor_aris(v_lines_before, r_before, exp_params.D0_SI);
-    KL_lines_after = KL_lines_taylor_aris(v_lines_before, r_before, exp_params.D0_SI);
+    KL_lines_after = KL_lines_taylor_aris(v_lines_after, r_after, exp_params.D0_SI);
 
     % V_lines_total_cc = exp_params.Vlinesbefore_cc + exp_params.Vlinesafter_cc;
     % L_line_before = (exp_params.Vlinesbefore_cc/V_lines_total_cc)*exp_params.L_lines_mean_SI;
@@ -79,6 +77,15 @@ for i = 1:length(filedataExp.Key)
 
     L_line_before = exp_params.L_linesbefore_SI;
     L_line_after = exp_params.L_linesafter_SI;
+
+    exp_params.v_lines_before_SI = v_lines_before;
+    exp_params.v_lines_before_cmmin = v_lines_before*60*100;
+    exp_params.v_lines_after_SI = v_lines_after;
+    exp_params.v_lines_after_cmmin = v_lines_after*60*100;
+    exp_params.KL2_lines_before_SI = KL_lines_before;
+    exp_params.KL2_lines_before_cmmin = KL_lines_before*60*(10^4);
+    exp_params.KL2_lines_after_SI = KL_lines_after;
+    exp_params.KL2_lines_after_cmmin = KL_lines_after*60*(10^4);
 
     model = @(Dc,t) three_segment_model(t, Dc, ...
         exp_params.q_SI, A_before, ...
@@ -104,11 +111,22 @@ for i = 1:length(filedataExp.Key)
     ub = 1e-3;                  % upper bound
 
     Dc_fit = lsqcurvefit(model, Dc0, t_vals, C1_vals, lb, ub);
-
     expProcFullData.(filedataExp.Key(i)).exp_params.Dcore_fit_SI = Dc_fit;
     expProcFullData.(filedataExp.Key(i)).exp_params.Dcore_fit_cm2min = Dc_fit*(60*10^4);
 
     C1_eval = model(Dc_fit,t_vals);
+
+    fit_idx = (C1_vals >= 0.16) & (C1_vals <= 0.84);
+
+    C_fit_data = C1_vals(fit_idx);
+    C_fit_model = C1_eval(fit_idx);
+
+    res = C_fit_data - C_fit_model; 
+    SS_res = sum(res.^2);
+    SS_tot = sum((C_fit_data - mean(C_fit_data)).^2);
+    R2 = 1 - SS_res/SS_tot;
+
+    exp_params.R2conv = R2;
 
     E = [0; diff(C1_eval)] / dt;   % numerical derivative
     E(E < 0) = 0;               % clip tiny negatives from noise
@@ -197,6 +215,9 @@ for i = 1:length(filedataExp.Key)
     grid on    
     saveas(gcf,pathExportAll + "g_functions" + "Q = " + filedataExp.Q(i),'png')
     savefig(gcf,pathExportAll + "g_functions" + "Q = " + filedataExp.Q(i))
+    
+    % saving mixing params
+    fitting_mixinglines_results = [fitting_mixinglines_results;exp_params];
 
 end
 
@@ -211,22 +232,27 @@ for i = 1:length(filedataExp.Key)
         % plot(expProcFullData.(filedataExp.Key(i)).BT_fit.SecondsElapsed,expProcFullData.(filedataExp.Key(i)).BT_fit.Ci_ob,'LineWidth',1.0,'Color','green','DisplayName','Ogatta Banks no t shift')
         plot(expProcFullData.(filedataExp.Key(i)).BT_fit.SecondsElapsed, ...
             expProcFullData.(filedataExp.Key(i)).BT_fit.C1_ob_linesbefore, ...
-            'LineWidth',1.2,'Color',[0.5 0.5 0.5],'DisplayName','C_{x = L_{upstream}}')
+            'LineWidth',1.2,'Color',[0.91 0.44 0.2],'DisplayName','C_{x = L_{upstream}}')
         plot(expProcFullData.(filedataExp.Key(i)).BT_fit.SecondsElapsed, ...
             expProcFullData.(filedataExp.Key(i)).BT_fit.Ci_upscore, ...
-            'LineWidth',1.0,'Color','k','DisplayName','C_{x = L_{upstream} + L_{core}}')
+            'LineWidth',1.2,'Color', [255 192 0]./255 ,'DisplayName','C_{x = L_{upstream} + L_{core}}')
         % plot(expProcFullData.(filedataExp.Key(i)).BT_fit.SecondsElapsed,expProcFullData.(filedataExp.Key(i)).BT_fit.C1_ob_linesafter,'LineWidth',1.0,'Color',[0.5 0.5 0.5],'DisplayName','Ogatta Banks lines after alone')
         plot(expProcFullData.(filedataExp.Key(i)).BT_fit.SecondsElapsed, ...
             expProcFullData.(filedataExp.Key(i)).BT_fit.Ci_corr_mean, ...
-            'LineWidth',2.0,'Color','k','DisplayName','C_{x = L_{total}}')
-        plot(expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed,expProcFullData.(filedataExp.Key(i)).BT.C_fit_dt_fixed, 'LineWidth',1.0,'Color','blue','DisplayName','C model w t shift')
+            'LineWidth',1.2,'Color',[78 167 46]./255,'DisplayName','C_{x = L_{total}}')
+        plot(expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed, ...
+            expProcFullData.(filedataExp.Key(i)).BT.C_fit_dt_fixed, ...
+            'LineWidth',1.0,'Color','k','DisplayName','C_{fit \Deltat_{shift}}')
         % plot(expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed,expProcFullData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed,'LineStyle','--', 'LineWidth',1.0,'Color','blue','DisplayName','C model mean t shift')
-        plot(expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed,expProcFullData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed,'LineStyle','--', 'LineWidth',1.0,'Color','k','DisplayName','C model nw t shift')
+        % plot(expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed, ...
+        %     expProcFullData.(filedataExp.Key(i)).BT.C_nw_fit_fullrange_dt_fixed, ...
+        %     'LineStyle','--', 'LineWidth',1.0,'Color','k','DisplayName','C_{fit \Deltat_{shift}} using C=[0,1]')
         xlabel('Seconds elapsed [seconds]');
-        ylabel('Molar concentration C_1 [mol %]');
+        ylabel('C_{H_2} [mol %]');
         ylim([-0.1,100.1]);
         grid on;
-        legend('Location','southeast');
+        lgd = legend('Location','southeast');
+        title (lgd, "Q = " + filedataExp.Q(i) + " ml/min")
         saveas(gcf,pathExportAll + "C_mixing_lines_effect" + "Q = " + filedataExp.Q(i),'png')
         savefig(gcf,pathExportAll + "C_mixing_lines_effect" + "Q = " + filedataExp.Q(i))
 end

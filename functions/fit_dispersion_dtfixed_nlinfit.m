@@ -1,13 +1,10 @@
-function out = fit_dispersion_dtfixed_nlinfit(C,t,u,Cj,Ci,L,dt_fixed,p0,dC)
+function out = fit_dispersion_dtfixed_nlinfit(C,t,u,Cj,Ci,L,dt_fixed,p0,dC,Cmin,Cmax)
 %fit_dispersion solves KL (SI) given concentration and time array, interstitial velocity, 
 % boundary conditions in x = 0 (Cj), initial concentration, length of the
 % core, initial guess parameters
 % p includes intital guess for Kl = p(1)^2 and a fixed dt = p(2);
 
 w = 1./(dC.^2); % weights = 1/variance
-
-Cmin = 0.16;
-Cmax = 0.84;
 
 C_vals = C((C>=Cmin)&(C<=Cmax));
 t_vals = t((C>=Cmin)&(C<=Cmax));
