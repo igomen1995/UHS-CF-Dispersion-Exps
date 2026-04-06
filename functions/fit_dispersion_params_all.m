@@ -9,7 +9,7 @@ w = 1./(dKL.^2);
 % Model with beta = 1 no tortuosity
 KL_model = @(p,Pe_vals) D0 * ( p(1) .* Pe_vals );
 
-% Model with beta = 1 tortuosity
+% % Model with beta = 1 tortuosity
 % KL_model = @(p,Pe_vals) D0 * ( 1/p(2) + p(1) .* (Pe_vals.^1) );
 
 % Nonlinear fit (unweighted or weighted)

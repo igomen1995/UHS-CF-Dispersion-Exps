@@ -522,8 +522,8 @@ KL_mean_array = fitting_results.KL_mean_SI; % KL and D0 must have same units
 dKL_mean_array = fitting_results.SE_KL_mean_SI;
 
 % Fitting
-p_guess = 1;
-% p_guess = [1,1]; % with tau
+% p_guess = 1;
+p_guess = [1,1]; % with tau
 
 % KL weigthed
 % weighted
@@ -1013,8 +1013,8 @@ for i = 1:length(filedataExp.Key)
     C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
     C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
     C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
-    cond = (expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed>=0)&(expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed<=100);
-    cond_nw = (expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed>=0)&(expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed<=100);
+    cond = (expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed>=16)&(expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed<=84);
+    cond_nw = (expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed>=16)&(expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed<=84);
     % errorbar(t(cond), expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed(cond), ...
     %    expProcData.(filedataExp.Key(i)).exp_params.RMSE_mean*100*ones(size(t(cond))), ...
     %    'LineStyle', 'none', ...

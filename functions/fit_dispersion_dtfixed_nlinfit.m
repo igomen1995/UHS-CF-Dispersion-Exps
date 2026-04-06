@@ -5,6 +5,13 @@ function out = fit_dispersion_dtfixed_nlinfit(C,t,u,Cj,Ci,L,dt_fixed,p0,dC)
 % p includes intital guess for Kl = p(1)^2 and a fixed dt = p(2);
 
 w = 1./(dC.^2); % weights = 1/variance
+
+Cmin = 0.16;
+Cmax = 0.84;
+
+C_vals = C((C>=Cmin)&(C<=Cmax));
+t_vals = t((C>=Cmin)&(C<=Cmax));
+w_vals = w((C>=Cmin)&(C<=Cmax));
         
 % Cj, Ci, u not fitting, fitting p where Kl = p(1)^2
 % Corrects BT curve due to extra volume before core
@@ -18,7 +25,7 @@ C_function = @(p,tvals)(Ci + (Cj/2)*erfc((L-u.*(tvals-dt_fixed))./(2*(max((tvals
 
 % Weighted nonlinear fit
 opts = statset('nlinfit');
-[p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t, C, C_function, p0, opts, 'Weights', w);
+[p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_vals, C_vals, C_function, p0, opts, 'Weights', w_vals);
 
 % Confidence intervals for parameters 95%
 ci = nlparci(p_est, R, 'jacobian', J);
