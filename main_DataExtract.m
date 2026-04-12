@@ -33,7 +33,7 @@ addpath('functions/');
 
 % Introduce name of input and desired output folder name
 
-filenameExp = 'input/input_exp_H2-CO2-T32-P1500.xlsx';
+filenameExp = 'input/input_exp_He-Xe-T20-P725.xlsx';
 
 % PR parameters
 % INTRODUCE THE INPUT HERE
@@ -48,8 +48,8 @@ filenameDiff = 'input/input_diffusion_Marrero.xlsx';
 % cal curve results input import
 pathImportCal = 'results/cal_250725_PR/';
 
-mkdir('results/exp_H2-CO2-T32-P1500-H');
-pathExportAll = 'results/exp_H2-CO2-T32-P1500-H/';
+mkdir('results/exp_HE-XE-T20-P725-V');
+pathExportAll = 'results/exp_HE-XE-T20-P725-V/';
 
 %% IMPORT data
 
@@ -394,8 +394,12 @@ for i = 1:length(filedataExp.Key)
     writetable(expProcData.(filedataExp.Key(i)).pumpsData,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'pumps_data');
     writetable(expProcData.(filedataExp.Key(i)).transData,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'trans_data');
     writetable(expProcData.(filedataExp.Key(i)).MFMData,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'MFM_data');
-    writetable(expProcData.(filedataExp.Key(i)).PGD1Data,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'PGD1_data');
-    writetable(expProcData.(filedataExp.Key(i)).PGD2Data,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'PGD2_data');
+    if ismissing(PGD1_data_name) == 0
+        writetable(expProcData.(filedataExp.Key(i)).PGD1Data,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'PGD1_data');
+    end
+    if ismissing(PGD2_data_name) == 0
+        writetable(expProcData.(filedataExp.Key(i)).PGD2Data,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'PGD2_data');
+    end
     writetable(expProcData.(filedataExp.Key(i)).exp_params,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'exp_params');
     writetable(expProcData.(filedataExp.Key(i)).BT,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'BT_curve');
 end
@@ -421,19 +425,20 @@ for i = 1:length(filedataExp.Key)
     % xlabel('Time elapsed [hh:mm:ss]')
     ylabel('Pressure [psig]')
     xtickformat('hh:mm:ss')
-    ylim([1450,1550])
+    ylim([600,1000])
     grid("on")
     title(filedataExp.Key(i) + " pore pressure", 'Interpreter', 'none')
     legend('Location','southeast');
 
     subplot(5,1,2);
     if isempty(expProcData.(filedataExp.Key(i)).pumpsData) == 0 && ismissing(pumps_data_name) == 0
-        scatter(expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed,expProcData.(filedataExp.Key(i)).pumpsData.P_Pconf,10,'filled','DisplayName','Pconf')
+        % scatter(expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed,expProcData.(filedataExp.Key(i)).pumpsData.P_Pconf,10,'filled','DisplayName','Pconf')
+        scatter(expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed,expProcData.(filedataExp.Key(i)).pumpsData.P_Cyl1A,10,'filled','DisplayName','Pconf')
     end
     % xlabel('Time elapsed [hh:mm:ss]')
     ylabel('Pressure [psig]')
     xtickformat('hh:mm:ss')
-    ylim([1900,2400])
+    ylim([1000,2000])
     grid("on")
     title(filedataExp.Key(i) + " confining pressure", 'Interpreter', 'none')
     legend('Location','southeast');
@@ -479,11 +484,11 @@ for i = 1:length(filedataExp.Key)
     ylabel('C1_{PGDs} [mol %]');
     ylim([0,100])
     hold on
-    if isempty(expProcData.(filedataExp.Key(i)).PGD2Data) == 0 && ismissing(PGD2_data_name) == 0
+    if ismissing(PGD2_data_name) == 0
         scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,10,'filled', 'MarkerFaceColor',[0.0000 0.4470 0.7410], 'DisplayName','C1_{PGD2}')
         hold on
     end
-    if isempty(expProcData.(filedataExp.Key(i)).PGD1Data) == 0 && ismissing(PGD1_data_name) == 0
+    if ismissing(PGD1_data_name) == 0
         scatter(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,10,'filled','MarkerFaceColor', [0.9290 0.6940 0.1250], 'DisplayName','C1_{PGD1}')
         hold on
     end

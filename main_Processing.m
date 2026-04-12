@@ -24,9 +24,9 @@
 
 addpath('functions/');
 
-filenameExp = 'input/input_exp_H2-CO2-T32-P1500.xlsx';
-pathImportAll = 'results/exp_H2-CO2-T32-P1500-H/';
-pathExportAll = 'results/exp_H2-CO2-T32-P1500-H/';
+filenameExp = 'input/input_exp_HE-XE-T20-P900.xlsx';
+pathImportAll = 'results/exp_HE-XE-T20-P900-V/';
+pathExportAll = 'results/exp_HE-XE-T20-P900-V/';
 
 
 %% IMPORT variables
@@ -186,6 +186,7 @@ for i = 1:length(filedataExp.Key)
             (expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_free - filedataExp.C1init(i))/(filedataExp.C1j(i)-filedataExp.C1init(i));
     end
 end
+
 fitting_results = table();
 for i = 1:length(filedataExp.Key)
     if filedataExp.Type(i) == "CF"
@@ -216,11 +217,13 @@ for i = 1:length(filedataExp.Key)
         KL_lines = expProcData.(filedataExp.Key(i)).exp_params.KL_lines_SI;
         
         % Weigthed for dtfixed
-        dtD_guess = (fitting_results_temp.dtD')*(fitting_results_temp.SE_dtD/sum(fitting_results_temp.SE_dtD)); % dtD fixed is a weigthed average
-        d_dt_dtfixed_SI = (fitting_results_temp.SE_dt_SI')*(fitting_results_temp.SE_dtD/sum(fitting_results_temp.SE_dtD));
+        % dtD_guess = (fitting_results_temp.dtD')*(fitting_results_temp.SE_dtD/sum(fitting_results_temp.SE_dtD)); % dtD fixed is a weigthed average
+        dtD_guess = (fitting_results_temp.dtD_nw')*(fitting_results_temp.SE_dtD_nw/sum(fitting_results_temp.SE_dtD_nw)); % dtD fixed is a weigthed average
+        % d_dt_dtfixed_SI = (fitting_results_temp.SE_dt_SI')*(fitting_results_temp.SE_dtD/sum(fitting_results_temp.SE_dtD));
+        d_dt_dtfixed_SI = (fitting_results_temp.SE_dt_nw_SI')*(fitting_results_temp.SE_dtD_nw/sum(fitting_results_temp.SE_dtD_nw));
         dt_fixed = dtD_guess*L/u; %  dt estimate according to velocity of each experiment
         p_guess = sqrt(expProcData.(filedataExp.Key(i)).exp_params.KL_SI);
-
+        
         % Non weigthed for dtfixed
         dtD_guess_nw = (fitting_results_temp.dtD_nw')*(fitting_results_temp.SE_dtD_nw/sum(fitting_results_temp.SE_dtD_nw)); % dtD fixed is a weigthed average
         d_dt_dtfixed_nw_SI = (fitting_results_temp.SE_dt_nw_SI')*(fitting_results_temp.SE_dtD_nw/sum(fitting_results_temp.SE_dtD_nw));
@@ -802,6 +805,7 @@ for i = 1:length(filedataExp.Key)
     expProcData.(filedataExp.Key(i)).exp_params.dKL_vs_D0 = dKL_vs_D0_array(i);
 end
 
+%% saving params
 expProcFullData = expProcData;
 
 % save updated expProcData
