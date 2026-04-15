@@ -21,9 +21,9 @@ addpath('functions/');
 
 % Introduce name of input and desired output folder name
 
-filenameExp = 'input/input_exp_HE-XE-T20-P725.xlsx';
-mkdir('results/exp_HE-XE-T20-P725-V');
-pathImportAll = 'results/exp_HE-XE-T20-P725-V/';
+filenameExp = 'input/input_exp_H2-CO2-T32-P1500.xlsx';
+mkdir('results/exp_H2-CO2-T32-P1500-H');
+pathImportAll = 'results/exp_H2-CO2-T32-P1500-H/';
 
 %% IMPORT variables
 

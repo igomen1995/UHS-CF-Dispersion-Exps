@@ -33,7 +33,7 @@ addpath('functions/');
 
 % Introduce name of input and desired output folder name
 
-filenameExp = 'input/input_exp_He-Xe-T20-P725.xlsx';
+filenameExp = 'input/input_exp_H2-CO2-T32-P1500.xlsx';
 
 % PR parameters
 % INTRODUCE THE INPUT HERE
@@ -48,8 +48,8 @@ filenameDiff = 'input/input_diffusion_Marrero.xlsx';
 % cal curve results input import
 pathImportCal = 'results/cal_250725_PR/';
 
-mkdir('results/exp_HE-XE-T20-P725-V');
-pathExportAll = 'results/exp_HE-XE-T20-P725-V/';
+mkdir('results/exp_H2-CO2-T32-P1500-H');
+pathExportAll = 'results/exp_H2-CO2-T32-P1500-H/';
 
 %% IMPORT data
 
@@ -425,20 +425,19 @@ for i = 1:length(filedataExp.Key)
     % xlabel('Time elapsed [hh:mm:ss]')
     ylabel('Pressure [psig]')
     xtickformat('hh:mm:ss')
-    ylim([600,1000])
+    ylim([1450,1550])
     grid("on")
     title(filedataExp.Key(i) + " pore pressure", 'Interpreter', 'none')
     legend('Location','southeast');
 
     subplot(5,1,2);
     if isempty(expProcData.(filedataExp.Key(i)).pumpsData) == 0 && ismissing(pumps_data_name) == 0
-        % scatter(expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed,expProcData.(filedataExp.Key(i)).pumpsData.P_Pconf,10,'filled','DisplayName','Pconf')
-        scatter(expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed,expProcData.(filedataExp.Key(i)).pumpsData.P_Cyl1A,10,'filled','DisplayName','Pconf')
+        scatter(expProcData.(filedataExp.Key(i)).pumpsData.TimeElapsed,expProcData.(filedataExp.Key(i)).pumpsData.P_Pconf,10,'filled','DisplayName','Pconf')
     end
     % xlabel('Time elapsed [hh:mm:ss]')
     ylabel('Pressure [psig]')
     xtickformat('hh:mm:ss')
-    ylim([1000,2000])
+    ylim([1900,2400])
     grid("on")
     title(filedataExp.Key(i) + " confining pressure", 'Interpreter', 'none')
     legend('Location','southeast');
@@ -523,24 +522,26 @@ for i = 1:length(filedataExp.Key)
         C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
         C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
         C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
-        errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', 'Color', [0.88 0.88 0.88])
+        errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', 'Color', [255 193 183]/255)
         hold on 
         h3 = scatter(t,C1,5,'filled','MarkerFaceColor','r','DisplayName','C_{MFM} \pm \DeltaC_{MFM}');
     end
     if isempty(expProcData.(filedataExp.Key(i)).PGD2Data) == 0 && ismissing(PGD2_data_name) == 0
-        h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,5,'filled','MarkerFaceColor',[1 0.88 0.43],'DisplayName','C_{PGD2}');
+        h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,7,'filled','MarkerFaceColor',[0.9290 0.6940 0.1250],'DisplayName','C_{PGD2}');
         hold on 
     end
     if isempty(expProcData.(filedataExp.Key(i)).PGD1Data) == 0 && ismissing(PGD1_data_name) == 0
-        h2 = scatter(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,5,'filled','MarkerFaceColor',[0.9290 0.6940 0.1250],'DisplayName','C_{PGD1}');
+        h2 = scatter(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,7,'filled','MarkerFaceColor',[0.4660    0.6740    0.1880],'DisplayName','C_{PGD1}');
         hold on 
     end
     xlabel('Time elapsed [hh:mm:ss]','FontSize', 14);
     xtickformat('hh:mm:ss')
     ylabel('C_{H_2} [mol %]','FontSize', 14);
     ylim([0,100]);
-    lgd = legend([h3,h2,h1], 'Location','southeast');
-    title (lgd, "Q = " + filedataExp.Q(i) + " ml/min")
+    lgd = legend([h3,h2,h1], 'Location','southeast','FontSize',14);
+    title (lgd, "Q = " + filedataExp.Q(i) + " ml/min",'FontSize',14)
     grid on;
+    ax = gca; % Get current axes
+    ax.FontSize = 14;
     saveas(gcf,pathExportAll + filedataExp.Key(i) + "_dens_conc",'png')
 end

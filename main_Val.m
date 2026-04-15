@@ -485,8 +485,8 @@ for i = 1: length(filedataExp.Key)
 hold on
 end
 h2 = plot(0:1:100,Cval_lin_params.feval(0:1:100),"Color",'k'); % fitting responds to high pressure only
-xlabel('C_{H_2}_{ ref} [mol %]');
-ylabel('C_{H_2}_{ MFM} [mol %]');
+xlabel('C_{H_2}_{ ref} [mol %]','FontSize',16);
+ylabel('C_{H_2}_{ MFM} [mol %]','FontSize',16);
 xlim([0 100]);
 ylim([0 100]);
 c=colorbar;
@@ -494,11 +494,14 @@ c.Title.String = 'Temperature [°C]';
 c.Title.Rotation = 90;
 c.Title.Units = 'normalized';
 c.Title.Position = [3.55, 0.5, 0];
-c.Title.FontSize = 14;
+c.Title.FontSize = 16;
 cTicks = c.Ticks;
 cTicks = cTicks(mod(cTicks,1) == 0);
 c.Ticks = cTicks;
+c.FontSize = 14;
+ax = gca; % Get current axes
+ax.FontSize = 14;
 grid on
-legend([h1,h2],{'C_{H_2}_{ MFM}','C_{H_2}_{ MFM_{ fit}} \pm \DeltaC_{H_2}_{ MFM_{ fit}}'},'Location','southeast')
+legend([h1,h2],{'C_{H_2}_{ MFM}','C_{H_2}_{ MFM_{ fit}} \pm \DeltaC_{H_2}_{ MFM_{ fit}}'},'Location','southeast', 'FontSize',14)
 % title("Validation curve - H2CO2 (~32 °C, 10.4 MPa)")
 saveas(gcf,pathExportAll + "Val-P1500",'png')

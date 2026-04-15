@@ -24,9 +24,9 @@
 
 addpath('functions/');
 
-filenameExp = 'input/input_exp_HE-XE-T20-P900.xlsx';
-pathImportAll = 'results/exp_HE-XE-T20-P900-V/';
-pathExportAll = 'results/exp_HE-XE-T20-P900-V/';
+filenameExp = 'input/input_exp_H2-CO2-T32-P1500.xlsx';
+pathImportAll = 'results/exp_H2-CO2-T32-P1500-H/';
+pathExportAll = 'results/exp_H2-CO2-T32-P1500-H/';
 
 
 %% IMPORT variables
@@ -186,7 +186,6 @@ for i = 1:length(filedataExp.Key)
             (expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_free - filedataExp.C1init(i))/(filedataExp.C1j(i)-filedataExp.C1init(i));
     end
 end
-
 fitting_results = table();
 for i = 1:length(filedataExp.Key)
     if filedataExp.Type(i) == "CF"
@@ -217,13 +216,11 @@ for i = 1:length(filedataExp.Key)
         KL_lines = expProcData.(filedataExp.Key(i)).exp_params.KL_lines_SI;
         
         % Weigthed for dtfixed
-        % dtD_guess = (fitting_results_temp.dtD')*(fitting_results_temp.SE_dtD/sum(fitting_results_temp.SE_dtD)); % dtD fixed is a weigthed average
-        dtD_guess = (fitting_results_temp.dtD_nw')*(fitting_results_temp.SE_dtD_nw/sum(fitting_results_temp.SE_dtD_nw)); % dtD fixed is a weigthed average
-        % d_dt_dtfixed_SI = (fitting_results_temp.SE_dt_SI')*(fitting_results_temp.SE_dtD/sum(fitting_results_temp.SE_dtD));
-        d_dt_dtfixed_SI = (fitting_results_temp.SE_dt_nw_SI')*(fitting_results_temp.SE_dtD_nw/sum(fitting_results_temp.SE_dtD_nw));
+        dtD_guess = (fitting_results_temp.dtD')*(fitting_results_temp.SE_dtD/sum(fitting_results_temp.SE_dtD)); % dtD fixed is a weigthed average
+        d_dt_dtfixed_SI = (fitting_results_temp.SE_dt_SI')*(fitting_results_temp.SE_dtD/sum(fitting_results_temp.SE_dtD));
         dt_fixed = dtD_guess*L/u; %  dt estimate according to velocity of each experiment
         p_guess = sqrt(expProcData.(filedataExp.Key(i)).exp_params.KL_SI);
-        
+
         % Non weigthed for dtfixed
         dtD_guess_nw = (fitting_results_temp.dtD_nw')*(fitting_results_temp.SE_dtD_nw/sum(fitting_results_temp.SE_dtD_nw)); % dtD fixed is a weigthed average
         d_dt_dtfixed_nw_SI = (fitting_results_temp.SE_dt_nw_SI')*(fitting_results_temp.SE_dtD_nw/sum(fitting_results_temp.SE_dtD_nw));
@@ -805,7 +802,6 @@ for i = 1:length(filedataExp.Key)
     expProcData.(filedataExp.Key(i)).exp_params.dKL_vs_D0 = dKL_vs_D0_array(i);
 end
 
-%% saving params
 expProcFullData = expProcData;
 
 % save updated expProcData
@@ -1041,20 +1037,24 @@ for i = 1:length(filedataExp.Key)
         'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
     hold on
     h1 = scatter(t,C1,5,'filled','MarkerFaceColor',colors(i,:), ...
-        'DisplayName',"Q"+filedataExp.Q(i)+": C_{MFM} \pm \DeltaC_{MFM}");
+        'DisplayName',"Q = "+filedataExp.Q(i)+" ml/min");
     h2 = plot(t(cond), expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed(cond), ...
         'LineWidth',0.8,'Color', 'k','DisplayName',"C_{fit model}");
     % h3 = plot(t(cond_nw), expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed(cond_nw), ...
     %     'LineWidth',0.8,'LineStyle','--', 'Color', 'k','DisplayName',"C_{non weigthed fitting}");
-    xlabel('Time elapsed [hh:mm:ss]');
+    xlabel('Time elapsed [hh:mm:ss]','FontSize',14);
     xtickformat('hh:mm:ss')
-    ylabel('C_{H_2} [mol %]');
+    ylabel('C_{H_2} [mol %]','FontSize',14);
     ylim([-0.1,100.1]);
+    ax = gca; % Get current axes
+    ax.FontSize = 14;
     % title("Breakthrough curves fitting", 'Interpreter', 'none')
     grid on;
     h = [h; h1];
 end
-legend([h;h2], 'Location','southeast');
+lgd1 = legend([h;h2], 'Location','southeast','FontSize',12);
+% title (lgd1, "C_{MFM} \pm \DeltaC_{MFM}",'FontSize',12)
+% lgd2 = legend(h2, 'Location','southeast','FontSize',12);
 saveas(gcf,pathExportAll + "BTfitting",'png')
 savefig(gcf,pathExportAll + "BTfitting")
 
