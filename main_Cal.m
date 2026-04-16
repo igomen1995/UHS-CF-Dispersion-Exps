@@ -152,6 +152,7 @@ clear expTrimData;
 
 % Start calResults as an empty table
 calResults = table();
+calResultsQAll = table();
 
 for i = 1:length(filedataExp.Key)
         
@@ -404,6 +405,26 @@ for i = 1:length(filedataExp.Key)
 
         end
 
+        % statistics for same P, Q, T and fluid
+        % mean for a specific P and QAll
+            % pumps data
+        P_mean = mean(pumps_data_trim_QAll.P_Pworking);
+        Q_mean = mean(pumps_data_trim_QAll.Q_Pworking);
+            % MFM data
+        T_mean = mean(MFM_data_trim_QAll.T_MFM2);
+        Q_MFM_mean = mean(MFM_data_trim_QAll.q_MFM2);
+        dens_mean = mean(MFM_data_trim_QAll.dens_MFM2);
+        freq_MFM_mean = mean(MFM_data_trim_QAll.freq_MFM2);
+        % std for a specific P and Q
+            % pumps data
+        P_std = std(pumps_data_trim_QAll.P_Pworking);
+        Q_std = std(pumps_data_trim_QAll.Q_Pworking); 
+            % MFM data      
+        T_std = std(MFM_data_trim_QAll.T_MFM2);
+        Q_MFM_std = std(MFM_data_trim_QAll.q_MFM2);
+        dens_std = std(MFM_data_trim_QAll.dens_MFM2);
+        freq_MFM_std = std(MFM_data_trim_QAll.freq_MFM2);
+                       
         % xxx_data_trim is feeded with xxx_data_aux for each fluid, T, P and Q, gathers all
         pumps_data_trim = [pumps_data_trim; pumps_data_trim_QAll];
         MFM_data_trim = [MFM_data_trim; MFM_data_trim_QAll];
@@ -423,6 +444,16 @@ for i = 1:length(filedataExp.Key)
         if ismissing(PGD2_data_name) == 0 % if PGD2 data exists
             calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.PGD2Data = PGD2_data_trim_QAll;
         end
+
+        % cal results gathers mean and std QAll
+        calResultsQAll_temp = table(fluid_cal,T_cal,P_unique(j), "QAll", ...
+            T_mean,T_std, P_mean,P_std, Q_mean,Q_std, Q_MFM_mean,Q_MFM_std, ...
+            dens_mean,dens_std,freq_MFM_mean,freq_MFM_std, ...
+            {TimeStamp_st},{TimeStamp_et}, ...
+            'VariableNames',{'Fluid_cal','T_cal_C','P_cal_psig', 'Q_cal_mlmin', ...
+            'T_mean','T_std','P_psig_mean','P_psig_std','Q_mean','Q_std', 'Q_MFM_mean', 'Q_MFM_std', ...
+            'dens_mean','dens_std','freq_MFM_mean','freq_MFM_std', ...
+            'st','et'});
         
         % cal proc data gets calResults and Data for each fluid, T and P, QAll
         calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).QAll.calResults = calResults_QAll;
@@ -430,6 +461,7 @@ for i = 1:length(filedataExp.Key)
 
         % cal Results and data for each fluid, T, P and Q
         calResults = [calResults;calResults_QAll];
+        calResultsQAll = [calResultsQAll;calResultsQAll_temp];
         
     end
 
@@ -447,6 +479,7 @@ end
 % Run for all Q after calData is finished
 fluid_unique = fieldnames(calProcData);
 calData = table();
+calResultsQAll_PR = table();
 
 for i = 1:length(fields(calProcData)) % for each fluid
     T_unique_field = fieldnames(calProcData.(fluid_unique{i}));
@@ -476,15 +509,32 @@ for i = 1:length(fields(calProcData)) % for each fluid
                 Z_PR_T_PR, dens_PR_T_PR, 'VariableNames',{'Fluid_cal', ...
                 'P_cal_psig','T_PR', 'x_PR','Z_PR_T_PR', 'dens_PR_T_PR'});
             calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.PTXrho_PR_ref = PTXrho_PR_ref;
-            calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.dens_PR_T_MFM = ...
-            interp1(PTXrho_PR_ref.T_PR, PTXrho_PR_ref.dens_PR_T_PR, ...
-            calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.T_MFM, 'linear');
-            
+                        calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.dens_PR_T_MFM = ...
+                interp1(PTXrho_PR_ref.T_PR, PTXrho_PR_ref.dens_PR_T_PR, ...
+                calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.T_MFM, 'linear');
+            calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.Z_PR_T_MFM = ...
+                interp1(PTXrho_PR_ref.T_PR, PTXrho_PR_ref.Z_PR_T_PR, ...
+                calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.T_MFM, 'linear');
+
+            % create table with PR_Results QAll
+            Z_PR_T_MFM_mean = mean(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.Z_PR_T_MFM);
+            Z_PR_T_MFM_std = std(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.Z_PR_T_MFM);
+            dens_PR_T_MFM_mean = mean(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.dens_PR_T_MFM);
+            dens_PR_T_MFM_std = std(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.dens_PR_T_MFM);
+
+            calResultsQAll_PR_temp = table(string(fluid_unique{i}),str2double(T_unique_field{ii}(2:end)),str2double(P_unique_field{j}(2:end)), "QAll", ...
+                Z_PR_T_MFM_mean,Z_PR_T_MFM_std, dens_PR_T_MFM_mean,dens_PR_T_MFM_std, ...
+                'VariableNames',{'Fluid_cal','T_cal_C','P_cal_psig', 'Q_cal_mlmin', ...
+                'Z_PR_T_mean','Z_PR_T_mean_std','dens_PR_T_mean','dens_PR_T_mean_std'});
+
             % create calData with all data for cal curve
+            calResultsQAll_PR = [calResultsQAll_PR;calResultsQAll_PR_temp];
             calData = [calData;calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData];
         end
     end
 end
+
+calResultsQAll_joint = outerjoin(calResultsQAll, calResultsQAll_PR, 'Keys',{'Fluid_cal', 'T_cal_C','P_cal_psig','Q_cal_mlmin'},'MergeKeys',true);
 
 %% Save trimmed and processed data
 
@@ -492,6 +542,7 @@ end
 expTrimData_name = pathExportAll + "expTrimData";  % Name used for saving TrimData comes from input pathExportAll
 calProcData_name = pathExportAll + "calProcData";
 calResults_name = pathExportAll + "calResults";
+calResultsQAll_name = pathExportAll + "calResultsQAll";
 calData_name = pathExportAll + "calData";
 
 % delete previous saved files
@@ -499,8 +550,11 @@ delete(expTrimData_name + '.mat');
 delete(calProcData_name + '.mat');
 delete(calResults_name + '.xlsx');
 delete(calResults_name + '.mat');
+delete(calResultsQAll_name + '.xlsx');
+delete(calResultsQAll_name + '.mat');
 delete(calData_name + '.xlsx');
 delete(calData_name + '.mat');
+
 
 for i = 1:length(filedataExp.Key)
 
@@ -533,9 +587,11 @@ end
 save(expTrimData_name + '.mat','expTrimData')
 save(calProcData_name + '.mat','calProcData')
 save(calResults_name + '.mat','calResults')
+save(calResultsQAll_name + '.mat','calResultsQAll_joint')
 save(calData_name + '.mat','calData')
 
 % save in excel, with timestamp as string joins
+% calResults
 calResults_xlsx = calResults;
 calResults_xlsx.st = [];
 calResults_xlsx.et = [];
@@ -545,6 +601,15 @@ for m = 1:height(calResults)
 end
 writetable(calResults_xlsx,calResults_name + '.xlsx','Sheet', 'calResults');
 writetable(calData,calData_name + '.xlsx','Sheet', 'calData');
+% calResultsQAll
+calResultsQAll_xlsx = calResultsQAll_joint;
+calResultsQAll_xlsx.st = [];
+calResultsQAll_xlsx.et = [];
+for m = 1:height(calResultsQAll_joint)
+    calResultsQAll_xlsx.st(m) = strjoin(string(calResultsQAll_joint.st{m}),", ");
+    calResultsQAll_xlsx.et(m) = strjoin(string(calResultsQAll_joint.et{m}),", ");
+end
+writetable(calResultsQAll_xlsx,calResultsQAll_name + '.xlsx','Sheet', 'calResultsQAll_joint');
 
 %% Plotting for analysis Raw Data
 % Subplot all in 4 panels
@@ -892,10 +957,10 @@ yticks(0:100:800)
 numTicks = 6;
 ax1.FontSize = 14;
 c=colorbar;
-c.Title.String = 'Temperature [°C]';
+c.Title.String = 'T_{MFM} [°C]';
 c.Title.Rotation = 90;
 c.Title.Units = 'normalized';
-c.Title.Position = [3.55, 0.5, 0];
+c.Title.Position = [4, 0.5, 0];
 c.Title.FontSize = 14;
 cTicks = c.Ticks;
 cTicks = cTicks(mod(cTicks,1) == 0);
@@ -1046,37 +1111,45 @@ calData_aux = calData(calData.P_cal_psig > 400,:);
 figure;
 set(gcf, 'Position', [100, 100, 700, 550])
 ax1 = axes;
+rho_ref_0 = nlfittingRhoResultsAll.p4(nlfittingRhoResultsAll.Q == "QAll");
+drho_corr_low = nlfittingRhoResultsAll.drho_corr_low(nlfittingRhoResultsAll.Q == "QAll");
+drho_corr_high = nlfittingRhoResultsAll.drho_corr_high(nlfittingRhoResultsAll.Q == "QAll");
+step = 1;
+%error bar low dens
+errorbar(0:step:rho_ref_0,feval(nl_cal_curve_params_Qall,0:step:rho_ref_0),drho_corr_low,'LineStyle', 'none', ...
+    'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
+hold on 
+errorbar(rho_ref_0:step:800,feval(nl_cal_curve_params_Qall,rho_ref_0:step:800),drho_corr_high,'LineStyle', 'none', ...
+    'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
 scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled')
-hold on
 plot(0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k','LineWidth',0.8) % fitting responds to high pressure only
-x1 = xlabel('\rho_{ref} [kg/m^{3}]', 'FontSize', 14);
-ylabel('\rho_{MFM} [kg/m^{3}]', 'FontSize', 14);
+x1 = xlabel('\rho_{ref} [kg/m^{3}]', 'FontSize', 16);
+ylabel('\rho_{MFM} [kg/m^{3}]', 'FontSize', 16);
 xlim([0 800]);
 ylim([0 800]);
 xticks(0:100:800)
 yticks(0:100:800)
 numTicks = 6;
-ax1.FontSize = 14;
+ax1.FontSize = 16;
 c=colorbar;
-c.Title.String = 'Temperature [°C]';
+c.Title.String = 'T_{MFM} [°C]';
 c.Title.Rotation = 90;
 c.Title.Units = 'normalized';
-c.Title.Position = [3.55, 0.5, 0];
-c.Title.FontSize = 14;
+c.Title.Position = [4, 0.5, 0];
+c.Title.FontSize = 16;
 cTicks = c.Ticks;
 cTicks = cTicks(mod(cTicks,1) == 0);
 c.Ticks = cTicks;
-% title("    Coriolis density calibration curve")
 grid on
-legend({'Measured density','Calibration curve'},'Location','southeast')
-% cal curve formula annotation
-coeffs = nlfittingRhoResultsAll(nlfittingRhoResultsAll.Q == 'QAll',:);
-annotText = sprintf(['$\\rho_{MFM} = \\left\\{ \\begin{array}{ll}',...
-    '%.2f + %.3f\\rho_{Ref}, & \\rho_{Ref} \\le %.2f \\\\',...
-    '%.2f + %.3f\\rho_{Ref}, & \\rho_{Ref} > %.2f',...
-    '\\end{array} \\right.$'], coeffs.p1, coeffs.p2, coeffs.p4, coeffs.n2, coeffs.p3, coeffs.p4);
-annotation('textbox', [0.34, 0.25, 0.3, 0.1], 'String', annotText, ...
-    'Interpreter', 'latex', 'FontSize', 11, 'EdgeColor', 'none');
+legend({'\rho_{MFM}','\rho_{MFM_{fit}} \pm \Delta\rho_{MFM_{fit}}'},'Location','southeast')
+% % cal curve formula annotation
+% coeffs = nlfittingRhoResultsAll(nlfittingRhoResultsAll.Q == 'QAll',:);
+% annotText = sprintf(['$\\rho_{MFM} = \\left\\{ \\begin{array}{ll}',...
+%     '%.2f + %.3f\\rho_{Ref}, & \\rho_{Ref} \\le %.2f \\\\',...
+%     '%.2f + %.3f\\rho_{Ref}, & \\rho_{Ref} > %.2f',...
+%     '\\end{array} \\right.$'], coeffs.p1, coeffs.p2, coeffs.p4, coeffs.n2, coeffs.p3, coeffs.p4);
+% annotation('textbox', [0.34, 0.25, 0.3, 0.1], 'String', annotText, ...
+%     'Interpreter', 'latex', 'FontSize', 11, 'EdgeColor', 'none');
 % H2
 insetAx = axes('Position', [0.19 0.68 0.1 0.17]);  % [x y width height]
 limScale = (insetAx.Position(3)/insetAx.Position(4))/((range(ax1.XLim)*ax1.Position(3))/(range(ax1.YLim)*ax1.Position(4)));
@@ -1086,9 +1159,9 @@ hold on
 plot(insetAx,0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 xlim([0,10])
 ylim([9.5,9.5+range(insetAx.XLim)/limScale])
-title({ 'H_2 @ T_{MFM},', ...
+title({ 'H_2 @ T_{MFM}', ...
         'P = 3.5, 6.3, 10.4 MPa' }, ...
-      'Interpreter','tex', 'FontSize',7);
+      'Interpreter','tex', 'FontSize',8);
 grid on
 % He
 insetAx = axes('Position', [0.35 0.68 0.1 0.17]);  % [x y width height]
@@ -1099,9 +1172,9 @@ hold on
 plot(insetAx,0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 xlim([3,19])
 ylim([12.5,12.5+range(insetAx.XLim)/limScale])
-title({ 'He @ T_{MFM},', ...
+title({ 'He @ T_{MFM}', ...
         'P = 3.5, 6.3, 10.4 MPa' }, ...
-      'Interpreter','tex', 'FontSize',7);
+      'Interpreter','tex', 'FontSize',8);
 grid on
 % CO2
 insetAx = axes('Position', [0.19 0.42 0.1 0.17]);  % [x y width height]
@@ -1112,9 +1185,9 @@ hold on
 plot(insetAx,0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 xlim([75,80])
 ylim([83,83+range(insetAx.XLim)/limScale])
-title({ 'CO_2 @ T_{MFM},', ...
+title({ 'CO_2 @ T_{MFM}', ...
         'P = 3.5 MPa' }, ...
-      'Interpreter','tex', 'FontSize',7);
+      'Interpreter','tex', 'FontSize',8);
 grid on
 % CO2
 insetAx = axes('Position', [0.54 0.42 0.1 0.17]);  % [x y width height]
@@ -1125,9 +1198,9 @@ hold on
 plot(insetAx,0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 xlim([184,204])
 ylim([182,182+range(insetAx.XLim)/limScale])
-title({ 'CO_2 @ T_{MFM},', ...
+title({ 'CO_2 @ T_{MFM}', ...
         'P = 6.3 MPa' }, ...
-      'Interpreter','tex', 'FontSize',7);
+      'Interpreter','tex', 'FontSize',8);
 grid on
 % CO2
 insetAx = axes('Position', [0.68 0.42 0.1 0.17]);  % [x y width height]
@@ -1138,9 +1211,9 @@ hold on
 plot(insetAx,0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 xlim([692,716])
 ylim([750,750+range(insetAx.XLim)/limScale])
-title({ 'CO_2 @ T_{MFM},', ...
+title({ 'CO_2 @ T_{MFM}', ...
         'P = 10.4 MPa' }, ...
-      'Interpreter','tex', 'FontSize',7);
+      'Interpreter','tex', 'FontSize',8);
 grid on
 saveas(gcf,pathExportAll + "Cal-curve-nonlin-zoom-in",'png')
 
