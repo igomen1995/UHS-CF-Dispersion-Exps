@@ -1018,16 +1018,34 @@ savefig(gcf,pathExportAll + "dimless_tDshiftTotal_fitting")
 %% Fitting and experimental data all CF plot
 
 colors = orderedcolors("glow");
+colorsdark = orderedcolors("earth"); 
 figure
 h=[];
+
+% empty objects
+h1 = gobjects(length(filedataExp.Key),1);
+h2 = gobjects(length(filedataExp.Key),1);
+h_titles = gobjects(length(filedataExp.Key),1);
+
 for i = 1:length(filedataExp.Key)
     t = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
     t_sec = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed;
     C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
     C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
     C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
+    % plot vals with function dt fixed weighted
     cond = (expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed>=16)&(expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed<=84);
     cond_nw = (expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed>=16)&(expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed<=84);
+    t_sec_cond = seconds(t(cond));
+    t_sec_trim = t_sec_cond(1):0.05:t_sec_cond(end);
+    t_trim = seconds(t_sec_trim);
+    t_trim.Format = 'hh:mm:ss';
+    dt_fixed = expProcData.(filedataExp.Key(i)).exp_params.dt_dtfixed_SI;
+    p = sqrt(expProcData.(filedataExp.Key(i)).exp_params.KL_dtfixed_SI);
+    L = expProcData.(filedataExp.Key(i)).exp_params.L_SI;
+    u = expProcData.(filedataExp.Key(i)).exp_params.u_SI;
+    C_plot_function = expProcData.(filedataExp.Key(i)).exp_params.C_fun_dtfixed{1};
+    C_plot = 100*C_plot_function(p,t_sec_trim);   
     % errorbar(t(cond), expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed(cond), ...
     %    expProcData.(filedataExp.Key(i)).exp_params.RMSE_mean*100*ones(size(t(cond))), ...
     %    'LineStyle', 'none', ...
@@ -1036,23 +1054,70 @@ for i = 1:length(filedataExp.Key)
     errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', ...
         'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
     hold on
-    h1 = scatter(t,C1,5,'filled','MarkerFaceColor',colors(i,:), ...
-        'DisplayName',"Q = "+filedataExp.Q(i)+" ml/min");
-    h2 = plot(t(cond), expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed(cond), ...
-        'LineWidth',0.8,'Color', 'k','DisplayName',"C_{fit model}");
+    h1(i) = scatter(t,C1,5,'filled','MarkerFaceColor',colors(i,:), ...
+        'DisplayName',"C_{MFM} \pm \DeltaC_{MFM}");
+    % h2(i) = plot(t(cond), expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed(cond), ...
+    %     'LineWidth',3,'Color', colorsdark(i,:),'DisplayName',"C_{fit}");
+    h2(i) = plot(t_trim, C_plot, ...
+        'LineWidth',2,'Color', colorsdark(i,:),'DisplayName',"C_{fit}"); %gives same results, but evaluating the function
     % h3 = plot(t(cond_nw), expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed(cond_nw), ...
-    %     'LineWidth',0.8,'LineStyle','--', 'Color', 'k','DisplayName',"C_{non weigthed fitting}");
+    %     'LineWidth',0.8,'LineStyle','--', 'Color', 'k','DisplayName',"C_{non weigthed fitting}");    
+    h_titles(i) = plot(NaN,NaN,'w', 'LineStyle','none', 'DisplayName', "\bf Q = " + filedataExp.Q(i) + " ml/min");
     xlabel('Time elapsed [hh:mm:ss]','FontSize',14);
     xtickformat('hh:mm:ss')
     ylabel('C_{H_2} [mol %]','FontSize',14);
     ylim([-0.1,100.1]);
     ax = gca; % Get current axes
-    ax.FontSize = 14;
+    ax.FontSize = 12;
     % title("Breakthrough curves fitting", 'Interpreter', 'none')
     grid on;
-    h = [h; h1];
+    % h = [h; h1];
+    h = [h;h_titles(i);h1(i);h2(i)];
 end
-lgd1 = legend([h;h2], 'Location','southeast','FontSize',12);
+lgd = legend(h, 'NumColumns', 1, ...
+    'Location', 'southeast', 'FontSize', 10);
+lgd.ItemTokenSize = [15 8];   % tighter symbols
+
+drawnow  % REQUIRED for correct positions
+
+lgd_pos = lgd.Position;  % [x y width height]
+nQ = length(filedataExp.Key);
+nRows = 3 * nQ;
+rowH = lgd_pos(4) / nRows;   % approximate row height
+
+
+for i = 1:nQ
+    % Row indices (from top of legend)
+    row_Q    = (i-1)*3 + 1;
+    row_Data = row_Q + 1;
+
+    % Y positions (legend is bottom-based)
+    y1 = lgd_pos(2) + lgd_pos(4) - (row_Q-0.12)*rowH;
+
+    % X positions (small indentation inside legend box)
+    x1 = lgd_pos(1);
+    x2 = lgd_pos(1) + lgd_pos(3);
+
+    % Draw line
+    annotation('line', [x1 x2], [y1 y1], ...
+        'Color','k', 'LineWidth',0.8);
+end
+
+for i = 1:nQ-1
+
+    % Y positions (legend is bottom-based)
+    y1 = lgd_pos(2) + lgd_pos(4) - 3*i*rowH;
+
+    % X positions (small indentation inside legend box)
+    x1 = lgd_pos(1);
+    x2 = lgd_pos(1) + lgd_pos(3);
+
+    % Draw line
+    annotation('line', [x1 x2], [y1 y1], ...
+        'Color','k', 'LineWidth',0.8);
+end
+
+% lgd1 = legend([h;h2], 'Location','southeast','FontSize',12);
 % title (lgd1, "C_{MFM} \pm \DeltaC_{MFM}",'FontSize',12)
 % lgd2 = legend(h2, 'Location','southeast','FontSize',12);
 saveas(gcf,pathExportAll + "BTfitting",'png')
