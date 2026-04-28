@@ -342,22 +342,22 @@ for i = 1:length(filedataExp.Key)
         % fitting parameters for rho corrected
         % auxLinFit = fittingRhoResultsAll(fittingRhoResultsAll.Q == "QAll",:);
         auxnLinFit = nlfittingRhoResultsAll(nlfittingRhoResultsAll.Q == "QAll",:);
-        rho_MFM_0 = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],auxnLinFit.p4);
+        rho_MFM_0 = auxnLinFit.rho_MFM_0;
         rho_MFM = expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_MFM;
-        % lower slope
+        % low densitites
         expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM);
-        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM-auxnLinFit.RMSE);
-        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM+auxnLinFit.RMSE);
-        % higher slope
+        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM-auxnLinFit.drho_corr_low);
+        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM+auxnLinFit.drho_corr_low);
+        % high densitites
         expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr(rho_MFM>rho_MFM_0) = ...
             rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
             rho_MFM(rho_MFM>rho_MFM_0));
         expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin(rho_MFM>rho_MFM_0) = ...
             rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
-            rho_MFM(rho_MFM>rho_MFM_0)-auxnLinFit.RMSE);
+            rho_MFM(rho_MFM>rho_MFM_0)-auxnLinFit.drho_corr_high);
         expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax(rho_MFM>rho_MFM_0) = ...
             rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
-            rho_MFM(rho_MFM>rho_MFM_0)+auxnLinFit.RMSE);
+            rho_MFM(rho_MFM>rho_MFM_0)+auxnLinFit.drho_corr_high);
     end
 end
 
@@ -370,6 +370,10 @@ P_unique = unique(vertcat(filedataExp.P_psig{:}));
 P_unique_field = "P"+ string(P_unique);
 
 x1 = 0:0.01:1; % array for binary mixture
+
+% all data for calibration
+Ci_ref_all = [];
+Ci_est_all = [];
 for i = 1:length(filedataExp.Key)
     for j = 1: length(P_unique)
         fluidPair = [filedataExp.Fluid1(i),filedataExp.Fluid2(i)];
@@ -410,9 +414,22 @@ for i = 1:length(filedataExp.Key)
         expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.dC = ...
             abs(expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.CiMax ...
             -expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.CiMin);
+
+        Ci_ref_all = [Ci_ref_all;expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.Ci_ref]; % mol fraction
+        Ci_est_all = [Ci_est_all;expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.Ci]; % mol percent
     end
 end
+Ci_ref_all = Ci_ref_all*100; % convert to mol %
+%% Calibration curve
+Cval_lin_params = fitlm(Ci_ref_all,Ci_est_all);
 
+CvalFitResults = table(Cval_lin_params.Coefficients.Estimate(1),Cval_lin_params.Coefficients.Estimate(2), ...
+    Cval_lin_params.RMSE, Cval_lin_params.Rsquared.Ordinary,'VariableNames',{'n','m','RMSE','R2'}); % mol %
+
+% save cal val curve
+writetable(CvalFitResults,pathExportAll + "CvalFitResults.xlsx");
+save(pathExportAll + "Cval_lin_params.mat",'Cval_lin_params');
+save(pathExportAll + "CvalFitResults.mat",'CvalFitResults')
 %% Save trimmed and processed data
 
 % name to save matrices and spreadsheets
@@ -459,25 +476,32 @@ save(expProcData_name + '.mat','expProcData')
 
 figure
 set(gcf, 'Position', [100, 100, 700, 550])
+errorbar(0:0.1:100,Cval_lin_params.feval(0:0.1:100), repmat(CvalFitResults.RMSE,length(0:0.1:100),1), ...
+    'LineStyle', 'none','Color', [0.88 0.88 0.88],'HandleVisibility','Off')
+hold on
 for i = 1: length(filedataExp.Key)
-    scatter(100*expProcData.(filedataExp.Key(i)).P1500.BT.Ci_ref, ...
-        expProcData.(filedataExp.Key(i)).P1500.BT.Ci,20,expProcData.(filedataExp.Key(i)).P1500.BT.T_MFM,'filled')
+    h1 = scatter(100*expProcData.(filedataExp.Key(i)).P1500.BT.Ci_ref, ...
+        expProcData.(filedataExp.Key(i)).P1500.BT.Ci,20,expProcData.(filedataExp.Key(i)).P1500.BT.T_MFM,'filled');
 hold on
 end
-plot(0:1:100,0:1:100,"Color",'k') % fitting responds to high pressure only
-xlabel('C_{H2} _{ref} [mol %]');
-ylabel('C_{H2} _{MFM} [mol %]');
+h2 = plot(0:1:100,Cval_lin_params.feval(0:1:100),"Color",'k'); % fitting responds to high pressure only
+xlabel('C_{H_2}_{ ref} [mol %]','FontSize',16);
+ylabel('C_{H_2}_{ MFM} [mol %]','FontSize',16);
 xlim([0 100]);
 ylim([0 100]);
 c=colorbar;
-c.Title.String = 'Temperature [°C]';
+c.Title.String = 'T_{MFM} [°C]';
 c.Title.Rotation = 90;
 c.Title.Units = 'normalized';
-c.Title.Position = [3.55, 0.5, 0];
-c.Title.FontSize = 14;
+c.Title.Position = [4, 0.5, 0];
+c.Title.FontSize = 16;
 cTicks = c.Ticks;
 cTicks = cTicks(mod(cTicks,1) == 0);
 c.Ticks = cTicks;
+c.FontSize = 14;
+ax = gca; % Get current axes
+ax.FontSize = 14;
 grid on
-title("Validation curve - H2CO2 (~32 °C, 10.4 MPa)")
+legend([h1,h2],{'C_{H_2}_{ MFM}','C_{H_2}_{ MFM_{ fit}} \pm \DeltaC_{H_2}_{ MFM_{ fit}}'},'Location','southeast', 'FontSize',14)
+% title("Validation curve - H2CO2 (~32 °C, 10.4 MPa)")
 saveas(gcf,pathExportAll + "Val-P1500",'png')

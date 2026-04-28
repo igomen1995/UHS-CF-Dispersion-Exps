@@ -33,23 +33,27 @@ addpath('functions/');
 
 % Introduce name of input and desired output folder name
 
-filenameExp = 'input/input_exp_H2-CO2-T32-P1500.xlsx';
+inputFileConfigName = 'inputExpConfig.xlsx';
+
+inputFileConfig = readtable(inputFileConfigName);
+
+filenameExp = inputFileConfig.inputFileName{:};
 
 % PR parameters
 % INTRODUCE THE INPUT HERE
 % file containing pure components NIST data: Tc, Pc and acentric factor w
-filenamePure = 'input/input_PR_pure.xlsx';
+filenamePure = inputFileConfig.inputPureParams{:};
 % file containing mixture compoents A12 B12 factor to estimate BIP
-filenameBIP = 'input/input_PR_BIP.xlsx';
+filenameBIP = inputFileConfig.inputMixParams{:};
 % file diffusion params Marrero to calculate D12 effective diffusion
 % coefficient using Marrero mold
-filenameDiff = 'input/input_diffusion_Marrero.xlsx';
+filenameDiff = inputFileConfig.inputDiffModel{:};
 
 % cal curve results input import
-pathImportCal = 'results/cal_250725_PR/';
+pathImportCal = inputFileConfig.importPath{:};
 
-mkdir('results/exp_H2-CO2-T32-P1500-H');
-pathExportAll = 'results/exp_H2-CO2-T32-P1500-H/';
+pathExportAll = inputFileConfig.exportPath{:}; % Path for OUTPUT
+mkdir(pathExportAll); % Create directory for output
 
 %% IMPORT data
 
@@ -150,6 +154,15 @@ for i = 1:length(filedataExp.Key)
     q = filedataExp.Q(i)*(10^(-6))/60; %m3/s
     v = q./A; % Darcy velocity m/s
     u = v./filedataExp.phi(i); % Interstitial velocity
+    Vbefore = filedataExp.Vlinesbefore(i)/(10^6); %m3
+    Vafter = filedataExp.Vlinesafter(i)/(10^6);
+
+    % lines
+    A_lines = pi*((filedataExp.IDlines_cm(i)/100)/2)^2; %m2
+    v_lines = q./A_lines; %m3/s
+    L_linesbefore = Vbefore/A_lines; %m
+    L_linesafter = Vafter/A_lines; %m
+    L_total = L_linesbefore + L_linesafter;
 
     % Assumes only one row is output, unique parasm for fluid 1 and 2
     filedataDiffaux = filedataDiff((filedataDiff.Fluid1 == filedataExp.Fluid1{i} & filedataDiff.Fluid2 == filedataExp.Fluid2{i}),:);
@@ -158,17 +171,25 @@ for i = 1:length(filedataExp.Key)
     [D12,dD12] = calc_diff_marrero(filedataExp.T(i), ...
         filedataExp.P(i), filedataDiffaux.A, filedataDiffaux.B, ...
         filedataDiffaux.C, filedataDiffaux.D, filedataDiffaux.E, ...
-        filedataDiffaux.group, filedataDiffaux.dev_pc);
+        filedataDiffaux.group, filedataDiffaux.dev_pc); %cm2min
+
+    % KL lines Aris Dispersion
+    % KL_lines = KL_lines_taylor_aris(v, r, Dm)
+    KL_lines =  KL_lines_taylor_aris(v_lines, filedataExp.IDlines_cm(i)/100, D12/(60*(10^4)));
 
     exp_params = table(filedataExp.Key(i), filedataExp.Date(i), filedataExp.Type(i), filedataExp.Fluid1(i), filedataExp.Fluid2(i), ...
         D12, dD12,...
         filedataExp.T(i), filedataExp.P(i), filedataExp.Q(i), filedataExp.C1init(i), filedataExp.C1j(i), filedataExp.Run(i), ...
         filedataExp.D(i), filedataExp.L(i), filedataExp.phi(i), filedataExp.K(i), filedataExp.Vcore(i), ...
-        filedataExp.setupVersion(i), filedataExp.Vlinesbefore(i), filedataExp.Vlinesafter(i), ... 
-        filedataExp.Vtotal(i), A,L,q,v,u, 'VariableNames', {'Key', 'Date', 'Type','Fluid1', 'Fluid2', ...
+        filedataExp.setupVersion(i), filedataExp.IDlines_cm(i), filedataExp.Vlinesbefore(i), filedataExp.Vlinesafter(i), ... 
+        L_linesbefore, L_linesafter, filedataExp.Vtotal(i), L_total, ...
+        A,L,q,v,u, A_lines, v_lines, KL_lines,KL_lines*60*(10^4), 'VariableNames', {'Key', 'Date', 'Type','Fluid1', 'Fluid2', ...
         'D12_cm2min', 'dD12_cm2min'...
         'T_C', 'P_psig', 'Q_mlmin', 'C1init_pcmol', 'C1j_pcmol', 'Run', 'D_in', 'L_in', 'phi', 'K_mD', 'Vcore_cc', ...
-        'setupVersion', 'Vlinesbefore_cc', 'Vlinesafter_cc', 'Vtotal_cc','A_SI','L_SI','q_SI','v_SI','u_SI'});
+        'setupVersion', 'ID_lines_cm', 'Vlinesbefore_cc', 'Vlinesafter_cc', ...
+        'L_linesbefore_SI', 'L_linesafter_SI', 'Vtotal_cc', 'L_linestotal_SI' ...
+        'A_SI','L_SI','q_SI','v_SI','u_SI', ...
+        'A_lines_SI','v_lines_SI','KL_lines_SI', 'KL_lines_cm2min'});
     expProcData.(filedataExp.Key(i)).exp_params = exp_params;
 
 end
@@ -202,22 +223,22 @@ for i = 1:length(filedataExp.Key)
     % fitting parameters for rho corrected
     % auxLinFit = fittingRhoResultsAll(fittingRhoResultsAll.Q == "QAll",:);
     auxnLinFit = nlfittingRhoResultsAll(nlfittingRhoResultsAll.Q == "QAll",:);
-    rho_MFM_0 = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],auxnLinFit.p4);
+    rho_MFM_0 = auxnLinFit.rho_MFM_0;
     rho_MFM = expProcData.(filedataExp.Key(i)).BT.rho_MFM;
-    % lower slope
+    % low densities
     expProcData.(filedataExp.Key(i)).BT.rho_corr = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM);
-    expProcData.(filedataExp.Key(i)).BT.rho_corrMin = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM-auxnLinFit.RMSE);
-    expProcData.(filedataExp.Key(i)).BT.rho_corrMax = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM+auxnLinFit.RMSE);
-    % higher slope
+    expProcData.(filedataExp.Key(i)).BT.rho_corrMin = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM-auxnLinFit.drho_corr_low);
+    expProcData.(filedataExp.Key(i)).BT.rho_corrMax = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM+auxnLinFit.drho_corr_low);
+    % high densities
     expProcData.(filedataExp.Key(i)).BT.rho_corr(rho_MFM>rho_MFM_0) = ...
         rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
         rho_MFM(rho_MFM>rho_MFM_0));
     expProcData.(filedataExp.Key(i)).BT.rho_corrMin(rho_MFM>rho_MFM_0) = ...
         rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
-        rho_MFM(rho_MFM>rho_MFM_0)-auxnLinFit.RMSE);
+        rho_MFM(rho_MFM>rho_MFM_0)-auxnLinFit.drho_corr_high);
     expProcData.(filedataExp.Key(i)).BT.rho_corrMax(rho_MFM>rho_MFM_0) = ...
         rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
-        rho_MFM(rho_MFM>rho_MFM_0)+auxnLinFit.RMSE);
+        rho_MFM(rho_MFM>rho_MFM_0)+auxnLinFit.drho_corr_high);
 end
 
 % %% Extract breakthrough curve data Q efect low density
@@ -311,8 +332,10 @@ for i = 1:length(filedataExp.Key)
         expProcData.(filedataExp.Key(i)).BT.rho_corrMax);
     % absolute error % 
     expProcData.(filedataExp.Key(i)).BT.dC = ...
-        abs(expProcData.(filedataExp.Key(i)).BT.CiMax ...
-        -expProcData.(filedataExp.Key(i)).BT.Ci)/2;
+        (abs(expProcData.(filedataExp.Key(i)).BT.CiMax ...
+        -expProcData.(filedataExp.Key(i)).BT.Ci)+ ...
+        abs(expProcData.(filedataExp.Key(i)).BT.CiMin ...
+        -expProcData.(filedataExp.Key(i)).BT.Ci))/2;
 
     % at rho corr value
     expProcData.(filedataExp.Key(i)).BT.Z = ...
@@ -365,6 +388,8 @@ for i = 1:length(filedataExp.Key)
 
 end
 
+save(pathExportAll + "expProcData.mat",'expProcData')
+
 %% Save data
 
 for i = 1:length(filedataExp.Key)
@@ -373,12 +398,15 @@ for i = 1:length(filedataExp.Key)
     writetable(expProcData.(filedataExp.Key(i)).pumpsData,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'pumps_data');
     writetable(expProcData.(filedataExp.Key(i)).transData,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'trans_data');
     writetable(expProcData.(filedataExp.Key(i)).MFMData,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'MFM_data');
-    writetable(expProcData.(filedataExp.Key(i)).PGD1Data,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'PGD1_data');
-    writetable(expProcData.(filedataExp.Key(i)).PGD2Data,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'PGD2_data');
+    if ismissing(PGD1_data_name) == 0
+        writetable(expProcData.(filedataExp.Key(i)).PGD1Data,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'PGD1_data');
+    end
+    if ismissing(PGD2_data_name) == 0
+        writetable(expProcData.(filedataExp.Key(i)).PGD2Data,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'PGD2_data');
+    end
     writetable(expProcData.(filedataExp.Key(i)).exp_params,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'exp_params');
     writetable(expProcData.(filedataExp.Key(i)).BT,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'BT_curve');
 end
-save(pathExportAll + "expProcData.mat",'expProcData')
 
 %% Plots for analysis
 
@@ -401,7 +429,8 @@ for i = 1:length(filedataExp.Key)
     % xlabel('Time elapsed [hh:mm:ss]')
     ylabel('Pressure [psig]')
     xtickformat('hh:mm:ss')
-    ylim([1450,1550])
+    Pavelim = mean((expProcData.(filedataExp.Key(i)).transData.PT1 + expProcData.(filedataExp.Key(i)).transData.PT2)/2);
+    ylim([Pavelim - 100,Pavelim + 100])
     grid("on")
     title(filedataExp.Key(i) + " pore pressure", 'Interpreter', 'none')
     legend('Location','southeast');
@@ -413,7 +442,8 @@ for i = 1:length(filedataExp.Key)
     % xlabel('Time elapsed [hh:mm:ss]')
     ylabel('Pressure [psig]')
     xtickformat('hh:mm:ss')
-    ylim([1900,2400])
+    Pconfavg = mean(expProcData.(filedataExp.Key(i)).pumpsData.P_Pconf);
+    ylim([Pconfavg-300,Pconfavg+300])
     grid("on")
     title(filedataExp.Key(i) + " confining pressure", 'Interpreter', 'none')
     legend('Location','southeast');
@@ -459,11 +489,11 @@ for i = 1:length(filedataExp.Key)
     ylabel('C1_{PGDs} [mol %]');
     ylim([0,100])
     hold on
-    if isempty(expProcData.(filedataExp.Key(i)).PGD2Data) == 0 && ismissing(PGD2_data_name) == 0
+    if ismissing(PGD2_data_name) == 0
         scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,10,'filled', 'MarkerFaceColor',[0.0000 0.4470 0.7410], 'DisplayName','C1_{PGD2}')
         hold on
     end
-    if isempty(expProcData.(filedataExp.Key(i)).PGD1Data) == 0 && ismissing(PGD1_data_name) == 0
+    if ismissing(PGD1_data_name) == 0
         scatter(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,10,'filled','MarkerFaceColor', [0.9290 0.6940 0.1250], 'DisplayName','C1_{PGD1}')
         hold on
     end
@@ -493,29 +523,31 @@ for i = 1:length(filedataExp.Key)
     % Densities and concentrations PGD
     figure('Position', [100, 100, 700, 550]);
     tiledlayout(2,2, 'TileSpacing', 'tight', 'Padding','tight');
-    if isempty(expProcData.(filedataExp.Key(i)).MFMData) == 0 && ismissing(MFM_data_name) == 0
+    if ismissing(MFM_data_name) == 0
         t = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
         C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
         C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
         C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
-        errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', 'Color', [1 0.7 0.8])
+        errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', 'Color', [255 193 183]/255,'HandleVisibility','off')
         hold on 
         h3 = scatter(t,C1,5,'filled','MarkerFaceColor','r','DisplayName','C_{MFM} \pm \DeltaC_{MFM}');
     end
-    if isempty(expProcData.(filedataExp.Key(i)).PGD2Data) == 0 && ismissing(PGD2_data_name) == 0
-        h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,5,'filled','MarkerFaceColor',[0.7 0.7 0.7],'DisplayName','C_{PGD2}');
+    if ismissing(PGD2_data_name) == 0
+        h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,7,'filled','MarkerFaceColor',[0.9290 0.6940 0.1250],'DisplayName','C_{PGD2}');
         hold on 
     end
-    if isempty(expProcData.(filedataExp.Key(i)).PGD1Data) == 0 && ismissing(PGD1_data_name) == 0
-        h2 = scatter(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,5,'filled','MarkerFaceColor',[0.9290 0.6940 0.1250],'DisplayName','C_{PGD1}');
+    if ismissing(PGD1_data_name) == 0
+        h2 = scatter(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,7,'filled','MarkerFaceColor',[0.4660    0.6740    0.1880],'DisplayName','C_{PGD1}');
         hold on 
     end
     xlabel('Time elapsed [hh:mm:ss]','FontSize', 14);
     xtickformat('hh:mm:ss')
     ylabel('C_{H_2} [mol %]','FontSize', 14);
     ylim([0,100]);
-    legend([h3,h2,h1], 'Location','southeast');
-    title (filedataExp.Key(i), 'Interpreter', 'none','FontSize', 16)
+    lgd = legend('Location','southeast','FontSize',14);
+    title (lgd, "Q = " + filedataExp.Q(i) + " ml/min",'FontSize',14)
     grid on;
+    ax = gca; % Get current axes
+    ax.FontSize = 14;
     saveas(gcf,pathExportAll + filedataExp.Key(i) + "_dens_conc",'png')
 end

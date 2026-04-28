@@ -50,7 +50,7 @@ sample = unique(filedataExpsParams.Sample);
     [filedataExpsParams.Ref, filedataExpsParams.Fluid2], ...
     'rows', 'stable');
 numGroups = max(Gid);   % this will be 5 in your example
-%colors = parula(numGroups); % if more than 7
+% colors = parula(numGroups); % if more than 7
 colors = orderedcolors("gem");
 
 % transparency based on P
@@ -98,7 +98,7 @@ savefig(gcf,pathExportAll + "KLvsVel-alpha_allLit")
 
 %% Plot Kl/Dl vs Pe
 
-figure % Kl/Dl vs Pe
+figure
 for i = 1:height(filedataExpsParams)
     groupID = Gid(i);          % color group
     alpha_i = alphaVals(i);    % transparency

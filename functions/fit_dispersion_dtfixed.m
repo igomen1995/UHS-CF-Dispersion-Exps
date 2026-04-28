@@ -7,16 +7,12 @@ function [KL,dt_fit, u_fit, Cj_fit, Ci_fit, C_fit] = fit_dispersion_dtfixed(C,t,
 % Cj, Ci, u not fitting, fitting p where Kl = p(1)^2
 % Corrects BT curve due to extra volume before core
 
-C_function = @(p,t)(Ci + (Cj/2)*erfc((L-u.*(t-dt))./(2*(max((t-dt),eps).^(1/2)).*p(1))));
-% C_function = @(p,t) Ci + (Cj/2) .* ( ...
-%     erfc( (L - u.*(t - p(2))) ./ (2 * p(1) .* sqrt(max(t - p(2), eps))) ) + ...
-%     exp( u*L / (p(1)^2) ) .* ...
-%     erfc( (L + u.*(t - p(2))) ./ (2 * p(1) .* sqrt(max(t - p(2), eps))) ) ...
-% );
+C_function = @(p,t)(Ci + (Cj/2)*erfc((L-u.*(t-dt))./(2*(max((t-dt),eps).^(1/2)).*p(1)))); % dt numerator and denominator
+% C_function = @(p,t)(Ci + (Cj/2)*erfc((L-u.*(t-dt))./(2*(t.^(1/2)).*p(1)))); % dt only numerator
 
-
-% C_function = @(p,t)(Ci + (Cj/2)*erfc((L-u.*(t-p(2)))./(2*((t).^(1/2)).*p(1))));
-% C_function = @(p,t)(Ci + (Cj/2)*(erfc((L-u.*(t-p(2)))./(2*((t).^(1/2)).*p(1)))+(exp(u*L/(p(1)^2)))*erfc((L+u.*(t-p(2)))./(2*((t).^(1/2)).*p(1)))));
+% full function
+% C_function = @(p,t) Ci + (Cj/2) .* (erfc( (L - u.*(t - p(2))) ./ (2 * p(1) .* sqrt(max(t - p(2), eps))) ) + ...
+%     exp( u*L / (p(1)^2) ) .*erfc( (L + u.*(t - p(2))) ./ (2 * p(1) .* sqrt(max(t - p(2), eps))) ));
 
 C_fit = fitnlm(t,C,C_function,p);
 p(1) = C_fit.Coefficients.Estimate(1);

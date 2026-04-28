@@ -21,9 +21,14 @@ addpath('functions/');
 
 % Introduce name of input and desired output folder name
 
-filenameExp = 'input/input_exp_H2-CO2-T32-P1500.xlsx';
-mkdir('results/exp_H2-CO2-T32-P1500-H');
-pathImportAll = 'results/exp_H2-CO2-T32-P1500-H/';
+inputFileConfigName = 'inputExpConfig.xlsx';
+
+inputFileConfig = readtable(inputFileConfigName);
+
+filenameExp = inputFileConfig.inputFileName{:};
+
+pathImportAll = inputFileConfig.exportPath{:}; % Path for OUTPUT
+mkdir(pathImportAll); % Create directory for output
 
 %% IMPORT variables
 

@@ -27,25 +27,36 @@
 %
 %% INPUT
 
+inputFileConfigName = 'inputPRConfig.xlsx';
+
+inputFileConfig = readtable(inputFileConfigName);
+
 addpath('functions/');
 
 % ------------------------------------------------------------------------
 
 % INTRODUCE THE INPUT HERE
 % file containing pure components NIST data: Tc, Pc and acentric factor w
-filenamePure = 'input/input_PR_pure.xlsx';
+filenamePure = inputFileConfig.inputPureParams{:};
 % file containing mixture compoents A12 B12 factor to estimate BIP
-filenameBIP = 'input/input_PR_BIP.xlsx';
+filenameBIP = inputFileConfig.inputMixParams{:};
 
 % Variables of interest for this mixture
-fl = {"H2", "CO2"}; % fluids in the mixture
-x1 = 0:0.001:1; %string molar fraction component 1
-P_MPa = 10.4; % MPa
-T_C = 32; % C
+flaux = string(inputFileConfig.inputFluids{:}); % fluids in the mixture
+fl = split(flaux,',');
+xi = inputFileConfig.inputXi;
+xf = inputFileConfig.inputXf;
+dx = inputFileConfig.inputdXi;
+x1 = xi:dx:xf; %string molar fraction component 1
+P_MPa = inputFileConfig.P_MPa; % MPa
+T_C = inputFileConfig.T_C; % C
+
+exportPath = inputFileConfig.exportPath{:};
 
 % Output
-mkdir('results/PR_H2-CO2-T32-P1500');
-pathExportAll = 'results/PR_H2-CO2-T32-P1500/';
+pathExportAll = inputFileConfig.exportPath{:}; % Path for OUTPUT
+mkdir(pathExportAll); % Create directory for output
+
 filenameOutput = "PR_results";
 
 % ------------------------------------------------------------------------
@@ -111,7 +122,7 @@ end
 
 %% Save results
 
-PR_input = table(fl{1}',fl{2}, P_MPa', T_C','VariableNames',{'fluid1', 'fluid2' 'P_MPa', 'T_C'});
+PR_input = table(string(fl{1}),string(fl{2}), P_MPa, T_C,'VariableNames',{'fluid1', 'fluid2' 'P_MPa', 'T_C'});
 PR_results = table(x1',Z',rho','VariableNames',{'x1','Z','rho'});
 
 delete(pathExportAll + filenameOutput + ".xlsx")
