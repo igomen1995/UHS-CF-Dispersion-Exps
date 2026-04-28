@@ -63,14 +63,14 @@ pumps_data = removevars(pumps_data,["Time","Date"]); % remove Date and Time inde
 % Set time format which is same for all other data types
 pumps_data.TimeStamp.Format = 'MM/dd/uuuu HH:mm:ss.SSS';
 
-if confPump ~= 0
+if isstring(confPump)
     P_Pconf = pumps_data.(P_Pconf_string);
     Q_Pconf = pumps_data.(Q_Pconf_string);
     V_Pconf = pumps_data.(V_Pconf_string);
     pumps_data = addvars(pumps_data,P_Pconf,Q_Pconf,V_Pconf);
 end
 
-if cushionPump ~= 0
+if isstring(cushionPump)
     P_Pcushion = pumps_data.(P_Pcushion_string);
     Q_Pcushion = pumps_data.(Q_Pcushion_string);
     V_Pcushion = pumps_data.(V_Pcushion_string);

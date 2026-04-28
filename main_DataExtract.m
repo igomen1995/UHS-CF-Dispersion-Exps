@@ -33,23 +33,27 @@ addpath('functions/');
 
 % Introduce name of input and desired output folder name
 
-filenameExp = 'input/input_exp_H2-CO2-T32-P1500.xlsx';
+inputFileConfigName = 'inputExpConfig.xlsx';
+
+inputFileConfig = readtable(inputFileConfigName);
+
+filenameExp = inputFileConfig.inputFileName{:};
 
 % PR parameters
 % INTRODUCE THE INPUT HERE
 % file containing pure components NIST data: Tc, Pc and acentric factor w
-filenamePure = 'input/input_PR_pure.xlsx';
+filenamePure = inputFileConfig.inputPureParams{:};
 % file containing mixture compoents A12 B12 factor to estimate BIP
-filenameBIP = 'input/input_PR_BIP.xlsx';
+filenameBIP = inputFileConfig.inputMixParams{:};
 % file diffusion params Marrero to calculate D12 effective diffusion
 % coefficient using Marrero mold
-filenameDiff = 'input/input_diffusion_Marrero.xlsx';
+filenameDiff = inputFileConfig.inputDiffModel{:};
 
 % cal curve results input import
-pathImportCal = 'results/cal_250725_PR/';
+pathImportCal = inputFileConfig.importPath{:};
 
-mkdir('results/exp_H2-CO2-T32-P1500-H');
-pathExportAll = 'results/exp_H2-CO2-T32-P1500-H/';
+pathExportAll = inputFileConfig.exportPath{:}; % Path for OUTPUT
+mkdir(pathExportAll); % Create directory for output
 
 %% IMPORT data
 
@@ -425,7 +429,8 @@ for i = 1:length(filedataExp.Key)
     % xlabel('Time elapsed [hh:mm:ss]')
     ylabel('Pressure [psig]')
     xtickformat('hh:mm:ss')
-    ylim([1450,1550])
+    Pavelim = mean((expProcData.(filedataExp.Key(i)).transData.PT1 + expProcData.(filedataExp.Key(i)).transData.PT2)/2);
+    ylim([Pavelim - 100,Pavelim + 100])
     grid("on")
     title(filedataExp.Key(i) + " pore pressure", 'Interpreter', 'none')
     legend('Location','southeast');
@@ -437,7 +442,8 @@ for i = 1:length(filedataExp.Key)
     % xlabel('Time elapsed [hh:mm:ss]')
     ylabel('Pressure [psig]')
     xtickformat('hh:mm:ss')
-    ylim([1900,2400])
+    Pconfavg = mean(expProcData.(filedataExp.Key(i)).pumpsData.P_Pconf);
+    ylim([Pconfavg-300,Pconfavg+300])
     grid("on")
     title(filedataExp.Key(i) + " confining pressure", 'Interpreter', 'none')
     legend('Location','southeast');
