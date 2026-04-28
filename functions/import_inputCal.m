@@ -9,7 +9,7 @@ opts.Sheet = "Sheet1";
 opts.DataRange = [3,Inf];
 % Specify column names and types
 opts.VariableNames = ["Key", "Date", "Fluid1", "Fluid2", "T_C", "P_psig", "x1", "Q_mlmin", "Run", "workingPump", "st", "et", "dt", "path", "pumps_data_name", "trans_data_name", "MFM_data_name", "PGD1_data_name", "PGD2_data_name","GMT_PGD"];
-opts.VariableTypes = ["string", "string","string","string", "double", "string", "double", "string", "double", "double",  "datetime", "datetime", "double", "string", "string", "string", "string", "string", "string", "string"];
+opts.VariableTypes = ["string", "string","string","string", "double", "string", "double", "string", "double", "string",  "datetime", "datetime", "double", "string", "string", "string", "string", "string", "string", "string"];
 data_out = readtable(input_name_xlsx,opts);
 
 % Specify time format which is same for all times in different data sets

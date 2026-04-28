@@ -17,7 +17,7 @@ opts.DataLines = dataLines;
 opts.Delimiter = ",";
 
 % % Specify column names and types
-opts.VariableNames = ["Date", "Time", "CumMin", "CumHrs", "LogMins", "LogHrs", "P_Cyl1A", "P_Cyl1B", "P_Cyl2A", "P_Cyl2B", "P_Cyl3A", "P_Cyl3B", "P_P1", "P_P2", "P_P3", "q_Cyl1A", "q_Cyl1B", "q_Cyl2A", "q_Cyl2B", "q_Cyl3A", "q_Cyl3B", "q_P1", "q_P2", "q_P3", "V_Cyl1A", "V_Cyl1B", "V_Cyl2A", "V_Cyl2B", "V_Cyl3A", "V_Cyl3B", "Vcum_Cyl1A", "Vcum_Cyl1B", "Vcum_Cyl2A", "Vcum_Cyl2B", "Vcum_Cyl3A", "Vcum_Cyl3B", "V_P1", "V_P2", "V_P3"];
+opts.VariableNames = ["Date", "Time", "CumMin", "CumHrs", "LogMins", "LogHrs", "P_P1A", "P_P1B", "P_P2A", "P_P2B", "P_P3A", "P_P3B", "P_P1", "P_P2", "P_P3", "q_P1A", "q_P1B", "q_P2A", "q_P2B", "q_P3A", "q_P3B", "q_P1", "q_P2", "q_P3", "V_P1A", "V_P1B", "V_P2A", "V_P2B", "V_P3A", "V_P3B", "Vcum_P1A", "Vcum_P1B", "Vcum_P2A", "Vcum_P2B", "Vcum_P3A", "Vcum_P3B", "V_P1", "V_P2", "V_P3"];
 opts.VariableTypes = ["datetime", "datetime", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double", "double"];
 
 % Specify file level properties

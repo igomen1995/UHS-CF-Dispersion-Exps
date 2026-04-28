@@ -29,20 +29,27 @@
 % - Figures
 %
 %% INPUT
+
 % INTRODUCE HERE INPUT AND OUTPUT PATH
 
+inputFileConfigName = 'inputCalConfig.xlsx';
+
+inputFileConfig = readtable(inputFileConfigName);
+
 %Cal Experimental data
-filenameExp = 'input/input_cal_exp.xlsx';
+filenameExp = inputFileConfig.inputFileName{:};
 
 % PR parameters
 % INTRODUCE THE INPUT HERE
 % file containing pure components NIST data: Tc, Pc and acentric factor w
-filenamePure = 'input/input_PR_pure.xlsx';
+filenamePure = inputFileConfig.inputPureParams{:};
 % file containing mixture compoents A12 B12 factor to estimate BIP
-filenameBIP = 'input/input_PR_BIP.xlsx';
+filenameBIP = inputFileConfig.inputMixParams{:};
 
-mkdir('results/cal_250725_PR'); % Create directory for output
-pathExportAll = 'results/cal_250725_PR/'; % Path for OUTPUT
+exportPath = inputFileConfig.exportPath{:};
+
+mkdir(exportPath); % Create directory for output
+pathExportAll = exportPath; % Path for OUTPUT
 
 
 %% Import data
