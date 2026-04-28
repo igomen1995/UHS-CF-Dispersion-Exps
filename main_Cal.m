@@ -46,10 +46,8 @@ filenamePure = inputFileConfig.inputPureParams{:};
 % file containing mixture compoents A12 B12 factor to estimate BIP
 filenameBIP = inputFileConfig.inputMixParams{:};
 
-exportPath = inputFileConfig.exportPath{:};
-
-mkdir(exportPath); % Create directory for output
-pathExportAll = exportPath; % Path for OUTPUT
+pathExportAll = inputFileConfig.exportPath{:}; % Path for OUTPUT
+mkdir(pathExportAll); % Create directory for output
 
 
 %% Import data
