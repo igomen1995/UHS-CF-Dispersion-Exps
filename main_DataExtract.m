@@ -523,20 +523,20 @@ for i = 1:length(filedataExp.Key)
     % Densities and concentrations PGD
     figure('Position', [100, 100, 700, 550]);
     tiledlayout(2,2, 'TileSpacing', 'tight', 'Padding','tight');
-    if isempty(expProcData.(filedataExp.Key(i)).MFMData) == 0 && ismissing(MFM_data_name) == 0
+    if ismissing(MFM_data_name) == 0
         t = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
         C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
         C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
         C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
-        errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', 'Color', [255 193 183]/255)
+        errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', 'Color', [255 193 183]/255,'HandleVisibility','off')
         hold on 
         h3 = scatter(t,C1,5,'filled','MarkerFaceColor','r','DisplayName','C_{MFM} \pm \DeltaC_{MFM}');
     end
-    if isempty(expProcData.(filedataExp.Key(i)).PGD2Data) == 0 && ismissing(PGD2_data_name) == 0
+    if ismissing(PGD2_data_name) == 0
         h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,7,'filled','MarkerFaceColor',[0.9290 0.6940 0.1250],'DisplayName','C_{PGD2}');
         hold on 
     end
-    if isempty(expProcData.(filedataExp.Key(i)).PGD1Data) == 0 && ismissing(PGD1_data_name) == 0
+    if ismissing(PGD1_data_name) == 0
         h2 = scatter(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,7,'filled','MarkerFaceColor',[0.4660    0.6740    0.1880],'DisplayName','C_{PGD1}');
         hold on 
     end
@@ -544,7 +544,7 @@ for i = 1:length(filedataExp.Key)
     xtickformat('hh:mm:ss')
     ylabel('C_{H_2} [mol %]','FontSize', 14);
     ylim([0,100]);
-    lgd = legend([h3,h2,h1], 'Location','southeast','FontSize',14);
+    lgd = legend('Location','southeast','FontSize',14);
     title (lgd, "Q = " + filedataExp.Q(i) + " ml/min",'FontSize',14)
     grid on;
     ax = gca; % Get current axes
