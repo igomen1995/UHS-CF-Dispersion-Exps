@@ -30,13 +30,13 @@ opts = setvaropts(opts, "Time", "InputFormat", "HH:mm:ss");
 
 % Import the data
 pumps_data = readtable(filename, opts);
-pumps_data = rmmissing(pumps_data); % Remove NaN values
+% pumps_data = rmmissing(pumps_data); % Remove NaN values
 
 % Preparing time data
 pumps_data.Date.Format = 'MM/dd/uuuu';
 pumps_data.Time.Format = 'HH:mm:ss';
 
-% Variables names of working, conf and cushion pumps
+% % Variables names of working, conf and cushion pumps
 % pressure
 P_Pworking_string = "P_P"+workingPump;
 P_Pconf_string = "P_P"+confPump;
@@ -49,7 +49,7 @@ Q_Pcushion_string = "q_P"+cushionPump;
 V_Pworking_string = "V_P"+workingPump; 
 V_Pconf_string = "V_P"+confPump;
 V_Pcushion_string = "V_P"+cushionPump;
-
+% 
 % Adding other fields/vars: TimeStamp, P_Pworking, P_Pcushion, P_Pconf,
 % Q_Pworking, Q_Pcushion, Q_Pconf, CVol_Pworking, CVol_Pcushion, CVol_Pconf
 TimeStamp = pumps_data.Date + timeofday(pumps_data.Time);
