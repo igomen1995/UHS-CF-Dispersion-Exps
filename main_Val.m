@@ -374,7 +374,9 @@ x1 = 0:0.01:1; % array for binary mixture
 % all data for calibration
 Ci_ref_all = [];
 Ci_est_all = [];
+
 for i = 1:length(filedataExp.Key)
+    BT_Key = table();
     for j = 1: length(P_unique)
         fluidPair = [filedataExp.Fluid1(i),filedataExp.Fluid2(i)];
         Tmin = floor(min(expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.T_MFM)*10)/10;
@@ -417,7 +419,10 @@ for i = 1:length(filedataExp.Key)
 
         Ci_ref_all = [Ci_ref_all;expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.Ci_ref]; % mol fraction
         Ci_est_all = [Ci_est_all;expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.Ci]; % mol percent
+        
+        BT_Key = [BT_Key;expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT];
     end
+    expTrimData.(filedataExp.Key(i)).Comp = BT_Key;
 end
 Ci_ref_all = Ci_ref_all*100; % convert to mol %
 %% Calibration curve
@@ -464,7 +469,7 @@ for i = 1:length(filedataExp.Key)
     if ismissing(PGD2_data_name) == 0
         writetable(expTrimData.(filedataExp.Key(i)).PGD2Data,xlsx_name + '.xlsx', 'Sheet', 'PGD2_data');
     end
-
+    writetable(expTrimData.(filedataExp.Key(i)).Comp,xlsx_name + '.xlsx', 'Sheet', 'Comp');
 end
 
 save(expTrimData_name + '.mat','expTrimData')
