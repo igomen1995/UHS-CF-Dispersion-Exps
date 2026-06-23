@@ -1,2 +1,12 @@
-# Local results
+# Local results & input data
 results/
+input/
+data/
+
+# input config
+inputCalConfig.xlsx
+inputPRConfig.xlsx
+inputExpConfig.xlsx
+
+% desktop init
+desktop.ini
