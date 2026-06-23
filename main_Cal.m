@@ -1119,6 +1119,7 @@ ax1 = axes;
 rho_ref_0 = nlfittingRhoResultsAll.p4(nlfittingRhoResultsAll.Q == "QAll");
 drho_corr_low = nlfittingRhoResultsAll.drho_corr_low(nlfittingRhoResultsAll.Q == "QAll");
 drho_corr_high = nlfittingRhoResultsAll.drho_corr_high(nlfittingRhoResultsAll.Q == "QAll");
+rho_MFM_0 = predict(nl_cal_curve_params_Qall,rho_ref_0);
 step = 1;
 %error bar low dens
 errorbar(0:step:rho_ref_0,feval(nl_cal_curve_params_Qall,0:step:rho_ref_0),drho_corr_low,'LineStyle', 'none', ...
@@ -1127,26 +1128,35 @@ hold on
 errorbar(rho_ref_0:step:800,feval(nl_cal_curve_params_Qall,rho_ref_0:step:800),drho_corr_high,'LineStyle', 'none', ...
     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
 scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled')
+hold on
 plot(0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k','LineWidth',0.8) % fitting responds to high pressure only
-x1 = xlabel('\rho_{ref} [kg/m^{3}]', 'FontSize', 16);
-ylabel('\rho_{MFM} [kg/m^{3}]', 'FontSize', 16);
+p1 = plot([0,rho_ref_0],[rho_MFM_0,rho_MFM_0],'--','Color','k','LineWidth',1.0);
+p2 = plot([rho_ref_0,rho_ref_0],[0,rho_MFM_0],'--','Color','k','LineWidth',1.0);
+annotText1 = sprintf('{%.1f} kg/m^{3}', rho_MFM_0);
+annotText2 = sprintf('{%.1f} kg/m^{3}', rho_ref_0);
+annotation('textbox', [0.14, 0.255, 0.3, 0.1], 'String', annotText1, ...
+    'Interpreter', 'tex', 'FontSize', 9, 'EdgeColor', 'none');
+annotation('textbox', [0.34, 0.145, 0.3, 0.1], 'String', annotText2, ...
+    'Interpreter', 'tex', 'FontSize', 9, 'EdgeColor', 'none','Rotation',90);
+x1 = xlabel('\rho_{ref} [kg/m^{3}]', 'FontSize', 14);
+ylabel('\rho_{MFM} [kg/m^{3}]', 'FontSize', 14);
 xlim([0 800]);
 ylim([0 800]);
 xticks(0:100:800)
 yticks(0:100:800)
 numTicks = 6;
-ax1.FontSize = 16;
+ax1.FontSize = 14;
 c=colorbar;
 c.Title.String = 'T_{MFM} [°C]';
 c.Title.Rotation = 90;
 c.Title.Units = 'normalized';
 c.Title.Position = [4, 0.5, 0];
-c.Title.FontSize = 16;
+c.Title.FontSize = 14;
 cTicks = c.Ticks;
 cTicks = cTicks(mod(cTicks,1) == 0);
 c.Ticks = cTicks;
 grid on
-legend({'\rho_{MFM}','\rho_{MFM_{fit}} \pm \Delta\rho_{MFM_{fit}}'},'Location','southeast')
+legend({'\rho_{MFM}','\rho_{MFM_{fit}} \pm \Delta\rho_{MFM_{fit}}'},'Location','southeast','FontSize', 14)
 % % cal curve formula annotation
 % coeffs = nlfittingRhoResultsAll(nlfittingRhoResultsAll.Q == 'QAll',:);
 % annotText = sprintf(['$\\rho_{MFM} = \\left\\{ \\begin{array}{ll}',...
@@ -1156,7 +1166,7 @@ legend({'\rho_{MFM}','\rho_{MFM_{fit}} \pm \Delta\rho_{MFM_{fit}}'},'Location','
 % annotation('textbox', [0.34, 0.25, 0.3, 0.1], 'String', annotText, ...
 %     'Interpreter', 'latex', 'FontSize', 11, 'EdgeColor', 'none');
 % H2
-insetAx = axes('Position', [0.19 0.68 0.1 0.17]);  % [x y width height]
+insetAx = axes('Position', [0.18 0.65 0.1 0.15]);  % [x y width height]
 limScale = (insetAx.Position(3)/insetAx.Position(4))/((range(ax1.XLim)*ax1.Position(3))/(range(ax1.YLim)*ax1.Position(4)));
 box(insetAx, 'on');  % Add border to inset
 scatter(insetAx,calData_aux.dens_PR_T_MFM(calData_aux.Fluid_cal == 'H2'),calData_aux.dens_MFM(calData_aux.Fluid_cal == 'H2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'H2'),'filled')
@@ -1169,7 +1179,7 @@ title({ 'H_2 @ T_{MFM}', ...
       'Interpreter','tex', 'FontSize',8);
 grid on
 % He
-insetAx = axes('Position', [0.35 0.68 0.1 0.17]);  % [x y width height]
+insetAx = axes('Position', [0.34 0.65 0.1 0.15]);  % [x y width height]
 limScale = (insetAx.Position(3)/insetAx.Position(4))/((range(ax1.XLim)*ax1.Position(3))/(range(ax1.YLim)*ax1.Position(4)));
 box(insetAx, 'on');  % Add border to inset
 scatter(insetAx,calData_aux.dens_PR_T_MFM(calData_aux.Fluid_cal == 'He'),calData_aux.dens_MFM(calData_aux.Fluid_cal == 'He'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'He'),'filled')
@@ -1182,7 +1192,7 @@ title({ 'He @ T_{MFM}', ...
       'Interpreter','tex', 'FontSize',8);
 grid on
 % CO2
-insetAx = axes('Position', [0.19 0.42 0.1 0.17]);  % [x y width height]
+insetAx = axes('Position', [0.18 0.41 0.1 0.15]);  % [x y width height]
 limScale = (insetAx.Position(3)/insetAx.Position(4))/((range(ax1.XLim)*ax1.Position(3))/(range(ax1.YLim)*ax1.Position(4)));
 box(insetAx, 'on');  % Add border to inset
 scatter(insetAx,calData_aux.dens_PR_T_MFM(calData_aux.Fluid_cal == 'CO2'),calData_aux.dens_MFM(calData_aux.Fluid_cal == 'CO2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'CO2'),'filled')
@@ -1194,8 +1204,13 @@ title({ 'CO_2 @ T_{MFM}', ...
         'P = 3.5 MPa' }, ...
       'Interpreter','tex', 'FontSize',8);
 grid on
+
+annotText3 = sprintf('Insets \\rho_{ref} %s %.1f kg/m^{3}', char(8804),rho_ref_0);
+annotation('textbox', [0.21, 0.81, 0.3, 0.1], 'String', annotText3, ...
+    'FontSize', 9, 'FontWeight', 'bold','EdgeColor', 'none');
+
 % CO2
-insetAx = axes('Position', [0.54 0.42 0.1 0.17]);  % [x y width height]
+insetAx = axes('Position', [0.54 0.41 0.1 0.15]);  % [x y width height]
 limScale = (insetAx.Position(3)/insetAx.Position(4))/((range(ax1.XLim)*ax1.Position(3))/(range(ax1.YLim)*ax1.Position(4)));
 box(insetAx, 'on');  % Add border to inset
 scatter(insetAx,calData_aux.dens_PR_T_MFM(calData_aux.Fluid_cal == 'CO2'),calData_aux.dens_MFM(calData_aux.Fluid_cal == 'CO2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'CO2'),'filled')
@@ -1208,7 +1223,7 @@ title({ 'CO_2 @ T_{MFM}', ...
       'Interpreter','tex', 'FontSize',8);
 grid on
 % CO2
-insetAx = axes('Position', [0.68 0.42 0.1 0.17]);  % [x y width height]
+insetAx = axes('Position', [0.68 0.41 0.1 0.15]);  % [x y width height]
 limScale = (insetAx.Position(3)/insetAx.Position(4))/((range(ax1.XLim)*ax1.Position(3))/(range(ax1.YLim)*ax1.Position(4)));
 box(insetAx, 'on');  % Add border to inset
 scatter(insetAx,calData_aux.dens_PR_T_MFM(calData_aux.Fluid_cal == 'CO2'),calData_aux.dens_MFM(calData_aux.Fluid_cal == 'CO2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'CO2'),'filled')
@@ -1219,6 +1234,11 @@ ylim([750,750+range(insetAx.XLim)/limScale])
 title({ 'CO_2 @ T_{MFM}', ...
         'P = 10.4 MPa' }, ...
       'Interpreter','tex', 'FontSize',8);
+
+annotText4 = sprintf('Insets \\rho_{ref} > %.1f kg/m^{3}',rho_ref_0);
+annotation('textbox', [0.56, 0.57, 0.3, 0.1], 'String', annotText4, ...
+    'FontSize', 9, 'FontWeight', 'bold','EdgeColor', 'none');
+
 grid on
 saveas(gcf,pathExportAll + "Cal-curve-nonlin-zoom-in",'png')
 
