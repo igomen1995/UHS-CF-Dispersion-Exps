@@ -11,3 +11,7 @@ inputExpConfig.xlsx
 % desktop init
 desktop.ini
 
+% Local temporary changes
+*.asv
+
+
