@@ -81,57 +81,7 @@ for i = 1:length(filedataExp.Key)
         KL_out = fit_dispersion_dt_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,p_guess,dC_vals); % weigthed with errors
 
         % exp params for table
-        row = table();
-        row.Key = filedataExp.Key(i);
-        row.Fluid1 = filedataExp.Fluid1(i);
-        row.Fluid2 = filedataExp.Fluid2(i);
-        row.T_C = filedataExp.T(i);
-        row.P_psig = filedataExp.P(i);
-        row.Q_mlmin = filedataExp.Q(i);
-        row.Run = filedataExp.Run(i);
-        row.C1init_molpc = filedataExp.C1init(i);
-        row.C1j_molpc = filedataExp.C1j(i);
-        row.D_in = filedataExp.D(i);
-        row.L_in = filedataExp.L(i);
-        row.phi = filedataExp.phi(i);
-        row.K_mD = filedataExp.K(i);
-        % exp params for table
-        row.T_mean = mean(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-        row.T_std = std(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-        row.u_cmmin = u*60*(10^2);
-        row.L_cm = L*100;
-        row.D0_SI = expProcData.(filedataExp.Key(i)).exp_params.D12_cm2min/(60*10^4);
-        row.dD0_SI = expProcData.(filedataExp.Key(i)).exp_params.dD12_cm2min/(60*10^4); % error
-        row.D0_cm2min = row.D0_SI*60*10^4;
-        row.dD0_cm2min = row.dD0_SI*60*10^4;
-        row.Pe_D0 = u*L/row.D0_SI;
-        row.dPe_D0 = (((-u*L/(row.D0_SI^2))^2)*(row.dD0_SI^2))^(1/2); % error
-        row.v_lines = expProcData.(filedataExp.Key(i)).exp_params.v_lines_SI;
-        row.KL_lines = expProcData.(filedataExp.Key(i)).exp_params.KL_lines_SI;
-
-        % results 
-        row.KL_SI = KL_out.KL;
-        row.dKL_SI = KL_out.dKL;
-        row.dt_SI = KL_out.dt;
-        row.d_dt_SI = KL_out.ddt;
-        row.RMSE = KL_out.RMSE; 
-        row.R2 = KL_out.R2;
-        row.KL_cm2min = row.KL_SI*60*10^4;
-        row.SE_KL_cm2min = (row.dKL_SI)*60*10^4;
-        row.dt_min = row.dt_SI/60;
-        row.SE_dt_min = row.d_dt_SI/60;
-        row.Pe = u*L/row.KL_SI; 
-        row.dPe = (((-u*L*((row.KL_SI)^-2))^2)*(row.dKL_SI^2))^(1/2); 
-        row.dtD = u*row.dt_SI/L;  % respect to Vcore
-        row.d_dtD = (((u/L)^2)*(row.d_dt_SI^2))^(1/2); 
-        row.L_lines = row.v_lines*row.dt_SI; 
-        row.dL_lines = ((row.v_lines^2)*(row.d_dt_SI^2))^(1/2); 
-        row.L_lines_cm = row.L_lines*100;
-        row.SE_L_lines_cm = row.dL_lines*100;
-        row.V_lines_cc = row.Q_mlmin*row.dt_SI/60; 
-        row.dV_lines_cc = row.Q_mlmin*row.d_dt_SI/60; 
-        row.V_lines_SI = row.V_lines_cc*(10^-6);
-        row.SE_V_lines_SI = row.dV_lines_cc*(10^-6);
+        row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
 
         method_results.dt_free_wfit = [method_results.dt_free_wfit; row];
 
@@ -142,57 +92,7 @@ for i = 1:length(filedataExp.Key)
         KL_out = fit_dispersion_dt_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,p_guess,ones(size(C1_vals))); %non weighted (error is 1, hence w = 1./(dC.^2) = 1)
 
         % exp params for table
-        row = table();
-        row.Key = filedataExp.Key(i);
-        row.Fluid1 = filedataExp.Fluid1(i);
-        row.Fluid2 = filedataExp.Fluid2(i);
-        row.T_C = filedataExp.T(i);
-        row.P_psig = filedataExp.P(i);
-        row.Q_mlmin = filedataExp.Q(i);
-        row.Run = filedataExp.Run(i);
-        row.C1init_molpc = filedataExp.C1init(i);
-        row.C1j_molpc = filedataExp.C1j(i);
-        row.D_in = filedataExp.D(i);
-        row.L_in = filedataExp.L(i);
-        row.phi = filedataExp.phi(i);
-        row.K_mD = filedataExp.K(i);
-        % exp params for table
-        row.T_mean = mean(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-        row.T_std = std(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-        row.u_cmmin = u*60*(10^2);
-        row.L_cm = L*100;
-        row.D0_SI = expProcData.(filedataExp.Key(i)).exp_params.D12_cm2min/(60*10^4);
-        row.dD0_SI = expProcData.(filedataExp.Key(i)).exp_params.dD12_cm2min/(60*10^4); % error
-        row.D0_cm2min = row.D0_SI*60*10^4;
-        row.dD0_cm2min = row.dD0_SI*60*10^4;
-        row.Pe_D0 = u*L/row.D0_SI;
-        row.dPe_D0 = (((-u*L/(row.D0_SI^2))^2)*(row.dD0_SI^2))^(1/2); % error
-        row.v_lines = expProcData.(filedataExp.Key(i)).exp_params.v_lines_SI;
-        row.KL_lines = expProcData.(filedataExp.Key(i)).exp_params.KL_lines_SI;
-
-        % results 
-        row.KL_SI = KL_out.KL;
-        row.dKL_SI = KL_out.dKL;
-        row.dt_SI = KL_out.dt;
-        row.d_dt_SI = KL_out.ddt;
-        row.RMSE = KL_out.RMSE; 
-        row.R2 = KL_out.R2;
-        row.KL_cm2min = row.KL_SI*60*10^4;
-        row.SE_KL_cm2min = (row.dKL_SI)*60*10^4;
-        row.dt_min = row.dt_SI/60;
-        row.SE_dt_min = row.d_dt_SI/60;
-        row.Pe = u*L/row.KL_SI; 
-        row.dPe = (((-u*L*((row.KL_SI)^-2))^2)*(row.dKL_SI^2))^(1/2); 
-        row.dtD = u*row.dt_SI/L;  % respect to Vcore
-        row.d_dtD = (((u/L)^2)*(row.d_dt_SI^2))^(1/2); 
-        row.L_lines = row.v_lines*row.dt_SI; 
-        row.dL_lines = ((row.v_lines^2)*(row.d_dt_SI^2))^(1/2); 
-        row.L_lines_cm = row.L_lines*100;
-        row.SE_L_lines_cm = row.dL_lines*100;
-        row.V_lines_cc = row.Q_mlmin*row.dt_SI/60; 
-        row.dV_lines_cc = row.Q_mlmin*row.d_dt_SI/60; 
-        row.V_lines_SI = row.V_lines_cc*(10^-6);
-        row.SE_V_lines_SI = row.dV_lines_cc*(10^-6);
+        row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
 
         method_results.dt_free_nwfit = [method_results.dt_free_nwfit; row];
 
@@ -203,8 +103,6 @@ end
 
 %% Fitting dispersion to find KL short equation ADE
 % dt fixed
-
-fitting_results = table();
 
 for i = 1:length(filedataExp.Key)
     if filedataExp.Type(i) == "CF"
@@ -241,57 +139,7 @@ for i = 1:length(filedataExp.Key)
             KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals,Cmin,Cmax);
 
             % exp params for table
-            row = table();
-            row.Key = filedataExp.Key(i);
-            row.Fluid1 = filedataExp.Fluid1(i);
-            row.Fluid2 = filedataExp.Fluid2(i);
-            row.T_C = filedataExp.T(i);
-            row.P_psig = filedataExp.P(i);
-            row.Q_mlmin = filedataExp.Q(i);
-            row.Run = filedataExp.Run(i);
-            row.C1init_molpc = filedataExp.C1init(i);
-            row.C1j_molpc = filedataExp.C1j(i);
-            row.D_in = filedataExp.D(i);
-            row.L_in = filedataExp.L(i);
-            row.phi = filedataExp.phi(i);
-            row.K_mD = filedataExp.K(i);
-            % exp params for table
-            row.T_mean = mean(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-            row.T_std = std(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-            row.u_cmmin = u*60*(10^2);
-            row.L_cm = L*100;
-            row.D0_SI = expProcData.(filedataExp.Key(i)).exp_params.D12_cm2min/(60*10^4);
-            row.dD0_SI = expProcData.(filedataExp.Key(i)).exp_params.dD12_cm2min/(60*10^4); % error
-            row.D0_cm2min = row.D0_SI*60*10^4;
-            row.dD0_cm2min = row.dD0_SI*60*10^4;
-            row.Pe_D0 = u*L/row.D0_SI;
-            row.dPe_D0 = (((-u*L/(row.D0_SI^2))^2)*(row.dD0_SI^2))^(1/2); % error
-            row.v_lines = expProcData.(filedataExp.Key(i)).exp_params.v_lines_SI;
-            row.KL_lines = expProcData.(filedataExp.Key(i)).exp_params.KL_lines_SI;
-    
-            % results 
-            row.KL_SI = KL_out.KL;
-            row.dKL_SI = KL_out.dKL;
-            row.dt_SI = KL_out.dt;
-            row.d_dt_SI = KL_out.ddt;
-            row.RMSE = KL_out.RMSE; 
-            row.R2 = KL_out.R2;
-            row.KL_cm2min = row.KL_SI*60*10^4;
-            row.SE_KL_cm2min = (row.dKL_SI)*60*10^4;
-            row.dt_min = row.dt_SI/60;
-            row.SE_dt_min = row.d_dt_SI/60;
-            row.Pe = u*L/row.KL_SI; 
-            row.dPe = (((-u*L*((row.KL_SI)^-2))^2)*(row.dKL_SI^2))^(1/2); 
-            row.dtD = u*row.dt_SI/L;  % respect to Vcore
-            row.d_dtD = (((u/L)^2)*(row.d_dt_SI^2))^(1/2); 
-            row.L_lines = row.v_lines*row.dt_SI; 
-            row.dL_lines = ((row.v_lines^2)*(row.d_dt_SI^2))^(1/2); 
-            row.L_lines_cm = row.L_lines*100;
-            row.SE_L_lines_cm = row.dL_lines*100;
-            row.V_lines_cc = row.Q_mlmin*row.dt_SI/60; 
-            row.dV_lines_cc = row.Q_mlmin*row.d_dt_SI/60; 
-            row.V_lines_SI = row.V_lines_cc*(10^-6);
-            row.SE_V_lines_SI = row.dV_lines_cc*(10^-6);
+            row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
     
             method_results.dt_fixed_wfit_wdt_lim = [method_results.dt_fixed_wfit_wdt_lim; row];
 
@@ -303,57 +151,7 @@ for i = 1:length(filedataExp.Key)
             KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,ones(size(C1_vals)),Cmin,Cmax);
 
             % exp params for table
-            row = table();
-            row.Key = filedataExp.Key(i);
-            row.Fluid1 = filedataExp.Fluid1(i);
-            row.Fluid2 = filedataExp.Fluid2(i);
-            row.T_C = filedataExp.T(i);
-            row.P_psig = filedataExp.P(i);
-            row.Q_mlmin = filedataExp.Q(i);
-            row.Run = filedataExp.Run(i);
-            row.C1init_molpc = filedataExp.C1init(i);
-            row.C1j_molpc = filedataExp.C1j(i);
-            row.D_in = filedataExp.D(i);
-            row.L_in = filedataExp.L(i);
-            row.phi = filedataExp.phi(i);
-            row.K_mD = filedataExp.K(i);
-            % exp params for table
-            row.T_mean = mean(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-            row.T_std = std(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-            row.u_cmmin = u*60*(10^2);
-            row.L_cm = L*100;
-            row.D0_SI = expProcData.(filedataExp.Key(i)).exp_params.D12_cm2min/(60*10^4);
-            row.dD0_SI = expProcData.(filedataExp.Key(i)).exp_params.dD12_cm2min/(60*10^4); % error
-            row.D0_cm2min = row.D0_SI*60*10^4;
-            row.dD0_cm2min = row.dD0_SI*60*10^4;
-            row.Pe_D0 = u*L/row.D0_SI;
-            row.dPe_D0 = (((-u*L/(row.D0_SI^2))^2)*(row.dD0_SI^2))^(1/2); % error
-            row.v_lines = expProcData.(filedataExp.Key(i)).exp_params.v_lines_SI;
-            row.KL_lines = expProcData.(filedataExp.Key(i)).exp_params.KL_lines_SI;
-    
-            % results 
-            row.KL_SI = KL_out.KL;
-            row.dKL_SI = KL_out.dKL;
-            row.dt_SI = KL_out.dt;
-            row.d_dt_SI = KL_out.ddt;
-            row.RMSE = KL_out.RMSE; 
-            row.R2 = KL_out.R2;
-            row.KL_cm2min = row.KL_SI*60*10^4;
-            row.SE_KL_cm2min = (row.dKL_SI)*60*10^4;
-            row.dt_min = row.dt_SI/60;
-            row.SE_dt_min = row.d_dt_SI/60;
-            row.Pe = u*L/row.KL_SI; 
-            row.dPe = (((-u*L*((row.KL_SI)^-2))^2)*(row.dKL_SI^2))^(1/2); 
-            row.dtD = u*row.dt_SI/L;  % respect to Vcore
-            row.d_dtD = (((u/L)^2)*(row.d_dt_SI^2))^(1/2); 
-            row.L_lines = row.v_lines*row.dt_SI; 
-            row.dL_lines = ((row.v_lines^2)*(row.d_dt_SI^2))^(1/2); 
-            row.L_lines_cm = row.L_lines*100;
-            row.SE_L_lines_cm = row.dL_lines*100;
-            row.V_lines_cc = row.Q_mlmin*row.dt_SI/60; 
-            row.dV_lines_cc = row.Q_mlmin*row.d_dt_SI/60; 
-            row.V_lines_SI = row.V_lines_cc*(10^-6);
-            row.SE_V_lines_SI = row.dV_lines_cc*(10^-6);
+            row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
     
             method_results.dt_fixed_nwfit_wdt_lim = [method_results.dt_fixed_nwfit_wdt_lim; row];
 
@@ -364,57 +162,7 @@ for i = 1:length(filedataExp.Key)
             KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals,0,1);
 
             % exp params for table
-            row = table();
-            row.Key = filedataExp.Key(i);
-            row.Fluid1 = filedataExp.Fluid1(i);
-            row.Fluid2 = filedataExp.Fluid2(i);
-            row.T_C = filedataExp.T(i);
-            row.P_psig = filedataExp.P(i);
-            row.Q_mlmin = filedataExp.Q(i);
-            row.Run = filedataExp.Run(i);
-            row.C1init_molpc = filedataExp.C1init(i);
-            row.C1j_molpc = filedataExp.C1j(i);
-            row.D_in = filedataExp.D(i);
-            row.L_in = filedataExp.L(i);
-            row.phi = filedataExp.phi(i);
-            row.K_mD = filedataExp.K(i);
-            % exp params for table
-            row.T_mean = mean(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-            row.T_std = std(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-            row.u_cmmin = u*60*(10^2);
-            row.L_cm = L*100;
-            row.D0_SI = expProcData.(filedataExp.Key(i)).exp_params.D12_cm2min/(60*10^4);
-            row.dD0_SI = expProcData.(filedataExp.Key(i)).exp_params.dD12_cm2min/(60*10^4); % error
-            row.D0_cm2min = row.D0_SI*60*10^4;
-            row.dD0_cm2min = row.dD0_SI*60*10^4;
-            row.Pe_D0 = u*L/row.D0_SI;
-            row.dPe_D0 = (((-u*L/(row.D0_SI^2))^2)*(row.dD0_SI^2))^(1/2); % error
-            row.v_lines = expProcData.(filedataExp.Key(i)).exp_params.v_lines_SI;
-            row.KL_lines = expProcData.(filedataExp.Key(i)).exp_params.KL_lines_SI;
-    
-            % results 
-            row.KL_SI = KL_out.KL;
-            row.dKL_SI = KL_out.dKL;
-            row.dt_SI = KL_out.dt;
-            row.d_dt_SI = KL_out.ddt;
-            row.RMSE = KL_out.RMSE; 
-            row.R2 = KL_out.R2;
-            row.KL_cm2min = row.KL_SI*60*10^4;
-            row.SE_KL_cm2min = (row.dKL_SI)*60*10^4;
-            row.dt_min = row.dt_SI/60;
-            row.SE_dt_min = row.d_dt_SI/60;
-            row.Pe = u*L/row.KL_SI; 
-            row.dPe = (((-u*L*((row.KL_SI)^-2))^2)*(row.dKL_SI^2))^(1/2); 
-            row.dtD = u*row.dt_SI/L;  % respect to Vcore
-            row.d_dtD = (((u/L)^2)*(row.d_dt_SI^2))^(1/2); 
-            row.L_lines = row.v_lines*row.dt_SI; 
-            row.dL_lines = ((row.v_lines^2)*(row.d_dt_SI^2))^(1/2); 
-            row.L_lines_cm = row.L_lines*100;
-            row.SE_L_lines_cm = row.dL_lines*100;
-            row.V_lines_cc = row.Q_mlmin*row.dt_SI/60; 
-            row.dV_lines_cc = row.Q_mlmin*row.d_dt_SI/60; 
-            row.V_lines_SI = row.V_lines_cc*(10^-6);
-            row.SE_V_lines_SI = row.dV_lines_cc*(10^-6);
+            row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
     
             method_results.dt_fixed_wfit_wdt_full = [method_results.dt_fixed_wfit_wdt_full; row];
 
@@ -425,57 +173,7 @@ for i = 1:length(filedataExp.Key)
             KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,ones(size(C1_vals)),0,1);
 
             % exp params for table
-            row = table();
-            row.Key = filedataExp.Key(i);
-            row.Fluid1 = filedataExp.Fluid1(i);
-            row.Fluid2 = filedataExp.Fluid2(i);
-            row.T_C = filedataExp.T(i);
-            row.P_psig = filedataExp.P(i);
-            row.Q_mlmin = filedataExp.Q(i);
-            row.Run = filedataExp.Run(i);
-            row.C1init_molpc = filedataExp.C1init(i);
-            row.C1j_molpc = filedataExp.C1j(i);
-            row.D_in = filedataExp.D(i);
-            row.L_in = filedataExp.L(i);
-            row.phi = filedataExp.phi(i);
-            row.K_mD = filedataExp.K(i);
-            % exp params for table
-            row.T_mean = mean(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-            row.T_std = std(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-            row.u_cmmin = u*60*(10^2);
-            row.L_cm = L*100;
-            row.D0_SI = expProcData.(filedataExp.Key(i)).exp_params.D12_cm2min/(60*10^4);
-            row.dD0_SI = expProcData.(filedataExp.Key(i)).exp_params.dD12_cm2min/(60*10^4); % error
-            row.D0_cm2min = row.D0_SI*60*10^4;
-            row.dD0_cm2min = row.dD0_SI*60*10^4;
-            row.Pe_D0 = u*L/row.D0_SI;
-            row.dPe_D0 = (((-u*L/(row.D0_SI^2))^2)*(row.dD0_SI^2))^(1/2); % error
-            row.v_lines = expProcData.(filedataExp.Key(i)).exp_params.v_lines_SI;
-            row.KL_lines = expProcData.(filedataExp.Key(i)).exp_params.KL_lines_SI;
-    
-            % results 
-            row.KL_SI = KL_out.KL;
-            row.dKL_SI = KL_out.dKL;
-            row.dt_SI = KL_out.dt;
-            row.d_dt_SI = KL_out.ddt;
-            row.RMSE = KL_out.RMSE; 
-            row.R2 = KL_out.R2;
-            row.KL_cm2min = row.KL_SI*60*10^4;
-            row.SE_KL_cm2min = (row.dKL_SI)*60*10^4;
-            row.dt_min = row.dt_SI/60;
-            row.SE_dt_min = row.d_dt_SI/60;
-            row.Pe = u*L/row.KL_SI; 
-            row.dPe = (((-u*L*((row.KL_SI)^-2))^2)*(row.dKL_SI^2))^(1/2); 
-            row.dtD = u*row.dt_SI/L;  % respect to Vcore
-            row.d_dtD = (((u/L)^2)*(row.d_dt_SI^2))^(1/2); 
-            row.L_lines = row.v_lines*row.dt_SI; 
-            row.dL_lines = ((row.v_lines^2)*(row.d_dt_SI^2))^(1/2); 
-            row.L_lines_cm = row.L_lines*100;
-            row.SE_L_lines_cm = row.dL_lines*100;
-            row.V_lines_cc = row.Q_mlmin*row.dt_SI/60; 
-            row.dV_lines_cc = row.Q_mlmin*row.d_dt_SI/60; 
-            row.V_lines_SI = row.V_lines_cc*(10^-6);
-            row.SE_V_lines_SI = row.dV_lines_cc*(10^-6);
+            row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
     
             method_results.dt_fixed_nwfit_wdt_full = [method_results.dt_fixed_nwfit_wdt_full; row];
 
@@ -498,57 +196,7 @@ for i = 1:length(filedataExp.Key)
             KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals,Cmin,Cmax);
 
             % exp params for table
-            row = table();
-            row.Key = filedataExp.Key(i);
-            row.Fluid1 = filedataExp.Fluid1(i);
-            row.Fluid2 = filedataExp.Fluid2(i);
-            row.T_C = filedataExp.T(i);
-            row.P_psig = filedataExp.P(i);
-            row.Q_mlmin = filedataExp.Q(i);
-            row.Run = filedataExp.Run(i);
-            row.C1init_molpc = filedataExp.C1init(i);
-            row.C1j_molpc = filedataExp.C1j(i);
-            row.D_in = filedataExp.D(i);
-            row.L_in = filedataExp.L(i);
-            row.phi = filedataExp.phi(i);
-            row.K_mD = filedataExp.K(i);
-            % exp params for table
-            row.T_mean = mean(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-            row.T_std = std(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-            row.u_cmmin = u*60*(10^2);
-            row.L_cm = L*100;
-            row.D0_SI = expProcData.(filedataExp.Key(i)).exp_params.D12_cm2min/(60*10^4);
-            row.dD0_SI = expProcData.(filedataExp.Key(i)).exp_params.dD12_cm2min/(60*10^4); % error
-            row.D0_cm2min = row.D0_SI*60*10^4;
-            row.dD0_cm2min = row.dD0_SI*60*10^4;
-            row.Pe_D0 = u*L/row.D0_SI;
-            row.dPe_D0 = (((-u*L/(row.D0_SI^2))^2)*(row.dD0_SI^2))^(1/2); % error
-            row.v_lines = expProcData.(filedataExp.Key(i)).exp_params.v_lines_SI;
-            row.KL_lines = expProcData.(filedataExp.Key(i)).exp_params.KL_lines_SI;
-    
-            % results 
-            row.KL_SI = KL_out.KL;
-            row.dKL_SI = KL_out.dKL;
-            row.dt_SI = KL_out.dt;
-            row.d_dt_SI = KL_out.ddt;
-            row.RMSE = KL_out.RMSE; 
-            row.R2 = KL_out.R2;
-            row.KL_cm2min = row.KL_SI*60*10^4;
-            row.SE_KL_cm2min = (row.dKL_SI)*60*10^4;
-            row.dt_min = row.dt_SI/60;
-            row.SE_dt_min = row.d_dt_SI/60;
-            row.Pe = u*L/row.KL_SI; 
-            row.dPe = (((-u*L*((row.KL_SI)^-2))^2)*(row.dKL_SI^2))^(1/2); 
-            row.dtD = u*row.dt_SI/L;  % respect to Vcore
-            row.d_dtD = (((u/L)^2)*(row.d_dt_SI^2))^(1/2); 
-            row.L_lines = row.v_lines*row.dt_SI; 
-            row.dL_lines = ((row.v_lines^2)*(row.d_dt_SI^2))^(1/2); 
-            row.L_lines_cm = row.L_lines*100;
-            row.SE_L_lines_cm = row.dL_lines*100;
-            row.V_lines_cc = row.Q_mlmin*row.dt_SI/60; 
-            row.dV_lines_cc = row.Q_mlmin*row.d_dt_SI/60; 
-            row.V_lines_SI = row.V_lines_cc*(10^-6);
-            row.SE_V_lines_SI = row.dV_lines_cc*(10^-6);
+            row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
     
             method_results.dt_fixed_wfit_nwdt_lim = [method_results.dt_fixed_wfit_nwdt_lim; row];
 
@@ -560,179 +208,29 @@ for i = 1:length(filedataExp.Key)
             KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,ones(size(C1_vals)),Cmin,Cmax);
 
             % exp params for table
-            row = table();
-            row.Key = filedataExp.Key(i);
-            row.Fluid1 = filedataExp.Fluid1(i);
-            row.Fluid2 = filedataExp.Fluid2(i);
-            row.T_C = filedataExp.T(i);
-            row.P_psig = filedataExp.P(i);
-            row.Q_mlmin = filedataExp.Q(i);
-            row.Run = filedataExp.Run(i);
-            row.C1init_molpc = filedataExp.C1init(i);
-            row.C1j_molpc = filedataExp.C1j(i);
-            row.D_in = filedataExp.D(i);
-            row.L_in = filedataExp.L(i);
-            row.phi = filedataExp.phi(i);
-            row.K_mD = filedataExp.K(i);
-            % exp params for table
-            row.T_mean = mean(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-            row.T_std = std(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-            row.u_cmmin = u*60*(10^2);
-            row.L_cm = L*100;
-            row.D0_SI = expProcData.(filedataExp.Key(i)).exp_params.D12_cm2min/(60*10^4);
-            row.dD0_SI = expProcData.(filedataExp.Key(i)).exp_params.dD12_cm2min/(60*10^4); % error
-            row.D0_cm2min = row.D0_SI*60*10^4;
-            row.dD0_cm2min = row.dD0_SI*60*10^4;
-            row.Pe_D0 = u*L/row.D0_SI;
-            row.dPe_D0 = (((-u*L/(row.D0_SI^2))^2)*(row.dD0_SI^2))^(1/2); % error
-            row.v_lines = expProcData.(filedataExp.Key(i)).exp_params.v_lines_SI;
-            row.KL_lines = expProcData.(filedataExp.Key(i)).exp_params.KL_lines_SI;
-    
-            % results 
-            row.KL_SI = KL_out.KL;
-            row.dKL_SI = KL_out.dKL;
-            row.dt_SI = KL_out.dt;
-            row.d_dt_SI = KL_out.ddt;
-            row.RMSE = KL_out.RMSE; 
-            row.R2 = KL_out.R2;
-            row.KL_cm2min = row.KL_SI*60*10^4;
-            row.SE_KL_cm2min = (row.dKL_SI)*60*10^4;
-            row.dt_min = row.dt_SI/60;
-            row.SE_dt_min = row.d_dt_SI/60;
-            row.Pe = u*L/row.KL_SI; 
-            row.dPe = (((-u*L*((row.KL_SI)^-2))^2)*(row.dKL_SI^2))^(1/2); 
-            row.dtD = u*row.dt_SI/L;  % respect to Vcore
-            row.d_dtD = (((u/L)^2)*(row.d_dt_SI^2))^(1/2); 
-            row.L_lines = row.v_lines*row.dt_SI; 
-            row.dL_lines = ((row.v_lines^2)*(row.d_dt_SI^2))^(1/2); 
-            row.L_lines_cm = row.L_lines*100;
-            row.SE_L_lines_cm = row.dL_lines*100;
-            row.V_lines_cc = row.Q_mlmin*row.dt_SI/60; 
-            row.dV_lines_cc = row.Q_mlmin*row.d_dt_SI/60; 
-            row.V_lines_SI = row.V_lines_cc*(10^-6);
-            row.SE_V_lines_SI = row.dV_lines_cc*(10^-6);
+            row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
     
             method_results.dt_fixed_nwfit_nwdt_lim = [method_results.dt_fixed_nwfit_nwdt_lim; row];
 
             expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwfit_nwdt_lim = 100*KL_out.C_fit;
 
-            % %% dt fixed weigthed fit wit dt weigthed full
-            % % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
-            % KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals,0,1);
-            % 
-            % % exp params for table
-            % row = table();
-            % row.Key = filedataExp.Key(i);
-            % row.Fluid1 = filedataExp.Fluid1(i);
-            % row.Fluid2 = filedataExp.Fluid2(i);
-            % row.T_C = filedataExp.T(i);
-            % row.P_psig = filedataExp.P(i);
-            % row.Q_mlmin = filedataExp.Q(i);
-            % row.Run = filedataExp.Run(i);
-            % row.C1init_molpc = filedataExp.C1init(i);
-            % row.C1j_molpc = filedataExp.C1j(i);
-            % row.D_in = filedataExp.D(i);
-            % row.L_in = filedataExp.L(i);
-            % row.phi = filedataExp.phi(i);
-            % row.K_mD = filedataExp.K(i);
-            % % exp params for table
-            % row.T_mean = mean(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-            % row.T_std = std(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-            % row.u_cmmin = u*60*(10^2);
-            % row.L_cm = L*100;
-            % row.D0_SI = expProcData.(filedataExp.Key(i)).exp_params.D12_cm2min/(60*10^4);
-            % row.dD0_SI = expProcData.(filedataExp.Key(i)).exp_params.dD12_cm2min/(60*10^4); % error
-            % row.D0_cm2min = row.D0_SI*60*10^4;
-            % row.dD0_cm2min = row.dD0_SI*60*10^4;
-            % row.Pe_D0 = u*L/row.D0_SI;
-            % row.dPe_D0 = (((-u*L/(row.D0_SI^2))^2)*(row.dD0_SI^2))^(1/2); % error
-            % row.v_lines = expProcData.(filedataExp.Key(i)).exp_params.v_lines_SI;
-            % row.KL_lines = expProcData.(filedataExp.Key(i)).exp_params.KL_lines_SI;
-            % 
-            % % results 
-            % row.KL_SI = KL_out.KL;
-            % row.dKL_SI = KL_out.dKL;
-            % row.dt_SI = KL_out.dt;
-            % row.d_dt_SI = KL_out.ddt;
-            % row.RMSE = KL_out.RMSE; 
-            % row.R2 = KL_out.R2;
-            % row.KL_cm2min = row.KL_SI*60*10^4;
-            % row.SE_KL_cm2min = (row.dKL_SI)*60*10^4;
-            % row.dt_min = row.dt_SI/60;
-            % row.SE_dt_min = row.d_dt_SI/60;
-            % row.Pe = u*L/row.KL_SI; 
-            % row.dPe = (((-u*L*((row.KL_SI)^-2))^2)*(row.dKL_SI^2))^(1/2); 
-            % row.dtD = u*row.dt_SI/L;  % respect to Vcore
-            % row.d_dtD = (((u/L)^2)*(row.d_dt_SI^2))^(1/2); 
-            % row.L_lines = row.v_lines*row.dt_SI; 
-            % row.dL_lines = ((row.v_lines^2)*(row.d_dt_SI^2))^(1/2); 
-            % row.L_lines_cm = row.L_lines*100;
-            % row.SE_L_lines_cm = row.dL_lines*100;
-            % row.V_lines_cc = row.Q_mlmin*row.dt_SI/60; 
-            % row.dV_lines_cc = row.Q_mlmin*row.d_dt_SI/60; 
-            % row.V_lines_SI = row.V_lines_cc*(10^-6);
-            % row.SE_V_lines_SI = row.dV_lines_cc*(10^-6);
-            % 
-            % method_results.dt_fixed_wfit_nwdt_full = [method_results.dt_fixed_wfit_nwdt_full; row];
-            % 
-            % expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wfit_nwdt_full = 100*KL_out.C_fit;
+            %% dt fixed weigthed fit wit dt weigthed full
+            % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
+            KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals,0,1);
+
+            % exp params for table
+            row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
+
+            method_results.dt_fixed_wfit_nwdt_full = [method_results.dt_fixed_wfit_nwdt_full; row];
+
+            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wfit_nwdt_full = 100*KL_out.C_fit;
 
             %% dt fixed non weigthed fit wit dt non weigthed full
             % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
             KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,ones(size(C1_vals)),0,1);
 
             % exp params for table
-            row = table();
-            row.Key = filedataExp.Key(i);
-            row.Fluid1 = filedataExp.Fluid1(i);
-            row.Fluid2 = filedataExp.Fluid2(i);
-            row.T_C = filedataExp.T(i);
-            row.P_psig = filedataExp.P(i);
-            row.Q_mlmin = filedataExp.Q(i);
-            row.Run = filedataExp.Run(i);
-            row.C1init_molpc = filedataExp.C1init(i);
-            row.C1j_molpc = filedataExp.C1j(i);
-            row.D_in = filedataExp.D(i);
-            row.L_in = filedataExp.L(i);
-            row.phi = filedataExp.phi(i);
-            row.K_mD = filedataExp.K(i);
-            % exp params for table
-            row.T_mean = mean(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-            row.T_std = std(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-            row.u_cmmin = u*60*(10^2);
-            row.L_cm = L*100;
-            row.D0_SI = expProcData.(filedataExp.Key(i)).exp_params.D12_cm2min/(60*10^4);
-            row.dD0_SI = expProcData.(filedataExp.Key(i)).exp_params.dD12_cm2min/(60*10^4); % error
-            row.D0_cm2min = row.D0_SI*60*10^4;
-            row.dD0_cm2min = row.dD0_SI*60*10^4;
-            row.Pe_D0 = u*L/row.D0_SI;
-            row.dPe_D0 = (((-u*L/(row.D0_SI^2))^2)*(row.dD0_SI^2))^(1/2); % error
-            row.v_lines = expProcData.(filedataExp.Key(i)).exp_params.v_lines_SI;
-            row.KL_lines = expProcData.(filedataExp.Key(i)).exp_params.KL_lines_SI;
-    
-            % results 
-            row.KL_SI = KL_out.KL;
-            row.dKL_SI = KL_out.dKL;
-            row.dt_SI = KL_out.dt;
-            row.d_dt_SI = KL_out.ddt;
-            row.RMSE = KL_out.RMSE; 
-            row.R2 = KL_out.R2;
-            row.KL_cm2min = row.KL_SI*60*10^4;
-            row.SE_KL_cm2min = (row.dKL_SI)*60*10^4;
-            row.dt_min = row.dt_SI/60;
-            row.SE_dt_min = row.d_dt_SI/60;
-            row.Pe = u*L/row.KL_SI; 
-            row.dPe = (((-u*L*((row.KL_SI)^-2))^2)*(row.dKL_SI^2))^(1/2); 
-            row.dtD = u*row.dt_SI/L;  % respect to Vcore
-            row.d_dtD = (((u/L)^2)*(row.d_dt_SI^2))^(1/2); 
-            row.L_lines = row.v_lines*row.dt_SI; 
-            row.dL_lines = ((row.v_lines^2)*(row.d_dt_SI^2))^(1/2); 
-            row.L_lines_cm = row.L_lines*100;
-            row.SE_L_lines_cm = row.dL_lines*100;
-            row.V_lines_cc = row.Q_mlmin*row.dt_SI/60; 
-            row.dV_lines_cc = row.Q_mlmin*row.d_dt_SI/60; 
-            row.V_lines_SI = row.V_lines_cc*(10^-6);
-            row.SE_V_lines_SI = row.dV_lines_cc*(10^-6);
+            row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
     
             method_results.dt_fixed_nwfit_nwdt_full = [method_results.dt_fixed_nwfit_nwdt_full; row];
 
