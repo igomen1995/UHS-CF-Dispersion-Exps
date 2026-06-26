@@ -43,9 +43,9 @@ function row = buildRow_procResults(filedataExp, expProcData, KL_out, i)
     row.RMSE = KL_out.RMSE; 
     row.R2 = KL_out.R2;
     row.KL_cm2min = row.KL_SI*60*10^4;
-    row.SE_KL_cm2min = (row.dKL_SI)*60*10^4;
+    row.dKL_cm2min = (row.dKL_SI)*60*10^4;
     row.dt_min = row.dt_SI/60;
-    row.SE_dt_min = row.d_dt_SI/60;
+    row.d_dt_min = row.d_dt_SI/60;
     row.Pe = u*L/row.KL_SI; 
     row.dPe = (((-u*L*((row.KL_SI)^-2))^2)*(row.dKL_SI^2))^(1/2); 
     row.dtD = u*row.dt_SI/L;  % respect to Vcore
@@ -53,11 +53,12 @@ function row = buildRow_procResults(filedataExp, expProcData, KL_out, i)
     row.L_lines = row.v_lines*row.dt_SI; 
     row.dL_lines = ((row.v_lines^2)*(row.d_dt_SI^2))^(1/2); 
     row.L_lines_cm = row.L_lines*100;
-    row.SE_L_lines_cm = row.dL_lines*100;
+    row.d_L_lines_cm = row.dL_lines*100;
     row.V_lines_cc = row.Q_mlmin*row.dt_SI/60; 
     row.dV_lines_cc = row.Q_mlmin*row.d_dt_SI/60; 
     row.V_lines_SI = row.V_lines_cc*(10^-6);
-    row.SE_V_lines_SI = row.dV_lines_cc*(10^-6);
+    row.d_V_lines_SI = row.dV_lines_cc*(10^-6);
+    row.C_fit = {KL_out.C_fit}; 
     
 end
 

@@ -134,7 +134,7 @@ for i = 1:length(filedataExp.Key)
             dt_fixed = dtD_guess*L/u; %  dt estimate according to velocity of each experiment
             p_guess = sqrt(method_results.dt_free_wfit.KL_SI);
 
-            %% dt fixed weigthed fit wit dt weigthed limited C
+            % dt fixed weigthed fit wit dt weigthed limited C
             % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
             KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals,Cmin,Cmax);
 
@@ -145,7 +145,7 @@ for i = 1:length(filedataExp.Key)
 
             expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wfit_wdt_lim = 100*KL_out.C_fit;
 
-            %% dt fixed non weigthed fit wit dt weigthed limited C
+            % dt fixed non weigthed fit wit dt weigthed limited C
 
             % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
             KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,ones(size(C1_vals)),Cmin,Cmax);
@@ -157,7 +157,7 @@ for i = 1:length(filedataExp.Key)
 
             expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwfit_wdt_lim = 100*KL_out.C_fit;
 
-            %% dt fixed weigthed fit wit dt weigthed full
+            % dt fixed weigthed fit wit dt weigthed full
             % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
             KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals,0,1);
 
@@ -168,7 +168,7 @@ for i = 1:length(filedataExp.Key)
 
             expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wfit_wdt_full = 100*KL_out.C_fit;
 
-            %% dt fixed non weigthed fit wit dt weigthed full
+            % dt fixed non weigthed fit wit dt weigthed full
             % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
             KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,ones(size(C1_vals)),0,1);
 
@@ -191,7 +191,7 @@ for i = 1:length(filedataExp.Key)
             dt_fixed = dtD_guess*L/u; %  dt estimate according to velocity of each experiment
             p_guess = sqrt(method_results.dt_free_nwfit.KL_SI);
 
-            %% dt fixed weigthed fit wit dt non weigthed limited C
+            % dt fixed weigthed fit wit dt non weigthed limited C
             % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
             KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals,Cmin,Cmax);
 
@@ -202,7 +202,7 @@ for i = 1:length(filedataExp.Key)
 
             expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wfit_nwdt_lim = 100*KL_out.C_fit;
 
-            %% dt fixed non weigthed fit wit dt non weigthed limited C
+            % dt fixed non weigthed fit wit dt non weigthed limited C
 
             % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
             KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,ones(size(C1_vals)),Cmin,Cmax);
@@ -214,7 +214,7 @@ for i = 1:length(filedataExp.Key)
 
             expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwfit_nwdt_lim = 100*KL_out.C_fit;
 
-            %% dt fixed weigthed fit wit dt weigthed full
+            % dt fixed weigthed fit wit dt weigthed full
             % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
             KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals,0,1);
 
@@ -225,7 +225,7 @@ for i = 1:length(filedataExp.Key)
 
             expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wfit_nwdt_full = 100*KL_out.C_fit;
 
-            %% dt fixed non weigthed fit wit dt non weigthed full
+            % dt fixed non weigthed fit wit dt non weigthed full
             % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
             KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,ones(size(C1_vals)),0,1);
 
@@ -239,9 +239,511 @@ for i = 1:length(filedataExp.Key)
     end
 end
 
-% %% Select best method (less R2 average) to estimate alpha and tortuosity
-% 
-% 
+%% Select the valid and best method results
+method_names = fieldnames(method_results);
+nExp = height(filedataExp);
+
+valid_methods = [];
+mean_R2 = [];
+
+
+for m = 1:length(method_names)
+
+    method_table = method_results.(method_names{m});
+
+    valid = isfinite(method_table.KL_SI) & isfinite(method_table.R2) & isfinite(method_table.RMSE);
+
+    if all(valid)
+        valid_methods = [valid_methods; string(method_names{m})];
+        mean_R2 = [mean_R2; mean(method_table.R2)];
+    end
+end
+
+% Select best method
+[~, idx_best] = max(mean_R2);
+best_method = valid_methods(idx_best);
+
+disp("Best method: " + best_method)
+
+% Store best fit in expProcData
+best_method_table = method_results.(best_method);
+for i = 1:length(filedataExp.Key)
+
+    key = filedataExp.Key(i);
+
+    row_best = best_method_table(i,:);
+
+    expProcData.(key).results = row_best;
+    expProcData.(key).results.model = best_method;
+
+    expProcData.(key).BT.C_fit_best = ...
+        100 * best_method_table.C_fit{i};
+end
+
+%% Plotting KL results
+% Fitting and experimental data all CF plot all methods
+
+colors = parula(length(method_names));
+
+for i = 1:length(filedataExp.Key)
+    figure
+    scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed, ...
+        expProcData.(filedataExp.Key(i)).BT.Ci,10,'filled', ...
+        'MarkerFaceColor','red','DisplayName','Experimental Data')
+    hold on
+    for j = 1:length(method_names)
+        method_results_table = method_results.(method_names{j});
+        plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed, ...
+            method_results_table.C_fit{i}*100,'LineWidth',1.5, ...
+            'Color', colors(j,:), ...
+            'DisplayName',method_names{j})
+    end
+    % KL best
+    plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed, ...
+    expProcData.(filedataExp.Key(i)).BT.C_fit_best,'LineWidth',1.5, ...
+    'Color', 'k', 'DisplayName',"BT model best fitting - " +  expProcData.(filedataExp.Key(i)).results.model)
+    xlabel('Time elapsed [hh:mm:ss]');
+    xtickformat('hh:mm:ss')
+    ylabel('Molar concentration C_1 [mol %]');
+    ylim([-0.1,100.1]);
+    title(filedataExp.Key(i) + " fitting", 'Interpreter', 'none')
+    grid on;
+    legend('Location','southeast','Interpreter','none');
+    saveas(gcf,pathExportAll + filedataExp.Key(i) + "_fittingAll",'png')
+    savefig(gcf,pathExportAll + filedataExp.Key(i) + "_fittingAll")
+end
+
+% only best
+for i = 1:length(filedataExp.Key)
+    figure
+    scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed, ...
+        expProcData.(filedataExp.Key(i)).BT.Ci,10,'filled', ...
+        'MarkerFaceColor','red','DisplayName','Experimental Data')
+    hold on
+    % KL best
+    plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed, ...
+    expProcData.(filedataExp.Key(i)).BT.C_fit_best,'LineWidth',1.5, ...
+    'Color', 'k', 'DisplayName',"BT model best fitting - " +  expProcData.(filedataExp.Key(i)).results.model)
+    xlabel('Time elapsed [hh:mm:ss]');
+    xtickformat('hh:mm:ss')
+    ylabel('Molar concentration C_1 [mol %]');
+    ylim([-0.1,100.1]);
+    title(filedataExp.Key(i) + " fitting", 'Interpreter', 'none')
+    grid on;
+    legend('Location','southeast','Interpreter','none');
+    saveas(gcf,pathExportAll + filedataExp.Key(i) + "_fitting",'png')
+    savefig(gcf,pathExportAll + filedataExp.Key(i) + "_fitting")
+end
+
+
+%% Fitting and experimental data all CF plot dimensionless
+
+% Dimensionless only best
+for i = 1:length(filedataExp.Key)
+    figure
+    scatter(expProcData.(filedataExp.Key(i)).BT.tD, ...
+        expProcData.(filedataExp.Key(i)).BT.CDi,10,'filled', ...
+        'MarkerFaceColor','red','DisplayName','Experimental Data')
+    hold on
+    % KL best
+    plot(expProcData.(filedataExp.Key(i)).BT.tD, ...
+    expProcData.(filedataExp.Key(i)).BT.C_fit_best/100,'LineWidth',1.5, ...
+    'Color', 'k', 'DisplayName',"BT model best fitting - " +  expProcData.(filedataExp.Key(i)).results.model)
+    xlabel('Dimensionless Time [-]');
+    % xlim([0,2]);
+    ylabel('C_{D}[-]');
+    ylim([-0.001,1.001]);
+    title(filedataExp.Key(i) + " dimensionless fitting", 'Interpreter', 'none')
+    grid on;
+    legend('Location','southeast');
+    saveas(gcf,pathExportAll + filedataExp.Key(i) + "_dimless_fitting",'png')
+    savefig(gcf,pathExportAll + filedataExp.Key(i) + "_dimless_fitting")
+end
+
+
+% Fitting and experimental data all CF plot dimensionless total
+
+% Dimensionless only best
+for i = 1:length(filedataExp.Key)
+    figure
+    scatter(expProcData.(filedataExp.Key(i)).BT.tDtotal, ...
+        expProcData.(filedataExp.Key(i)).BT.CDi,10,'filled', ...
+        'MarkerFaceColor','red','DisplayName','Experimental Data')
+    hold on
+    % KL best
+    plot(expProcData.(filedataExp.Key(i)).BT.tDtotal, ...
+    expProcData.(filedataExp.Key(i)).BT.C_fit_best/100,'LineWidth',1.5, ...
+    'Color', 'k', 'DisplayName',"BT model best fitting - " +  expProcData.(filedataExp.Key(i)).results.model)
+    xlabel('Dimensionless Time [-]');
+    % xlim([0,2]);
+    ylabel('C_{D}[-]');
+    ylim([-0.001,1.001]);
+    title(filedataExp.Key(i) + " dimensionless fitting", 'Interpreter', 'none')
+    grid on;
+    legend(["Experimental data", "BT model fitting"],'Location','southeast');
+    saveas(gcf,pathExportAll + filedataExp.Key(i) + "_dimlessTotal_fitting",'png')
+    savefig(gcf,pathExportAll + filedataExp.Key(i) + "_dimlessTotal_fitting")
+end
+
+%% Fitting and experimental data all CF plot
+
+colors = orderedcolors("glow");
+colorsdark = orderedcolors("earth"); 
+
+% empty objects
+h1 = gobjects(length(filedataExp.Key),1);
+h2 = gobjects(length(filedataExp.Key),1);
+h_titles = gobjects(length(filedataExp.Key),1);
+
+Fluid1_unique = unique(filedataExp.Fluid1);
+Fluid2_unique = unique(filedataExp.Fluid2);
+T_unique = unique(filedataExp.T);
+P_unique = unique(filedataExp.P);
+
+for j = 1:length(Fluid1_unique)
+    for jj = 1:length(Fluid2_unique)
+        for k = 1:length(T_unique)
+            for l = 1:length(P_unique)
+
+                figure
+                h = [];
+                h1 = [];
+                h2 = [];
+                h_titles = [];
+        
+                count = 0;
+        
+                for i = 1:length(filedataExp.Key)
+        
+                    if filedataExp.Fluid1(i) == Fluid1_unique(j) && filedataExp.Fluid2(i) == Fluid2_unique(jj) ...
+                            && filedataExp.T(k) == T_unique(j) && filedataExp.P(l) == P_unique(j)
+        
+                        count = count + 1;
+        
+                        t = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
+                        t_sec = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed;
+                        C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
+                        C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
+                        C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
+                        C_fit = expProcData.(filedataExp.Key(i)).BT.C_fit_best;
+                        % plot vals with function dt fixed weighted
+                        cond = (C_fit>=16)&(C_fit<=84);
+                        t_sec_cond = t(cond);
+                        t_sec_cond.Format = 'hh:mm:ss';
+                        C_fit_cond = C_fit(cond);
+                        % Uncomment below line to show error bar
+                        % errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', ...
+                        %     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
+                        hold on
+                        h1(count) = scatter(t,C1,5,'filled','MarkerFaceColor',colors(count,:), ...
+                            'DisplayName',"C_{MFM} \pm \DeltaC_{MFM}");
+                        h2(count) = plot(t_sec_cond, C_fit_cond, ...
+                            'LineWidth',3,'Color', colorsdark(count,:),'DisplayName',"C_{fit}"); 
+                        h_titles(count) = plot(NaN,NaN,'w', 'LineStyle','none', 'DisplayName', "\bf Q = " + filedataExp.Q(i) + " ml/min");
+                        xlabel('Time elapsed [hh:mm:ss]','FontSize',14);
+                        xtickformat('hh:mm:ss')
+                        ylabel('C_{H_2} [mol %]','FontSize',14);
+                        ylim([-0.1,100.1]);
+                        ax = gca; % Get current axes
+                        ax.FontSize = 12;
+                        % title("Breakthrough curves fitting", 'Interpreter', 'none')
+                        grid on;
+                        % h = [h; h1];
+                        h = [h;h_titles(count);h1(count);h2(count)];
+                        
+                        save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(i)+"_T"+filedataExp.T(i)+"_P"+filedataExp.P(i);
+                        % add vertical or horizontal to tile (fix input excel (add orientation variable) for that)
+                    end
+                end
+                lgd = legend(h, 'NumColumns', 1, ...
+                    'Location', 'southeast', 'FontSize', 10);
+                lgd.ItemTokenSize = [15 8];   % tighter symbols
+                
+                drawnow  % REQUIRED for correct positions
+                
+                lgd_pos = lgd.Position;  % [x y width height]
+                nQ = count;
+                nRows = 3 * nQ;
+                rowH = lgd_pos(4) / nRows;   % approximate row height
+                
+                
+                for i = 1:nQ
+                    % Row indices (from top of legend)
+                    row_Q    = (i-1)*3 + 1;
+                    row_Data = row_Q + 1;
+                
+                    % Y positions (legend is bottom-based)
+                    y1 = lgd_pos(2) + lgd_pos(4) - (row_Q-0.12)*rowH;
+                
+                    % X positions (small indentation inside legend box)
+                    x1 = lgd_pos(1);
+                    x2 = lgd_pos(1) + lgd_pos(3);
+                
+                    % Draw line
+                    annotation('line', [x1 x2], [y1 y1], ...
+                        'Color','k', 'LineWidth',0.8);
+                end
+                
+                for i = 1:nQ-1
+                
+                    % Y positions (legend is bottom-based)
+                    y1 = lgd_pos(2) + lgd_pos(4) - 3*i*rowH;
+                
+                    % X positions (small indentation inside legend box)
+                    x1 = lgd_pos(1);
+                    x2 = lgd_pos(1) + lgd_pos(3);
+                
+                    % Draw line
+                    annotation('line', [x1 x2], [y1 y1], ...
+                        'Color','k', 'LineWidth',0.8);
+                end
+                
+                title(save_name,'Interpreter','none')
+                saveas(gcf,pathExportAll + save_name + "_BTfitting",'png')
+                savefig(gcf,pathExportAll + save_name + "_BTfitting")
+
+            end
+        end
+    end
+end
+
+
+%% Fitting and experimental data all CF plot
+% dimensionless
+colors = orderedcolors("glow");
+colorsdark = orderedcolors("earth"); 
+
+% empty objects
+h1 = gobjects(length(filedataExp.Key),1);
+h2 = gobjects(length(filedataExp.Key),1);
+h_titles = gobjects(length(filedataExp.Key),1);
+
+Fluid1_unique = unique(filedataExp.Fluid1);
+Fluid2_unique = unique(filedataExp.Fluid2);
+T_unique = unique(filedataExp.T);
+P_unique = unique(filedataExp.P);
+
+for j = 1:length(Fluid1_unique)
+    for jj = 1:length(Fluid2_unique)
+        for k = 1:length(T_unique)
+            for l = 1:length(P_unique)
+
+                figure
+                h = [];
+                h1 = [];
+                h2 = [];
+                h_titles = [];
+        
+                count = 0;
+        
+                for i = 1:length(filedataExp.Key)
+        
+                    if filedataExp.Fluid1(i) == Fluid1_unique(j) && filedataExp.Fluid2(i) == Fluid2_unique(jj) ...
+                            && filedataExp.T(k) == T_unique(j) && filedataExp.P(l) == P_unique(j)
+        
+                        count = count + 1;
+
+                        tD = expProcData.(filedataExp.Key(i)).BT.tD;
+                        CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
+                        CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
+                        CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
+        
+                        CD_fit = expProcData.(filedataExp.Key(i)).BT.C_fit_best/100;
+                        % plot vals with function dt fixed weighted
+                        cond = (CD_fit>=0.16)&(CD_fit<=0.84);
+                        tD_cond = tD(cond);
+                        CD_fit_cond = CD_fit(cond);
+                        hold on
+                        h1(count) = scatter(tD,CD1,5,'filled','MarkerFaceColor',colors(count,:), ...
+                            'DisplayName',"C_{MFM}");
+                        h2(count) = plot(tD_cond, CD_fit_cond, ...
+                            'LineWidth',3,'Color', colorsdark(count,:),'DisplayName',"C_{fit}"); 
+                        h_titles(count) = plot(NaN,NaN,'w', 'LineStyle','none', 'DisplayName', "\bf Q = " + filedataExp.Q(i) + " ml/min");
+                        xlabel('Dimensionless Time [-]');
+                        ylabel('C_{D}[-]');
+                        ylim([-0.001,1.001]);
+                        ax = gca; % Get current axes
+                        ax.FontSize = 12;
+                        % title("Breakthrough curves fitting", 'Interpreter', 'none')
+                        grid on;
+                        % h = [h; h1];
+                        h = [h;h_titles(count);h1(count);h2(count)];
+                        
+                        save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(i)+"_T"+filedataExp.T(i)+"_P"+filedataExp.P(i);
+                        % add vertical or horizontal to tile (fix input excel (add orientation variable) for that)
+                    end
+                end
+                lgd = legend(h, 'NumColumns', 1, ...
+                    'Location', 'southeast', 'FontSize', 10);
+                lgd.ItemTokenSize = [15 8];   % tighter symbols
+                
+                drawnow  % REQUIRED for correct positions
+                
+                lgd_pos = lgd.Position;  % [x y width height]
+                nQ = count;
+                nRows = 3 * nQ;
+                rowH = lgd_pos(4) / nRows;   % approximate row height
+                
+                
+                for i = 1:nQ
+                    % Row indices (from top of legend)
+                    row_Q    = (i-1)*3 + 1;
+                    row_Data = row_Q + 1;
+                
+                    % Y positions (legend is bottom-based)
+                    y1 = lgd_pos(2) + lgd_pos(4) - (row_Q-0.12)*rowH;
+                
+                    % X positions (small indentation inside legend box)
+                    x1 = lgd_pos(1);
+                    x2 = lgd_pos(1) + lgd_pos(3);
+                
+                    % Draw line
+                    annotation('line', [x1 x2], [y1 y1], ...
+                        'Color','k', 'LineWidth',0.8);
+                end
+                
+                for i = 1:nQ-1
+                
+                    % Y positions (legend is bottom-based)
+                    y1 = lgd_pos(2) + lgd_pos(4) - 3*i*rowH;
+                
+                    % X positions (small indentation inside legend box)
+                    x1 = lgd_pos(1);
+                    x2 = lgd_pos(1) + lgd_pos(3);
+                
+                    % Draw line
+                    annotation('line', [x1 x2], [y1 y1], ...
+                        'Color','k', 'LineWidth',0.8);
+                end
+                
+                title(save_name,'Interpreter','none')
+                saveas(gcf,pathExportAll + save_name + "_BTfitting_dimless",'png')
+                savefig(gcf,pathExportAll + save_name + "_BTfitting_dimless")
+
+            end
+        end
+    end
+end
+
+%% Fitting and experimental data all CF plot
+% dimensionless total
+colors = orderedcolors("glow");
+colorsdark = orderedcolors("earth"); 
+
+% empty objects
+h1 = gobjects(length(filedataExp.Key),1);
+h2 = gobjects(length(filedataExp.Key),1);
+h_titles = gobjects(length(filedataExp.Key),1);
+
+Fluid1_unique = unique(filedataExp.Fluid1);
+Fluid2_unique = unique(filedataExp.Fluid2);
+T_unique = unique(filedataExp.T);
+P_unique = unique(filedataExp.P);
+
+for j = 1:length(Fluid1_unique)
+    for jj = 1:length(Fluid2_unique)
+        for k = 1:length(T_unique)
+            for l = 1:length(P_unique)
+
+                figure
+                h = [];
+                h1 = [];
+                h2 = [];
+                h_titles = [];
+        
+                count = 0;
+        
+                for i = 1:length(filedataExp.Key)
+        
+                    if filedataExp.Fluid1(i) == Fluid1_unique(j) && filedataExp.Fluid2(i) == Fluid2_unique(jj) ...
+                            && filedataExp.T(k) == T_unique(j) && filedataExp.P(l) == P_unique(j)
+        
+                        count = count + 1;
+
+                        tDtotal = expProcData.(filedataExp.Key(i)).BT.tDtotal;
+                        CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
+                        CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
+                        CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
+        
+                        CD_fit = expProcData.(filedataExp.Key(i)).BT.C_fit_best/100;
+                        % plot vals with function dt fixed weighted
+                        cond = (CD_fit>=0.16)&(CD_fit<=0.84);
+                        tDtotal_cond = tDtotal(cond);
+                        CD_fit_cond = CD_fit(cond);
+                        hold on
+                        h1(count) = scatter(tDtotal,CD1,5,'filled','MarkerFaceColor',colors(count,:), ...
+                            'DisplayName',"C_{MFM}");
+                        h2(count) = plot(tDtotal_cond, CD_fit_cond, ...
+                            'LineWidth',3,'Color', colorsdark(count,:),'DisplayName',"C_{fit}"); 
+                        h_titles(count) = plot(NaN,NaN,'w', 'LineStyle','none', 'DisplayName', "\bf Q = " + filedataExp.Q(i) + " ml/min");
+                        xlabel('Dimensionless Time (total)[-]');
+                        ylabel('C_{D}[-]');
+                        ylim([-0.001,1.001]);
+                        ax = gca; % Get current axes
+                        ax.FontSize = 12;
+                        % title("Breakthrough curves fitting", 'Interpreter', 'none')
+                        grid on;
+                        % h = [h; h1];
+                        h = [h;h_titles(count);h1(count);h2(count)];
+                        
+                        save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(i)+"_T"+filedataExp.T(i)+"_P"+filedataExp.P(i);
+                        % add vertical or horizontal to tile (fix input excel (add orientation variable) for that)
+                    end
+                end
+                lgd = legend(h, 'NumColumns', 1, ...
+                    'Location', 'southeast', 'FontSize', 10);
+                lgd.ItemTokenSize = [15 8];   % tighter symbols
+                
+                drawnow  % REQUIRED for correct positions
+                
+                lgd_pos = lgd.Position;  % [x y width height]
+                nQ = count;
+                nRows = 3 * nQ;
+                rowH = lgd_pos(4) / nRows;   % approximate row height
+                
+                
+                for i = 1:nQ
+                    % Row indices (from top of legend)
+                    row_Q    = (i-1)*3 + 1;
+                    row_Data = row_Q + 1;
+                
+                    % Y positions (legend is bottom-based)
+                    y1 = lgd_pos(2) + lgd_pos(4) - (row_Q-0.12)*rowH;
+                
+                    % X positions (small indentation inside legend box)
+                    x1 = lgd_pos(1);
+                    x2 = lgd_pos(1) + lgd_pos(3);
+                
+                    % Draw line
+                    annotation('line', [x1 x2], [y1 y1], ...
+                        'Color','k', 'LineWidth',0.8);
+                end
+                
+                for i = 1:nQ-1
+                
+                    % Y positions (legend is bottom-based)
+                    y1 = lgd_pos(2) + lgd_pos(4) - 3*i*rowH;
+                
+                    % X positions (small indentation inside legend box)
+                    x1 = lgd_pos(1);
+                    x2 = lgd_pos(1) + lgd_pos(3);
+                
+                    % Draw line
+                    annotation('line', [x1 x2], [y1 y1], ...
+                        'Color','k', 'LineWidth',0.8);
+                end
+                
+                title(save_name,'Interpreter','none')
+                saveas(gcf,pathExportAll + save_name + "_BTfitting_dimlessTotal",'png')
+                savefig(gcf,pathExportAll + save_name + "_BTfitting_dimlessTotal")
+
+            end
+        end
+    end
+end
+
+
+% %%
 % 
 % % Minimum requirements for fitting
 % min_points_alphaFitting = 3; 
@@ -627,328 +1129,6 @@ end
 % save(table_name1 + ".mat",'fitting_results_simple')
 % save(table_name2 + ".mat",'fitting_params_simple')
 % 
-% %% Fitting and experimental data all CF plot
-% % dt not shifted
-% 
-% for i = 1:length(filedataExp.Key)
-%         figure
-%         scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.Ci,10,'filled','MarkerFaceColor','red','DisplayName','Experimental Data')
-%         hold on
-%         % KL weigthed 
-%         % plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.C_fit_dt_free,'LineWidth',1.5,'Color', [0.5 0.5 0.5],'DisplayName',"BT model fitting - dt free - KL weigthed")
-%         plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed,'LineWidth',1.5,'Color', 'k', 'DisplayName',"BT model fitting - KL weighted fitting")
-%         % KL non weigthed
-%         % plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_free,'LineStyle','--','LineWidth',1.5,'Color', [0.5 0.5 0.5],'DisplayName',"BT model fitting - dt free - KL non weigthed")
-%         plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed,'LineStyle','--','LineWidth',1.5,'Color', 'k', 'DisplayName',"BT model fitting - KL non weighted fitting")
-%         % KL mean
-%         % plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed,'LineWidth',1.5,'Color', 'blue', 'DisplayName',"BT model fitting - dt fixed - KL mean")
-%         xlabel('Time elapsed [hh:mm:ss]');
-%         xtickformat('hh:mm:ss')
-%         ylabel('Molar concentration C_1 [mol %]');
-%         ylim([-0.1,100.1]);
-%         title(filedataExp.Key(i) + " fitting", 'Interpreter', 'none')
-%         grid on;
-%         legend('Location','southeast');
-%         saveas(gcf,pathExportAll + filedataExp.Key(i) + "_fitting",'png')
-%         savefig(gcf,pathExportAll + filedataExp.Key(i) + "_fitting")
-% end
-% 
-% %% Fitting and experimental data all CF plot dimensionless
-% 
-% for i = 1:length(filedataExp.Key)
-%         figure
-%         scatter(expProcData.(filedataExp.Key(i)).BT.tD,expProcData.(filedataExp.Key(i)).BT.CDi,10,'filled','MarkerFaceColor','red','DisplayName','Experimental Data')
-%         hold on
-%         % KL weigthed 
-%         plot(expProcData.(filedataExp.Key(i)).BT.tD,expProcData.(filedataExp.Key(i)).BT.C_fit_dt_free/100,'LineWidth',1.5,'Color', [0.5 0.5 0.5],'DisplayName',"BT model fitting - dt free - KL weigthed")
-%         plot(expProcData.(filedataExp.Key(i)).BT.tD,expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed/100,'LineWidth',1.5,'Color', 'k', 'DisplayName',"BT model fitting - dt fixed - KL weigthed")
-%         % KL non weigthed
-%         plot(expProcData.(filedataExp.Key(i)).BT.tD,expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_free/100,'LineStyle','--','LineWidth',1.5,'Color', [0.5 0.5 0.5],'DisplayName',"BT model fitting - dt free - KL non weigthed")
-%         plot(expProcData.(filedataExp.Key(i)).BT.tD,expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed/100,'LineStyle','--','LineWidth',1.5,'Color', 'k', 'DisplayName',"BT model fitting - dt fixed - KL non weigthed")
-%         % % KL mean
-%         % plot(expProcData.(filedataExp.Key(i)).BT.tD,expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed/100,'LineWidth',1.5,'Color', 'blue', 'DisplayName',"BT model fitting - dt fixed - KL mean")
-%         xlabel('Dimensionless Time [-]');
-%         % xlim([0,2]);
-%         ylabel('C_{D}[-]');
-%         ylim([-0.001,1.001]);
-%         title(filedataExp.Key(i) + " dimensionless fitting", 'Interpreter', 'none')
-%         grid on;
-%         legend('Location','southeast');
-%         saveas(gcf,pathExportAll + filedataExp.Key(i) + "_dimless_fitting",'png')
-%         savefig(gcf,pathExportAll + filedataExp.Key(i) + "_dimless_fitting")
-% end
-% 
-% % Fitting and experimental data all CF plot dimensionless total
-% 
-% for i = 1:length(filedataExp.Key)
-%         figure
-%         scatter(expProcData.(filedataExp.Key(i)).BT.tDtotal,expProcData.(filedataExp.Key(i)).BT.CDi,10,'filled','MarkerFaceColor','red','DisplayName','Experimental Data')
-%         hold on
-%         % KL weigthed 
-%         plot(expProcData.(filedataExp.Key(i)).BT.tDtotal,expProcData.(filedataExp.Key(i)).BT.C_fit_dt_free/100,'LineWidth',1.5,'Color', [0.5 0.5 0.5],'DisplayName',"BT model fitting - dt free - KL weigthed")
-%         plot(expProcData.(filedataExp.Key(i)).BT.tDtotal,expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed/100,'LineWidth',1.5,'Color', 'k', 'DisplayName',"BT model fitting - dt fixed - KL weigthed")
-%         % KL non weigthed
-%         plot(expProcData.(filedataExp.Key(i)).BT.tDtotal,expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_free/100,'LineStyle','--','LineWidth',1.5,'Color', [0.5 0.5 0.5],'DisplayName',"BT model fitting - dt free - KL non weigthed")
-%         plot(expProcData.(filedataExp.Key(i)).BT.tDtotal,expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed/100,'LineStyle','--','LineWidth',1.5,'Color', 'k', 'DisplayName',"BT model fitting - dt fixed - KL non weigthed")
-%         % % KL mean
-%         % plot(expProcData.(filedataExp.Key(i)).BT.tDtotal,expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed/100,'LineWidth',1.5,'Color', 'blue', 'DisplayName',"BT model fitting - dt fixed - KL mean")
-%         xlabel('Dimensionless Time [-]');
-%         % xlim([0,2]);
-%         ylabel('C_{D}[-]');
-%         ylim([-0.001,1.001]);
-%         title(filedataExp.Key(i) + " dimensionless fitting", 'Interpreter', 'none')
-%         grid on;
-%         legend(["Experimental data", "BT model fitting"],'Location','southeast');
-%         saveas(gcf,pathExportAll + filedataExp.Key(i) + "_dimlessTotal_fitting",'png')
-%         savefig(gcf,pathExportAll + filedataExp.Key(i) + "_dimlessTotal_fitting")
-% end
-% 
-% %% Fitting and experimental data all CF plot
-% % dt shifted
-% 
-% colors = orderedcolors("glow");
-% figure
-% for i = 1:length(filedataExp.Key)
-%         scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed, ...
-%             expProcData.(filedataExp.Key(i)).BT.Ci,10,'filled', ...
-%             'MarkerFaceColor',colors(i,:),'DisplayName',"Q"+filedataExp.Q(i));
-%         hold on
-%         scatter(expProcData.(filedataExp.Key(i)).BT_corr.TimeElapsedNew, ...
-%             expProcData.(filedataExp.Key(i)).BT_corr.Ci,10,'filled', ...
-%             'MarkerFaceColor',colors(length(filedataExp.Key)+i,:),'DisplayName',"Q"+filedataExp.Q(i)+"-t_{shifted}")
-%         %plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,100*expProcData.(filedataExp.Key(i)).exp_params.C_fit_dtfixed.feval(expProcData.(filedataExp.Key(i)).BT.SecondsElapsed),'LineWidth',1.5,'Color', 'k')
-%         %plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,100*expProcData.(filedataExp.Key(i)).exp_params.C_fit.feval(expProcData.(filedataExp.Key(i)).BT.SecondsElapsed),'LineWidth',1.5,'Color', [0.5 0.5 0.5])
-%         xlabel('Time elapsed [hh:mm:ss]');
-%         xtickformat('hh:mm:ss')
-%         ylabel('Molar concentration C_1 [mol %]');
-%         ylim([-0.1,100.1]);
-%         title(filedataExp.Key(i) + " fitting", 'Interpreter', 'none')
-%         grid on;
-%         legend('Location','southeast');
-% end
-% saveas(gcf,pathExportAll + "dtshift_fitting",'png')
-% savefig(gcf,pathExportAll + "dtshift_fitting")
-% %% Fitting and experimental data all CF plot dimensionless
-% % tD shifted
-% colors = orderedcolors("glow");
-% figure
-% for i = 1:length(filedataExp.Key)
-%         scatter(expProcData.(filedataExp.Key(i)).BT.tD,expProcData.(filedataExp.Key(i)).BT.CDi,10,'filled','MarkerFaceColor',colors(i,:), 'DisplayName',"Q"+filedataExp.Q(i))
-%         hold on
-%         scatter(expProcData.(filedataExp.Key(i)).BT_corr.tD_corr,expProcData.(filedataExp.Key(i)).BT_corr.CDi,10,'filled','MarkerFaceColor',colors(length(filedataExp.Key)+i,:), 'DisplayName',"Q"+filedataExp.Q(i)+"-t_{shifted}")
-%         %plot(expProcData.(filedataExp.Key(i)).BT.tD,expProcData.(filedataExp.Key(i)).exp_params.C_fit_dtfixed.feval(expProcData.(filedataExp.Key(i)).BT.SecondsElapsed),'LineWidth',1.5,'Color', 'k')
-%         %plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,100*expProcData.(filedataExp.Key(i)).exp_params.C_fit.feval(expProcData.(filedataExp.Key(i)).BT.SecondsElapsed),'LineWidth',1.5,'Color', [0.5 0.5 0.5])
-%         xlabel('Dimensionless Time [-]');
-%         % xlim([0,2]);
-%         ylabel('C_{D}[-]');
-%         ylim([-0.001,1.001]);
-%         title(filedataExp.Key(i) + " dimensionless fitting", 'Interpreter', 'none')
-%         grid on;
-%         legend('Location','southeast');
-% end
-% saveas(gcf,pathExportAll + "dimless_tDshift_fitting",'png')
-% savefig(gcf,pathExportAll + "dimless_tDshift_fitting")
-% 
-% % Fitting and experimental data all CF plot dimensionless total
-% % tD shifted
-% colors = orderedcolors("glow");
-% figure
-% for i = 1:length(filedataExp.Key)
-%         scatter(expProcData.(filedataExp.Key(i)).BT.tDtotal,expProcData.(filedataExp.Key(i)).BT.CDi,10,'filled','MarkerFaceColor',colors(i,:), 'DisplayName',"Q"+filedataExp.Q(i))
-%         hold on
-%         scatter(expProcData.(filedataExp.Key(i)).BT_corr.tDtotal_corr,expProcData.(filedataExp.Key(i)).BT_corr.CDi,10,'filled','MarkerFaceColor',colors(length(filedataExp.Key)+i,:), 'DisplayName',"Q"+filedataExp.Q(i)+"-t_{shifted}")
-%         %plot(expProcData.(filedataExp.Key(i)).BT.tD,expProcData.(filedataExp.Key(i)).exp_params.C_fit_dtfixed.feval(expProcData.(filedataExp.Key(i)).BT.SecondsElapsed),'LineWidth',1.5,'Color', 'k')
-%         %plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed,100*expProcData.(filedataExp.Key(i)).exp_params.C_fit.feval(expProcData.(filedataExp.Key(i)).BT.SecondsElapsed),'LineWidth',1.5,'Color', [0.5 0.5 0.5])
-%         xlabel('Dimensionless Time [-]');
-%         % xlim([0,2]);
-%         ylabel('C_{D}[-]');
-%         ylim([-0.001,1.001]);
-%         title(filedataExp.Key(i) + " dimensionless fitting", 'Interpreter', 'none')
-%         grid on;
-%         legend('Location','southeast');
-% end
-% saveas(gcf,pathExportAll + "dimless_tDshiftTotal_fitting",'png')
-% savefig(gcf,pathExportAll + "dimless_tDshiftTotal_fitting")
-% 
-% %% Fitting and experimental data all CF plot
-% 
-% colors = orderedcolors("glow");
-% colorsdark = orderedcolors("earth"); 
-% figure
-% h=[];
-% 
-% % empty objects
-% h1 = gobjects(length(filedataExp.Key),1);
-% h2 = gobjects(length(filedataExp.Key),1);
-% h_titles = gobjects(length(filedataExp.Key),1);
-% 
-% for i = 1:length(filedataExp.Key)
-%     t = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
-%     t_sec = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed;
-%     C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
-%     C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
-%     C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
-%     % plot vals with function dt fixed weighted
-%     cond = (expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed>=16)&(expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed<=84);
-%     cond_nw = (expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed>=16)&(expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed<=84);
-%     t_sec_cond = seconds(t(cond));
-%     t_sec_trim = t_sec_cond(1):0.05:t_sec_cond(end);
-%     t_trim = seconds(t_sec_trim);
-%     t_trim.Format = 'hh:mm:ss';
-%     dt_fixed = expProcData.(filedataExp.Key(i)).exp_params.dt_dtfixed_SI;
-%     p = sqrt(expProcData.(filedataExp.Key(i)).exp_params.KL_dtfixed_SI);
-%     L = expProcData.(filedataExp.Key(i)).exp_params.L_SI;
-%     u = expProcData.(filedataExp.Key(i)).exp_params.u_SI;
-%     C_plot_function = expProcData.(filedataExp.Key(i)).exp_params.C_fun_dtfixed{1};
-%     C_plot = 100*C_plot_function(p,t_sec_trim);   
-%     % errorbar(t(cond), expProcData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed(cond), ...
-%     %    expProcData.(filedataExp.Key(i)).exp_params.RMSE_mean*100*ones(size(t(cond))), ...
-%     %    'LineStyle', 'none', ...
-%     %     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
-%     % hold on
-%     errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', ...
-%         'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
-%     hold on
-%     h1(i) = scatter(t,C1,5,'filled','MarkerFaceColor',colors(i,:), ...
-%         'DisplayName',"C_{MFM} \pm \DeltaC_{MFM}");
-%     % h2(i) = plot(t(cond), expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed(cond), ...
-%     %     'LineWidth',3,'Color', colorsdark(i,:),'DisplayName',"C_{fit}");
-%     h2(i) = plot(t_trim, C_plot, ...
-%         'LineWidth',2,'Color', colorsdark(i,:),'DisplayName',"C_{fit}"); %gives same results, but evaluating the function
-%     % h3 = plot(t(cond_nw), expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_fixed(cond_nw), ...
-%     %     'LineWidth',0.8,'LineStyle','--', 'Color', 'k','DisplayName',"C_{non weigthed fitting}");    
-%     h_titles(i) = plot(NaN,NaN,'w', 'LineStyle','none', 'DisplayName', "\bf Q = " + filedataExp.Q(i) + " ml/min");
-%     xlabel('Time elapsed [hh:mm:ss]','FontSize',14);
-%     xtickformat('hh:mm:ss')
-%     ylabel('C_{H_2} [mol %]','FontSize',14);
-%     ylim([-0.1,100.1]);
-%     ax = gca; % Get current axes
-%     ax.FontSize = 12;
-%     % title("Breakthrough curves fitting", 'Interpreter', 'none')
-%     grid on;
-%     % h = [h; h1];
-%     h = [h;h_titles(i);h1(i);h2(i)];
-% end
-% lgd = legend(h, 'NumColumns', 1, ...
-%     'Location', 'southeast', 'FontSize', 10);
-% lgd.ItemTokenSize = [15 8];   % tighter symbols
-% 
-% drawnow  % REQUIRED for correct positions
-% 
-% lgd_pos = lgd.Position;  % [x y width height]
-% nQ = length(filedataExp.Key);
-% nRows = 3 * nQ;
-% rowH = lgd_pos(4) / nRows;   % approximate row height
-% 
-% 
-% for i = 1:nQ
-%     % Row indices (from top of legend)
-%     row_Q    = (i-1)*3 + 1;
-%     row_Data = row_Q + 1;
-% 
-%     % Y positions (legend is bottom-based)
-%     y1 = lgd_pos(2) + lgd_pos(4) - (row_Q-0.12)*rowH;
-% 
-%     % X positions (small indentation inside legend box)
-%     x1 = lgd_pos(1);
-%     x2 = lgd_pos(1) + lgd_pos(3);
-% 
-%     % Draw line
-%     annotation('line', [x1 x2], [y1 y1], ...
-%         'Color','k', 'LineWidth',0.8);
-% end
-% 
-% for i = 1:nQ-1
-% 
-%     % Y positions (legend is bottom-based)
-%     y1 = lgd_pos(2) + lgd_pos(4) - 3*i*rowH;
-% 
-%     % X positions (small indentation inside legend box)
-%     x1 = lgd_pos(1);
-%     x2 = lgd_pos(1) + lgd_pos(3);
-% 
-%     % Draw line
-%     annotation('line', [x1 x2], [y1 y1], ...
-%         'Color','k', 'LineWidth',0.8);
-% end
-% 
-% % lgd1 = legend([h;h2], 'Location','southeast','FontSize',12);
-% % title (lgd1, "C_{MFM} \pm \DeltaC_{MFM}",'FontSize',12)
-% % lgd2 = legend(h2, 'Location','southeast','FontSize',12);
-% saveas(gcf,pathExportAll + "BTfitting",'png')
-% savefig(gcf,pathExportAll + "BTfitting")
-% 
-% %% Fitting and experimental data all CF plot
-% % dimensionless 
-% 
-% colors = orderedcolors("glow");
-% figure
-% h=[];
-% for i = 1:length(filedataExp.Key)
-%     tD = expProcData.(filedataExp.Key(i)).BT.tD;
-%     CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
-%     CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
-%     CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
-%     cond = (expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed>=10)&(expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed<=90);
-%     % errorbar(tD(cond), expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed(cond)/100, ...
-%     %    expProcData.(filedataExp.Key(i)).exp_params.RMSE_mean*ones(size(tD(cond))), ...
-%     %    'LineStyle', 'none', ...
-%     %     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
-%     % hold on
-%     % errorbar(tD, CD1, CD1-CD1min, CD1max - CD1, 'LineStyle', 'none', ...
-%     %     'Color', [1 0.78 0.88],'HandleVisibility','Off')
-%     h1 = scatter(tD,CD1,5,'filled','MarkerFaceColor',colors(i,:), ...
-%         'DisplayName',"Q"+filedataExp.Q(i)+": C_{D}");
-%     hold on
-%     h2 = plot(tD(cond), expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed(cond)/100, ...
-%         'LineWidth',1.0,'Color', 'k','DisplayName',"C_D_{fit} \pm \DeltaC_D_{fit}");
-%     xlabel('Dimensionless Time [-]');
-%     ylabel('C_{D}[-]');
-%     ylim([-0.001,1.001]);
-%     title("Breakthrough curves fitting - dimensionless", 'Interpreter', 'none')
-%     grid on;
-%     h = [h; h1];
-% end
-% legend([h;h2], 'Location','southeast');
-% saveas(gcf,pathExportAll + "BTfitting_dimless",'png')
-% savefig(gcf,pathExportAll + "BTfitting_dimless")
-% 
-% %% Fitting and experimental data all CF plot
-% % dimensionless 
-% 
-% colors = orderedcolors("glow");
-% figure
-% h=[];
-% for i = 1:length(filedataExp.Key)
-%     tDtotal = expProcData.(filedataExp.Key(i)).BT.tDtotal;
-%     CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
-%     CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
-%     CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
-%     cond = (expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed>=10)&(expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed<=90);
-%     % errorbar(tDtotal(cond), expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed(cond)/100, ...
-%     %    expProcData.(filedataExp.Key(i)).exp_params.RMSE_mean*ones(size(tDtotal(cond))), ...
-%     %    'LineStyle', 'none', ...
-%     %     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
-%     % hold on
-%     % errorbar(tDtotal, CD1, CD1-CD1min, CD1max - CD1, 'LineStyle', 'none', ...
-%     %     'Color', [1 0.78 0.88],'HandleVisibility','Off')
-%     h1 = scatter(tDtotal,CD1,5,'filled','MarkerFaceColor',colors(i,:), ...
-%         'DisplayName',"Q"+filedataExp.Q(i));
-%     hold on
-%     % h2 = plot(tDtotal(cond), expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed(cond)/100, ...
-%     %     'LineWidth',1.0,'Color', 'k','DisplayName',"C_D_{fit} \pm \DeltaC_D_{fit}");
-%     xlabel('Dimensionless Time [-]');
-%     ylabel('C_{D}[-]');
-%     xlim([0,2]);
-%     ylim([-0.001,1.001]);
-%     title("Breakthrough curves fitting - dimensionless total", 'Interpreter', 'none')
-%     grid on;
-%     h = [h; h1];
-% end
-% % legend([h;h2], 'Location','southeast');
-% legend(h, 'Location','southeast');
-% saveas(gcf,pathExportAll + "BTfitting_dimlessTotal",'png')
-% savefig(gcf,pathExportAll + "BTfitting_dimlessTotal")
 % 
 % %% Plot Kl_vs_vel
 % 
