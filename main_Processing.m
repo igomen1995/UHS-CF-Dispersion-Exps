@@ -742,425 +742,321 @@ for j = 1:length(Fluid1_unique)
     end
 end
 
+%% alpha estimation with best method only 
 
-% %%
-% 
-% % Minimum requirements for fitting
-% min_points_alphaFitting = 3; 
-% 
-% % Estimate alpha - tortuosity for same fluid, same T, and P (same D0), same length
-% 
-% % all params in SI
-% Dp_SI = unique(fitting_results.L_SI); % Dp characteristic length in Peclet number
-% D0 = unique(fitting_results.D0_SI);
-% dD0 = unique(fitting_results.dD0_SI);
-% 
-% u_array = fitting_results.u_SI;
-% Pe_D0_array = fitting_results.Pe_D0; % Pe in respect to D0
-% dPe_D0_array = fitting_results.dPe_D0;
-% 
-% % KL_array = fitting_results.KL_SI; % KL and D0 must have same units
-% % dKL_array = fitting_results.SE_KL_SI;
-% KL_array = fitting_results.KL_dtfixed_SI; % KL and D0 must have same units
-% dKL_array = fitting_results.SE_KL_total_dtfixed_SI;
-% KL_nw_array = fitting_results.KL_dtfixed_nw_SI; % KL and D0 must have same units
-% dKL_nw_array = fitting_results.SE_KL_total_dtfixed_nw_SI;
-% % KL_mean_array = fitting_results.KL_mean_SI; % KL and D0 must have same units
-% % dKL_mean_array = fitting_results.SE_KL_mean_SI;
-% 
-% for i = 1:length(Dp_SI)
-%     for j = 1:length(D0)
-% 
-%         for l = 1:length(filedataExp.Key)
-% 
-%         end
-%     end
-% end
-% 
-% 
-% 
-% 
-% 
-% 
-% 
-% 
-% 
-% % Fitting
-% % p_guess = 1;
-% p_guess = [1,1]; % with tau
-% 
-% % KL weigthed
-% % weighted
-% fit_dispersion_params_all_out = fit_dispersion_params_all(KL_array,Pe_D0_array,D0,Dp_SI,p_guess,dKL_array);
-% %nonweighted
-% fit_dispersion_params_all_nw_out = fit_dispersion_params_all(KL_array,Pe_D0_array,D0,Dp_SI,p_guess,ones(size(KL_array)));
-% 
-% % Propagation of uncertainty from D0 error
-% D0max = D0 + dD0;
-% D0min = D0 - dD0;
-% Pe_D0max_array = Pe_D0_array*(D0/D0max); % Pe in respect to D0max
-% Pe_D0min_array = Pe_D0_array*(D0/D0min); % Pe in respect to D0min
-% 
-% % Fitting KL with different Pe ranges
-% fit_dispersion_params_all_Pe_D0max_out = fit_dispersion_params_all(KL_array,Pe_D0max_array,D0max,Dp_SI,p_guess,dKL_array);
-% fit_dispersion_params_all_Pe_D0min_out = fit_dispersion_params_all(KL_array,Pe_D0min_array,D0min,Dp_SI,p_guess,dKL_array);
-% fit_dispersion_params_all_Pe_D0max_nw_out = fit_dispersion_params_all(KL_array,Pe_D0max_array,D0max,Dp_SI,p_guess,ones(size(KL_array)));
-% fit_dispersion_params_all_Pe_D0min_nw_out = fit_dispersion_params_all(KL_array,Pe_D0min_array,D0min,Dp_SI,p_guess,ones(size(KL_array)));
-% 
-% % Params from fitting
-% beta = fit_dispersion_params_all_out.beta;
-% d_beta = fit_dispersion_params_all_out.d_beta;
-% 
-% % % taus KL weigthed
-% % % tau weigthed
-% % tau_w = fit_dispersion_params_all_out.tau;
-% % d_tau_w = fit_dispersion_params_all_out.d_tau;
-% % % tau non weigthed
-% % tau_nw = fit_dispersion_params_all_nw_out.tau;
-% % d_tau_nw = fit_dispersion_params_all_nw_out.d_tau;
-% % % tau weigthed D0 effect
-% % tau_D0max_w = fit_dispersion_params_all_Pe_D0max_out.tau;
-% % tau_D0min_w = fit_dispersion_params_all_Pe_D0min_out.tau;
-% % d_tau_D0uncert_w = abs(tau_D0max_w - tau_D0min_w)/2;
-% % % tau non weigthed D0 effect
-% % tau_D0max_nw = fit_dispersion_params_all_Pe_D0max_nw_out.tau;
-% % tau_D0min_nw = fit_dispersion_params_all_Pe_D0min_nw_out.tau;
-% % d_tau_D0uncert_nw = abs(tau_D0max_nw - tau_D0min_nw)/2;
-% 
-% % alphas KL weigthed
-% % alpha weigthed
-% alpha_w_SI = fit_dispersion_params_all_out.alpha_SI;
-% d_alpha_w_SI = fit_dispersion_params_all_out.d_alpha_SI;
-% alpha_w_cm = fit_dispersion_params_all_out.alpha_cm;
-% d_alpha_w_cm = fit_dispersion_params_all_out.d_alpha_cm;
-% % alpha non weigthed
-% alpha_nw_SI = fit_dispersion_params_all_nw_out.alpha_SI;
-% d_alpha_nw_SI = fit_dispersion_params_all_nw_out.d_alpha_SI;
-% alpha_nw_cm = fit_dispersion_params_all_nw_out.alpha_cm;
-% d_alpha_nw_cm = fit_dispersion_params_all_nw_out.d_alpha_cm;
-% % alpha weigthed D0 effect
-% alpha_D0max_w_SI = fit_dispersion_params_all_Pe_D0max_out.alpha_SI;
-% alpha_D0min_w_SI = fit_dispersion_params_all_Pe_D0min_out.alpha_SI;
-% d_alpha_D0uncert_w_SI = abs(alpha_D0max_w_SI - alpha_D0min_w_SI)/2;
-% alpha_D0max_w_cm = fit_dispersion_params_all_Pe_D0max_out.alpha_cm;
-% alpha_D0min_w_cm = fit_dispersion_params_all_Pe_D0min_out.alpha_cm;
-% d_alpha_D0uncert_w_cm = abs(alpha_D0max_w_cm - alpha_D0min_w_cm)/2;
-% % alpha non weigthed D0 effect
-% alpha_D0max_nw_SI = fit_dispersion_params_all_Pe_D0max_nw_out.alpha_SI;
-% alpha_D0min_nw_SI = fit_dispersion_params_all_Pe_D0min_nw_out.alpha_SI;
-% d_alpha_D0uncert_nw_SI = abs(alpha_D0max_nw_SI - alpha_D0min_nw_SI)/2;
-% alpha_D0max_nw_cm = fit_dispersion_params_all_Pe_D0max_nw_out.alpha_cm;
-% alpha_D0min_nw_cm = fit_dispersion_params_all_Pe_D0min_nw_out.alpha_cm;
-% d_alpha_D0uncert_nw_cm = abs(alpha_D0max_nw_cm - alpha_D0min_nw_cm)/2;
-% 
-% % KL non weigthed
-% % weighted
-% fit_dispersion_params_all_KLnw_out = fit_dispersion_params_all(KL_nw_array,Pe_D0_array,D0,Dp_SI,p_guess,dKL_nw_array);
-% %nonweighted
-% fit_dispersion_params_all_nw_KLnw_out = fit_dispersion_params_all(KL_nw_array,Pe_D0_array,D0,Dp_SI,p_guess,ones(size(KL_nw_array)));
-% 
-% % Propagation of uncertainty from D0 error
-% D0max = D0 + dD0;
-% D0min = D0 - dD0;
-% Pe_D0max_array = Pe_D0_array*(D0/D0max); % Pe in respect to D0max
-% Pe_D0min_array = Pe_D0_array*(D0/D0min); % Pe in respect to D0min
-% 
-% % Fitting KL with different Pe ranges
-% fit_dispersion_params_all_Pe_D0max_KLnw_out = fit_dispersion_params_all(KL_nw_array,Pe_D0max_array,D0max,Dp_SI,p_guess,dKL_nw_array);
-% fit_dispersion_params_all_Pe_D0min_KLnw_out = fit_dispersion_params_all(KL_nw_array,Pe_D0min_array,D0min,Dp_SI,p_guess,dKL_nw_array);
-% fit_dispersion_params_all_Pe_D0max_nw_KLnw_out = fit_dispersion_params_all(KL_nw_array,Pe_D0max_array,D0max,Dp_SI,p_guess,ones(size(KL_nw_array)));
-% fit_dispersion_params_all_Pe_D0min_nw_KLnw_out = fit_dispersion_params_all(KL_nw_array,Pe_D0min_array,D0min,Dp_SI,p_guess,ones(size(KL_nw_array)));
-% 
-% % Params from fitting
-% beta_KLnw = fit_dispersion_params_all_KLnw_out.beta;
-% d_beta_KLnw = fit_dispersion_params_all_KLnw_out.d_beta;
-% 
-% % % taus KL weigthed
-% % % tau weigthed
-% % tau_w_KLnw = fit_dispersion_params_all_KLnw_out.tau;
-% % d_tau_w_KLnw = fit_dispersion_params_all_KLnw_out.d_tau;
-% % % tau non weigthed
-% % tau_nw_KLnw = fit_dispersion_params_all_nw_KLnw_out.tau;
-% % d_tau_nw_KLnw = fit_dispersion_params_all_nw_KLnw_out.d_tau;
-% % % tau weigthed D0 effect
-% % tau_D0max_w_KLnw = fit_dispersion_params_all_Pe_D0max_KLnw_out.tau;
-% % tau_D0min_w_KLnw = fit_dispersion_params_all_Pe_D0min_KLnw_out.tau;
-% % d_tau_D0uncert_w_KLnw = abs(tau_D0max_w_KLnw - tau_D0min_w_KLnw)/2;
-% % % tau non weigthed D0 effect
-% % tau_D0max_nw_KLnw = fit_dispersion_params_all_Pe_D0max_KLnw_out.tau;
-% % tau_D0min_nw_KLnw = fit_dispersion_params_all_Pe_D0min_KLnw_out.tau;
-% % d_tau_D0uncert_nw_KLnw = abs(tau_D0max_nw_KLnw - tau_D0min_nw_KLnw)/2;
-% 
-% % alphas KL non weigthed
-% % alpha weigthed
-% alpha_w_KLnw_SI = fit_dispersion_params_all_KLnw_out.alpha_SI;
-% d_alpha_w_KLnw_SI = fit_dispersion_params_all_KLnw_out.d_alpha_SI;
-% alpha_w_KLnw_cm = fit_dispersion_params_all_KLnw_out.alpha_cm;
-% d_alpha_w_KLnw_cm = fit_dispersion_params_all_KLnw_out.d_alpha_cm;
-% % alpha non weigthed
-% alpha_nw_KLnw_SI = fit_dispersion_params_all_nw_KLnw_out.alpha_SI;
-% d_alpha_nw_KLnw_SI = fit_dispersion_params_all_nw_KLnw_out.d_alpha_SI;
-% alpha_nw_KLnw_cm = fit_dispersion_params_all_nw_KLnw_out.alpha_cm;
-% d_alpha_nw_KLnw_cm = fit_dispersion_params_all_nw_KLnw_out.d_alpha_cm;
-% % alpha weigthed D0 effect
-% alpha_D0max_w_KLnw_SI = fit_dispersion_params_all_Pe_D0max_KLnw_out.alpha_SI;
-% alpha_D0min_w_KLnw_SI = fit_dispersion_params_all_Pe_D0min_KLnw_out.alpha_SI;
-% d_alpha_D0uncert_w_KLnw_SI = abs(alpha_D0max_w_KLnw_SI - alpha_D0min_w_KLnw_SI)/2;
-% alpha_D0max_w_KLnw_cm = fit_dispersion_params_all_Pe_D0max_KLnw_out.alpha_cm;
-% alpha_D0min_w_KLnw_cm = fit_dispersion_params_all_Pe_D0min_KLnw_out.alpha_cm;
-% d_alpha_D0uncert_w_KLnw_cm = abs(alpha_D0max_w_KLnw_cm - alpha_D0min_w_KLnw_cm)/2;
-% % alpha non weigthed D0 effect
-% alpha_D0max_nw_KLnw_SI = fit_dispersion_params_all_Pe_D0max_nw_KLnw_out.alpha_SI;
-% alpha_D0min_nw_KLnw_SI = fit_dispersion_params_all_Pe_D0min_nw_KLnw_out.alpha_SI;
-% d_alpha_D0uncert_nw_KLnw_SI = abs(alpha_D0max_nw_KLnw_SI - alpha_D0min_nw_KLnw_SI)/2;
-% alpha_D0max_nw_KLnw_cm = fit_dispersion_params_all_Pe_D0max_nw_KLnw_out.alpha_cm;
-% alpha_D0min_nw_KLnw_cm = fit_dispersion_params_all_Pe_D0min_nw_KLnw_out.alpha_cm;
-% d_alpha_D0uncert_nw_KLnw_cm = abs(alpha_D0max_nw_KLnw_cm - alpha_D0min_nw_KLnw_cm)/2;
-% 
-% % % KL mean
-% % % weighted
-% % fit_dispersion_params_all_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0_array,D0,Dp_SI,p_guess,dKL_mean_array);
-% % %nonweighted
-% % fit_dispersion_params_all_nw_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0_array,D0,Dp_SI,p_guess,ones(size(KL_mean_array)));
-% % 
-% % % Propagation of uncertainty from D0 error
-% % D0max = D0 + dD0;
-% % D0min = D0 - dD0;
-% % Pe_D0max_array = Pe_D0_array*(D0/D0max); % Pe in respect to D0max
-% % Pe_D0min_array = Pe_D0_array*(D0/D0min); % Pe in respect to D0min
-% % 
-% % % Fitting KL with different Pe ranges
-% % fit_dispersion_params_all_Pe_D0max_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0max_array,D0max,Dp_SI,p_guess,dKL_mean_array);
-% % fit_dispersion_params_all_Pe_D0min_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0min_array,D0min,Dp_SI,p_guess,dKL_mean_array);
-% % fit_dispersion_params_all_Pe_D0max_nw_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0max_array,D0max,Dp_SI,p_guess,ones(size(KL_mean_array)));
-% % fit_dispersion_params_all_Pe_D0min_nw_KLmean_out = fit_dispersion_params_all(KL_mean_array,Pe_D0min_array,D0min,Dp_SI,p_guess,ones(size(KL_mean_array)));
-% % 
-% % % Params from fitting
-% % beta_KLmean = fit_dispersion_params_all_KLmean_out.beta;
-% % d_beta_KLmean = fit_dispersion_params_all_KLmean_out.d_beta;
-% % 
-% % % % taus KL weigthed
-% % % % tau weigthed
-% % % tau_w_KLmean = fit_dispersion_params_all_KLmean_out.tau;
-% % % d_tau_w_KLmean = fit_dispersion_params_all_KLmean_out.d_tau;
-% % % % tau non weigthed
-% % % tau_nw_KLmean = fit_dispersion_params_all_nw_KLmean_out.tau;
-% % % d_tau_nw_KLmean = fit_dispersion_params_all_nw_KLmean_out.d_tau;
-% % % % tau weigthed D0 effect
-% % % tau_D0max_w_KLmean = fit_dispersion_params_all_Pe_D0max_KLmean_out.tau;
-% % % tau_D0min_w_KLmean = fit_dispersion_params_all_Pe_D0min_KLmean_out.tau;
-% % % d_tau_D0uncert_w_KLmean = abs(tau_D0max_w_KLmean - tau_D0min_w_KLmean)/2;
-% % % % tau non weigthed D0 effect
-% % % tau_D0max_nw_KLmean = fit_dispersion_params_all_Pe_D0max_KLmean_out.tau;
-% % % tau_D0min_nw_KLmean = fit_dispersion_params_all_Pe_D0min_KLmean_out.tau;
-% % % d_tau_D0uncert_nw_KLmean = abs(tau_D0max_nw_KLmean - tau_D0min_nw_KLmean)/2;
-% % 
-% % % alphas KL average
-% % % alpha weigthed
-% % alpha_w_KLmean_SI = fit_dispersion_params_all_KLmean_out.alpha_SI;
-% % d_alpha_w_KLmean_SI = fit_dispersion_params_all_KLmean_out.d_alpha_SI;
-% % alpha_w_KLmean_cm = fit_dispersion_params_all_KLmean_out.alpha_cm;
-% % d_alpha_w_KLmean_cm = fit_dispersion_params_all_KLmean_out.d_alpha_cm;
-% % % alpha non weigthed
-% % alpha_nw_KLmean_SI = fit_dispersion_params_all_nw_KLmean_out.alpha_SI;
-% % d_alpha_nw_KLmean_SI = fit_dispersion_params_all_nw_KLmean_out.d_alpha_SI;
-% % alpha_nw_KLmean_cm = fit_dispersion_params_all_nw_KLmean_out.alpha_cm;
-% % d_alpha_nw_KLmean_cm = fit_dispersion_params_all_nw_KLmean_out.d_alpha_cm;
-% % % alpha weigthed D0 effect
-% % alpha_D0max_w_KLmean_SI = fit_dispersion_params_all_Pe_D0max_KLmean_out.alpha_SI;
-% % alpha_D0min_w_KLmean_SI = fit_dispersion_params_all_Pe_D0min_KLmean_out.alpha_SI;
-% % d_alpha_D0uncert_w_KLmean_SI = abs(alpha_D0max_w_KLmean_SI - alpha_D0min_w_KLmean_SI)/2;
-% % alpha_D0max_w_KLmean_cm = fit_dispersion_params_all_Pe_D0max_KLmean_out.alpha_cm;
-% % alpha_D0min_w_KLmean_cm = fit_dispersion_params_all_Pe_D0min_KLmean_out.alpha_cm;
-% % d_alpha_D0uncert_w_KLmean_cm = abs(alpha_D0max_w_KLmean_cm - alpha_D0min_w_KLmean_cm)/2;
-% % % alpha non weigthed D0 effect
-% % alpha_D0max_nw_KLmean_SI = fit_dispersion_params_all_Pe_D0max_nw_KLmean_out.alpha_SI;
-% % alpha_D0min_nw_KLmean_SI = fit_dispersion_params_all_Pe_D0min_nw_KLmean_out.alpha_SI;
-% % d_alpha_D0uncert_nw_KLmean_SI = abs(alpha_D0max_nw_KLmean_SI - alpha_D0min_nw_KLmean_SI)/2;
-% % alpha_D0max_nw_KLmean_cm = fit_dispersion_params_all_Pe_D0max_nw_KLmean_out.alpha_cm;
-% % alpha_D0min_nw_KLmean_cm = fit_dispersion_params_all_Pe_D0min_nw_KLmean_out.alpha_cm;
-% % d_alpha_D0uncert_nw_KLmean_cm = abs(alpha_D0max_nw_KLmean_cm - alpha_D0min_nw_KLmean_cm)/2;
-% % 
-% % % % all taus
-% % % % KL weigthed
-% % % taus = [tau_w,tau_nw,tau_D0max_w,tau_D0min_w,tau_D0max_nw,tau_D0min_nw];
-% % % d_taus = [d_tau_w,d_tau_nw,d_tau_D0uncert_w,d_tau_D0uncert_nw];
-% % % % KL non weigthed
-% % % taus_KLnw = [tau_w_KLnw,tau_nw_KLnw,tau_D0max_w_KLnw,tau_D0min_w_KLnw,tau_D0max_nw_KLnw,tau_D0min_nw_KLnw];
-% % % d_taus_KLnw = [d_tau_w_KLnw,d_tau_nw_KLnw,d_tau_D0uncert_w_KLnw,d_tau_D0uncert_nw_KLnw];
-% % % % KL mean
-% % % taus_KLmean = [tau_w_KLmean,tau_nw_KLmean,tau_D0max_w_KLmean,tau_D0min_w_KLmean,tau_D0max_nw_KLmean,tau_D0min_nw_KLmean];
-% % % d_taus_KLmean = [d_tau_w_KLmean,d_tau_nw_KLmean,d_tau_D0uncert_w_KLmean,d_tau_D0uncert_nw_KLmean];
-% % % 
-% % % % all taus and dtaus
-% % % taus_all = [taus_KLnw,taus_KLmean];
-% % % d_taus_all = [d_taus_KLnw,d_taus_KLmean];
-% % % tau_mean = mean(taus_all);
-% % % d_tau_sens = max(abs(taus_all - tau_mean));
-% % 
-% % % all alphas
-% % % KL weigthed
-% % alphas_SI = [alpha_w_SI,alpha_nw_SI,alpha_D0max_w_SI,alpha_D0min_w_SI,alpha_D0max_nw_SI,alpha_D0min_nw_SI];
-% % alphas_cm = [alpha_w_cm,alpha_nw_cm,alpha_D0max_w_cm,alpha_D0min_w_cm,alpha_D0max_nw_cm,alpha_D0min_nw_cm];
-% % d_alphas_SI = [d_alpha_w_SI,d_alpha_nw_SI,d_alpha_D0uncert_w_SI,d_alpha_D0uncert_nw_SI];
-% % d_alphas_cm = [d_alpha_w_cm,d_alpha_nw_cm,d_alpha_D0uncert_w_cm,d_alpha_D0uncert_nw_cm];
-% % % KL non weigthed
-% % alphas_KLnw_SI = [alpha_w_KLnw_SI,alpha_nw_KLnw_SI,alpha_D0max_w_KLnw_SI,alpha_D0min_w_KLnw_SI,alpha_D0max_nw_KLnw_SI,alpha_D0min_nw_KLnw_SI];
-% % alphas_KLnw_cm = [alpha_w_KLnw_cm,alpha_nw_KLnw_cm,alpha_D0max_w_KLnw_cm,alpha_D0min_w_KLnw_cm,alpha_D0max_nw_KLnw_cm,alpha_D0min_nw_KLnw_cm];
-% % d_alphas_KLnw_SI = [d_alpha_w_KLnw_SI,d_alpha_nw_KLnw_SI,d_alpha_D0uncert_w_KLnw_SI,d_alpha_D0uncert_nw_KLnw_SI];
-% % d_alphas_KLnw_cm = [d_alpha_w_KLnw_cm,d_alpha_nw_KLnw_cm,d_alpha_D0uncert_w_KLnw_cm,d_alpha_D0uncert_nw_KLnw_cm];
-% % % KL mean
-% % alphas_KLmean_SI = [alpha_w_KLmean_SI,alpha_nw_KLmean_SI,alpha_D0max_w_KLmean_SI,alpha_D0min_w_KLmean_SI,alpha_D0max_nw_KLmean_SI,alpha_D0min_nw_KLmean_SI];
-% % alphas_KLmean_cm = [alpha_w_KLmean_cm,alpha_nw_KLmean_cm,alpha_D0max_w_KLmean_cm,alpha_D0min_w_KLmean_cm,alpha_D0max_nw_KLmean_cm,alpha_D0min_nw_KLmean_cm];
-% % d_alphas_KLmean_SI = [d_alpha_w_KLmean_SI,d_alpha_nw_KLmean_SI,d_alpha_D0uncert_w_KLmean_SI,d_alpha_D0uncert_nw_KLmean_SI];
-% % d_alphas_KLmean_cm = [d_alpha_w_KLmean_cm,d_alpha_nw_KLmean_cm,d_alpha_D0uncert_w_KLmean_cm,d_alpha_D0uncert_nw_KLmean_cm];
-% % 
-% % % all alphas and dalphas
-% % alphas_all_SI = [alphas_SI,alphas_KLnw_SI,alphas_KLmean_SI];
-% % alphas_all_cm = [alphas_cm,alphas_KLnw_cm,alphas_KLmean_cm];
-% % d_alphas_all_SI = [d_alphas_SI,d_alphas_KLnw_SI,d_alphas_KLmean_SI];
-% % d_alphas_all_cm = [d_alphas_SI,d_alphas_KLnw_SI,d_alphas_KLmean_SI];
-% % 
-% % alpha_mean_SI = mean(alphas_all_SI);
-% % alpha_mean_cm = mean(alphas_all_cm);
-% % d_alpha_sens_SI = max(abs(alphas_all_SI - alpha_mean_SI));
-% % d_alpha_sens_cm = max(abs(alphas_all_cm - alpha_mean_cm));
-% % 
-% % C2 in model is alpha/Dp Dp is characterstic legth L
-% KL_fun = fit_dispersion_params_all_out.Cfun; 
-% % KL_SI = KL_fun(alpha_mean_SI/Dp_SI,Pe_D0_array);
-% % % KL_SI = KL_fun([alpha_mean_SI/Dp_SI,tau_mean],Pe_D0_array);
-% % KL_alphamax_fit = KL_fun((alpha_mean_SI+d_alpha_sens_SI)/Dp_SI,Pe_D0_array);
-% % KL_alphamin_fit = KL_fun((alpha_mean_SI-d_alpha_sens_SI)/Dp_SI,Pe_D0_array);
-% % % KL_alphamax_fit = KL_fun([(alpha_mean_SI+d_alpha_sens_SI)/Dp_SI,tau_mean+d_tau_sens],Pe_D0_array);
-% % % KL_alphamin_fit = KL_fun([(alpha_mean_SI-d_alpha_sens_SI)/Dp_SI,tau_mean-d_tau_sens],Pe_D0_array);
-% % dKL_alpha_sens = abs(KL_alphamax_fit - KL_alphamin_fit)/2;
-% % 
-% % % RMSE = fit_dispersion_params_all_out.RMSE;
-% % % R2 = fit_dispersion_params_all_out.R2;
-% 
-% % Peclet with Dp = alpha instead of L
-% Pe_alpha_array = u_array*alpha_nw_SI/D0;
-% dPe_alpha_array = (((u_array/D0).^2)*((abs(alpha_nw_SI-alpha_w_SI))^2)+((-u_array*alpha_nw_SI/(D0^2)).^2)*(dD0^2)).^(1/2);
-% % KL/D0, must be same units
-% KL_vs_D0_array = KL_array/D0;
-% dKL_vs_D0_array = (((1/D0).^2)*(dKL_nw_array.^2)+((-KL_array/(D0^2)).^2)*(dD0^2)).^(1/2); %dKL array instead of dKL total
-% % since it is the result from fitting C vs t, not plotting the results from this fitting
-% 
-% % Add dispersion parameters in exp_params and fitting results
-% fitting_results.Pe_alpha = Pe_alpha_array;
-% fitting_results.dPe_alpha = dPe_alpha_array;
-% fitting_results.KL_vs_D0 = KL_vs_D0_array;
-% fitting_results.dKL_vs_D0 = dKL_vs_D0_array;
-% for i = 1:length(filedataExp.Key)
-%     expProcData.(filedataExp.Key(i)).exp_params.Pe_alpha = Pe_alpha_array(i);
-%     expProcData.(filedataExp.Key(i)).exp_params.dPe_alpha = dPe_alpha_array(i);
-%     expProcData.(filedataExp.Key(i)).exp_params.KL_vs_D0 = KL_vs_D0_array(i);
-%     expProcData.(filedataExp.Key(i)).exp_params.dKL_vs_D0 = dKL_vs_D0_array(i);
-% end
-% 
-% expProcFullData = expProcData;
-% 
-% % save updated expProcData
-% save(pathExportAll + "expProcFullData.mat",'expProcFullData')
-% 
-% %% Table results
-% 
-% % creating table all in cm2 and min, and mol %
-% % Pe alone is Pe in respect to KL and not D0
-% fitting_results_simple = fitting_results(:, {'Key', 'C1init_pcmol', ...
-%     'C1j_pcmol', 'Q_mlmin', 'u_cmmin', 'RMSE_dtfixed', 'R2_dtfixed', ...
-%     'KL_dtfixed_cm2min','SE_KL_total_dtfixed_cm2min','Pe_dtfixed', 'SE_Pe_dtfixed', ...
-%     'dt_dtfixed_min', 'SE_dt_dtfixed_min', 'dtD_dtfixed', 'SE_dtD_dtfixed', ...
-%     'L_dtfixed_lines_cm','SE_L_dtfixed_lines_cm','V_dtfixed_lines_cc','SE_V_dtfixed_lines_cc',...
-%     'Pe_D0', 'dPe_D0', 'Pe_alpha', 'dPe_alpha', 'T_mean', 'T_std', ...
-%     'RMSE_dtfixed_nw', 'R2_dtfixed_nw', ...
-%     'KL_dtfixed_nw_cm2min','SE_KL_total_dtfixed_nw_cm2min','Pe_dtfixed_nw', 'SE_Pe_dtfixed_nw', ...
-%     'dt_dtfixed_nw_min', 'SE_dt_dtfixed_nw_min', 'dtD_dtfixed_nw', 'SE_dtD_dtfixed_nw', ...
-%     'L_lines_nw_cm','SE_L_lines_nw_cm','V_lines_nw_cc','SE_V_lines_nw_cc'});
-% 
-% fitting_params_simple = table("Berea", unique(fitting_results.Fluid1), unique(fitting_results.Fluid2),...
-%     unique(fitting_results.T_C),unique(fitting_results.P_psig), (unique(fitting_results.P_psig)+14.7)*0.00689476,...
-%     unique(fitting_results.D12_cm2min), unique(fitting_results.dD12_cm2min), ...
-%     unique(fitting_results.D_in)*2.54, unique(fitting_results.L_cm), ...
-%     unique(fitting_results.phi),unique(fitting_results.K_mD), ...
-%     unique(fitting_results.dtD_dtfixed), max(fitting_results.L_dtfixed_lines_cm),max(fitting_results.SE_L_dtfixed_lines_cm),...
-%     unique(fitting_results.Vlinesbefore_cc), max(fitting_results.V_dtfixed_lines_cc),max(fitting_results.SE_V_dtfixed_lines_cc),...
-%     alpha_w_cm, d_alpha_w_cm, alpha_nw_cm, d_alpha_nw_cm, ...
-%     alpha_w_KLnw_cm, d_alpha_w_KLnw_cm, alpha_nw_KLnw_cm, d_alpha_nw_KLnw_cm, beta, ...
-%     'VariableNames',{'Sample', 'Fluid1','Fluid2', ...
-%     'T_C','P_psig','P_MPa', ...
-%     'D0_cm2min', 'dD0_cm2min', ...
-%     'D_cm', 'L_cm', ...
-%     'phi',  'K_mD', ...
-%     'dtD_fixed','L_lines_before_dtfixed_cm','sd_L_lines_before_dtfixed_cm',...
-%     'Vlinesbefore_cc','V_lines_before_dtfixed_cc','sd_V_lines_before_dtfixed_cc',...
-%     'alpha_w_cm', 'sd_alpha_w_cm','alpha_nw_cm', 'sd_alpha_nw_cm', ...
-%     'alpha_w_KLnw_cm', 'd_alpha_w_KLnw_cm', 'alpha_nw_KLnw_cm', 'd_alpha_nw_KLnw_cm','beta'});
-% 
-% fittingDispersionResults.results = fitting_results_simple;
-% fittingDispersionResults.params = fitting_params_simple;
-% 
-% %% Save tables and matrices
-% 
-% % name to save matrices and spreadsheets
-% table_name = pathExportAll + "fittingResults";  % Name used for saving TrimData comes from input pathExportAll
-% table_name1 = pathExportAll + "fittingResultsSimple";  % Name used for saving TrimData comes from input pathExportAll
-% table_name2 = pathExportAll + "fittingResultsParams";  % Name used for saving TrimData comes from input pathExportAll
-% 
-% % delete previous saved files
-% delete(table_name + '.mat');
-% delete(table_name + '.xlsx');
-% delete(table_name1 + '.mat');
-% delete(table_name1 + '.xlsx');
-% delete(table_name2 + '.mat');
-% delete(table_name2 + '.xlsx');
-% 
-% % save fitting_results
-% writetable(fitting_results,table_name + ".xlsx");
-% save(table_name + ".mat",'fitting_results')
-% 
-% % save updated expProcData
-% save(pathExportAll + "expProcFullData.mat",'expProcFullData')
-% 
-% % save fitting table
-% writetable(fitting_results_simple,table_name1 + ".xlsx");
-% writetable(fitting_params_simple,table_name2 + ".xlsx");
-% save(table_name1 + ".mat",'fitting_results_simple')
-% save(table_name2 + ".mat",'fitting_params_simple')
-% 
-% 
-% %% Plot Kl_vs_vel
+min_points_alpha = 2;
+min_points_alpha_tau = 3;
+
+Fluid1_unique = unique(filedataExp.Fluid1);
+Fluid2_unique = unique(filedataExp.Fluid2);
+T_unique      = unique(filedataExp.T);
+P_unique      = unique(filedataExp.P);
+
+alpha_results = struct();
+count_row = 0;
+
+% Initial guesses
+p_guess_alpha     = 1;
+p_guess_alpha_tau = [1,1];
+
+for i = 1:length(Fluid1_unique)
+    for j = 1:length(Fluid2_unique)
+        for k = 1:length(T_unique)
+            for m = 1:length(P_unique)
+            
+                KL = [];
+                dKL = [];
+                Pe_D0 = [];
+                D0_group = [];
+                dD0_group = [];
+                Dp_group = [];
+            
+                for l = 1:length(filedataExp.Key)
+            
+                    if filedataExp.Fluid1(l) == Fluid1_unique(i) && ...
+                       filedataExp.Fluid2(l) == Fluid2_unique(j) && ...
+                       filedataExp.T(l) == T_unique(k) && ...
+                       filedataExp.P(l) == P_unique(m)
+            
+                        key = filedataExp.Key(l);
+                        res = expProcData.(key).results;
+            
+                        if isfinite(res.KL_SI)
+            
+                            KL = [KL; res.KL_SI];
+                            dKL = [dKL; res.dKL_SI];
+                            Pe_D0 = [Pe_D0; res.Pe_D0];
+            
+                            D0_group = [D0_group; res.D0_SI];
+                            dD0_group = [dD0_group; res.dD0_SI];
+                            Dp_group = [Dp_group; res.L_SI];
+            
+                        end
+                    end
+                end
+            
+                n_points = length(KL);
+            
+                % D0 unique if fluid , fluid 2, T and P are unique
+                D0_val = unique(D0_group);
+                Dp_val = unique(Dp_group);
+            
+                % store goup info
+                count_row = count_row + 1;
+            
+                alpha_results(count_row).Fluid1 = Fluid1_unique(i);
+                alpha_results(count_row).Fluid2 = Fluid2_unique(j);
+                alpha_results(count_row).T = T_unique(k);
+                alpha_results(count_row).P = P_unique(m);
+                alpha_results(count_row).n_points = n_points;
+            
+                % Initialize outputs
+                % alpha only fitting
+                alpha_results(count_row).alpha_SI   = NaN;
+                alpha_results(count_row).d_alpha_SI = NaN;
+                alpha_results(count_row).alpha_cm   = NaN;
+                alpha_results(count_row).d_alpha_cm = NaN;
+            
+                % alpha + tau fitting
+                alpha_results(count_row).alpha_tau_SI   = NaN;
+                alpha_results(count_row).d_alpha_tau_SI = NaN;
+                alpha_results(count_row).alpha_tau_cm   = NaN;
+                alpha_results(count_row).d_alpha_tau_cm = NaN;
+                alpha_results(count_row).tau   = NaN;
+                alpha_results(count_row).d_tau = NaN;
+            
+                % alpha only fitting
+                if n_points >= min_points_alpha && range(Pe_D0) > 1e-4 && std(KL) > 1e-12
+            
+                    try
+                        out_alpha = fit_dispersion_params_alpha( ...
+                            KL, Pe_D0, D0_val, Dp_val, p_guess_alpha, dKL);
+            
+                        alpha_results(count_row).alpha_SI   = out_alpha.alpha_SI;
+                        alpha_results(count_row).d_alpha_SI = out_alpha.d_alpha_SI;
+                        alpha_results(count_row).alpha_cm   = out_alpha.alpha_cm;
+                        alpha_results(count_row).d_alpha_cm = out_alpha.d_alpha_cm;
+            
+                    catch
+                        % leave NaNs
+                    end
+            
+                end
+            
+                % alpha + tau if possible
+                if n_points >= min_points_alpha_tau && range(Pe_D0) > 1e-3 && std(KL) > 1e-12
+            
+                    try
+                        out_tau = fit_dispersion_params_alpha_tau( ...
+                            KL, Pe_D0, D0_val, Dp_val, p_guess_alpha_tau, dKL);
+            
+                        if isfinite(out_tau.tau) && ...
+                           out_tau.tau > 0 && ...
+                           out_tau.tau < 10 && ...
+                           abs(out_tau.d_tau / out_tau.tau) < 1
+
+                            alpha_results(count_row).alpha_tau_SI   = out_tau.alpha_SI;
+                            alpha_results(count_row).d_alpha_tau_SI = out_tau.d_alpha_SI;
+                            alpha_results(count_row).alpha_tau_cm   = out_tau.alpha_cm;
+                            alpha_results(count_row).d_alpha_tau_cm = out_tau.d_alpha_cm;
+            
+                            alpha_results(count_row).tau   = out_tau.tau;
+                            alpha_results(count_row).d_tau = out_tau.d_tau;
+            
+                        end
+            
+                    catch
+                        % leave NaN
+                    end
+            
+                end
+            
+            end
+        end
+    end
+end
+
+% convert to table
+
+alpha_table = struct2table(alpha_results);
+
+disp(alpha_table)
+
+%% Save results
+
+alpha_table_name = pathExportAll + "alpha_results";
+
+% delete previous
+if exist(alpha_table_name + ".xlsx","file")
+    delete(alpha_table_name + ".xlsx")
+end
+if exist(alpha_table_name + ".mat","file")
+    delete(alpha_table_name + ".mat")
+end
+
+% save alpha table
+writetable(alpha_table, alpha_table_name + ".xlsx")
+save(alpha_table_name + ".mat",'alpha_table')
+
+% save processed data
+expProcFullData = expProcData;
+save(pathExportAll + "expProcFullData.mat",'expProcFullData')
+
+fitting_results_name = pathExportAll + "fitting_results.xlsx";
+
+% delete previous file
+if exist(fitting_results_name,"file")
+    delete(fitting_results_name)
+end
+
+% Sheet 1: Best results
+vars_to_remove = {'C_fit'};
+T = best_method_table; 
+T(:, vars_to_remove) = [];
+writetable(T, fitting_results_name, ...
+    'Sheet','best_method')
+
+% Sheet 2+: each method
+method_names = fieldnames(method_results);
+
+for j = 1:length(method_names)
+
+    T = method_results.(method_names{j});
+
+    % remove Cfit col
+    T(:, vars_to_remove) = [];
+
+    % limit sheet name
+    sheet_name = method_names{j};
+    if strlength(sheet_name) > 31
+        sheet_name = extractBefore(sheet_name,32);
+    end
+
+    writetable(T, fitting_results_name, 'Sheet', sheet_name)
+
+end
+
+%% Plot Kl_vs_vel
+
+Fluid1_unique = unique(best_method_table.Fluid1);
+Fluid2_unique = unique(best_method_table.Fluid2);
+T_unique      = unique(best_method_table.T_C);
+P_unique      = unique(best_method_table.P_psig);
+
+colors = orderedcolors("glow");
+
+for i = 1:length(Fluid1_unique)
+    for j = 1:length(Fluid2_unique)
+        for k = 1:length(T_unique)
+            for m = 1:length(P_unique)
+            
+                % filter rows for this group
+                idx = best_method_table.Fluid1 == Fluid1_unique(i) & ...
+                      best_method_table.Fluid2 == Fluid2_unique(j) & ...
+                      best_method_table.T_C == T_unique(k) & ...
+                      best_method_table.P_psig == P_unique(m);
+            
+                % extract data
+                u_array_cmmin = best_method_table.u_cmmin(idx);
+                KL_array      = best_method_table.KL_cm2min(idx);
+                dKL_array     = best_method_table.dKL_cm2min(idx);
+                Pe_D0_array   = best_method_table.Pe_D0(idx);
+            
+                D0 = unique(best_method_table.D0_SI(idx));
+            
+                % get alpha for this group
+                idx_alpha = alpha_table.Fluid1 == Fluid1_unique(i) & ...
+                            alpha_table.Fluid2 == Fluid2_unique(j) & ...
+                            alpha_table.T      == T_unique(k) & ...
+                            alpha_table.P      == P_unique(m);
+            
+                alpha_SI = alpha_table.alpha_SI(idx_alpha);
+                dalpha_SI = alpha_table.d_alpha_SI(idx_alpha);
+            
+                alpha_cm = alpha_SI * 100;
+                dalpha_cm = dalpha_SI * 100;
+            
+                % model (KL = alpha * u)
+                u_model = linspace(0, max(u_array_cmmin)/(60*100), 100);
+                KL_model = alpha_SI * u_model;
+            
+                u_model_cm = u_model * (60*100);
+                KL_model_cm = KL_model * (60*10^4);
+            
+                % plot
+                figure
+                hold on
+            
+                % model line
+                plot(u_model_cm, KL_model_cm, ...
+                    'k','LineWidth',2,...
+                    'DisplayName','K_L = \alpha u_x')
+            
+                % data
+                for ii = 1:length(u_array_cmmin)
+            
+                    errorbar(u_array_cmmin(ii), KL_array(ii), ...
+                        dKL_array(ii), dKL_array(ii), ...
+                        'Color','k','HandleVisibility','off')
+            
+                    scatter(u_array_cmmin(ii), KL_array(ii), ...
+                        'filled', ...
+                        'Color',colors(ii,:), ...
+                        'DisplayName',"Q = " + best_method_table.Q_mlmin(ii) + " ml/min")
+            
+                end
+            
+                xlabel('Interstitial velocity (u_x) [cm/min]')
+                ylabel('K_L [cm^2/min]')
+            
+                xlim([0,1.1*max(u_array_cmmin)])
+                ylim([0,1.1*max(KL_array)])
+            
+                grid on
+            
+                save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(j)+"_T"+filedataExp.T(k)+"_P"+filedataExp.P(m);
+            
+                title(save_name, 'Interpreter','none')
+            
+                annotation('textbox',[0.25 0.2 0.5 0.05],...
+                    'String',sprintf('\\alpha = %.2f ± %.2f cm', alpha_cm, dalpha_cm),...
+                    'EdgeColor','none')
+            
+                legend('Location','northwest')
+            
+                % save figure
+                saveas(gcf, pathExportAll + "KLvsVel_" + save_name, 'png')
+                savefig(gcf, pathExportAll + "KLvsVel_" + save_name)
+            
+            end
+        end
+    end
+end
+
+%  %%
 % 
 % colors = orderedcolors("glow");
 % 
 % % all params in SI
-% Dp_SI = unique(fitting_results.L_SI);
-% D0 = unique(fitting_results.D0_SI);
-% Pe_D0_array = fitting_results.Pe_D0; % Pe in respect to D0
-% u_array_cmmin = fitting_results.u_cmmin;
+% Dp_SI = unique(best_method_table.L_SI);
+% D0 = unique(best_method_table.D0_SI);
+% Pe_D0_array = best_method_table.Pe_D0; % Pe in respect to D0
+% u_array_cmmin = best_method_table.u_cmmin;
 % 
-% % weigthed
-% KL_array = fitting_results.KL_dtfixed_cm2min; % KL and D0 must have same units
-% dKLneg_array = fitting_results.SE_KL_dtfixed_cm2min;
-% dKLpos_array = fitting_results.SE_KL_dtfixed_cm2min;
-% alpha_SI = alpha_nw_SI;
-% dalpha_SI = d_alpha_nw_SI;
-% alpha_L = alpha_nw_cm;
-% dalpha_L = d_alpha_nw_cm;
-% 
-% % non weigthed
-% KL_array_nw = fitting_results.KL_dtfixed_nw_cm2min; % KL and D0 must have same units
-% dKLneg_array_nw = fitting_results.SE_KL_dtfixed_nw_cm2min;
-% dKLpos_array_nw = fitting_results.SE_KL_dtfixed_nw_cm2min;
-% alpha_SI_nw = alpha_nw_KLnw_SI;
-% dalpha_SI_nw = d_alpha_nw_KLnw_SI;
-% alpha_L_nw = alpha_nw_KLnw_cm;
-% dalpha_L_nw = d_alpha_nw_KLnw_cm;
+% % K and alha with best method
+% KL_array = best_method_table.KL_cm2min; % KL and D0 must have same units
+% dKLneg_array = best_method_table.dKL_cm2min;
+% dKLpos_array = best_method_table.dKL_cm2min;
+% alpha_SI = alpha_table.alpha_SI;
+% dalpha_SI = alpha_table.d_alpha_SI;
+% alpha_cm = alpha_table.alpha_cm;
+% dalpha_cm = alpha_table.d_alpha_cm;
 % 
 % x = 0:1:ceil(max(Pe_D0_array));
-% KL_plot = KL_fun(alpha_SI/Dp_SI,x);
-% KL_plot_nw = KL_fun(alpha_SI_nw/Dp_SI,x);
+% KL_plot = KL_Pe_alpha_only_model(x,D0,alpha_SI);
+% 
+% %%
+% 
 % 
 % figure % dispersivity
 % % KL fit weighted
@@ -1204,45 +1100,45 @@ end
 % legend('Location','northwest');
 % saveas(gcf,pathExportAll + "KLvsVel-alpha_all",'png')
 % savefig(gcf,pathExportAll + "KLvsVel-alpha_all")
-% 
-% %% Plot Kl/Dl vs Pe
-% 
-% % all params in SI
-% Pe_array = Pe_alpha_array; % Pe in respect to D0
-% dPe_array = fitting_results.dPe_alpha;
-% KL_vs_D0_array = fitting_results.KL_vs_D0;
-% dKL_vs_D0_array = fitting_results.dKL_vs_D0;
-% D0 = unique(fitting_results.D0_SI);
-% dD0 = unique(fitting_results.dD0_SI);
-% KL_array = fitting_results.KL_dtfixed_SI; % KL and D0 must have same units
-% dKL_array = fitting_results.SE_KL_dtfixed_SI;
-% 
-% x = 0:1:ceil(max(Pe_array));
-% KL_plot = KL_fun(alpha_SI/Dp_SI,x);
-% % KL_plot = KL_fun([alpha_SI/Dp_SI,tau],x);
-% 
-% figure % dispersivity
-% plot(x,KL_plot/D0, ...
-%     'DisplayName','K_L/D_0 \approx \alpha_Lu_x/D_0','Color','k'); % Kl_vs_u fitting
-% hold on
-% for i = 1:length(Pe_array)
-%     errorbar(Pe_array(i),KL_vs_D0_array(i), ...
-%         dKL_vs_D0_array(i),dKL_vs_D0_array(i), dPe_array(i), dPe_array(i), ...
-%         'Color','k','HandleVisibility','off')
-%     hold on
-%     scatter(Pe_array(i),KL_vs_D0_array(i),'filled', ...
-%         'DisplayName',"Q = " + filedataExp.Q(i) +" ml/min", ...
-%         'Color',colors(i,:))
-%     hold on
-% end
-% xlabel('Pe = u_x\alpha/D_0')
-% ylabel('K_L/D_0');
-% ylim([0,10])
-% set(gca, 'XScale','log','YScale','log')
-% grid on;
-% legend('Location','northwest');
-% saveas(gcf,pathExportAll + "KLD0vsPe_all",'png')
-% savefig(gcf,pathExportAll + "KLD0vsPe_all")
+% % 
+% % %% Plot Kl/Dl vs Pe
+% % 
+% % % all params in SI
+% % Pe_array = Pe_alpha_array; % Pe in respect to D0
+% % dPe_array = fitting_results.dPe_alpha;
+% % KL_vs_D0_array = fitting_results.KL_vs_D0;
+% % dKL_vs_D0_array = fitting_results.dKL_vs_D0;
+% % D0 = unique(fitting_results.D0_SI);
+% % dD0 = unique(fitting_results.dD0_SI);
+% % KL_array = fitting_results.KL_dtfixed_SI; % KL and D0 must have same units
+% % dKL_array = fitting_results.SE_KL_dtfixed_SI;
+% % 
+% % x = 0:1:ceil(max(Pe_array));
+% % KL_plot = KL_fun(alpha_SI/Dp_SI,x);
+% % % KL_plot = KL_fun([alpha_SI/Dp_SI,tau],x);
+% % 
+% % figure % dispersivity
+% % plot(x,KL_plot/D0, ...
+% %     'DisplayName','K_L/D_0 \approx \alpha_Lu_x/D_0','Color','k'); % Kl_vs_u fitting
+% % hold on
+% % for i = 1:length(Pe_array)
+% %     errorbar(Pe_array(i),KL_vs_D0_array(i), ...
+% %         dKL_vs_D0_array(i),dKL_vs_D0_array(i), dPe_array(i), dPe_array(i), ...
+% %         'Color','k','HandleVisibility','off')
+% %     hold on
+% %     scatter(Pe_array(i),KL_vs_D0_array(i),'filled', ...
+% %         'DisplayName',"Q = " + filedataExp.Q(i) +" ml/min", ...
+% %         'Color',colors(i,:))
+% %     hold on
+% % end
+% % xlabel('Pe = u_x\alpha/D_0')
+% % ylabel('K_L/D_0');
+% % ylim([0,10])
+% % set(gca, 'XScale','log','YScale','log')
+% % grid on;
+% % legend('Location','northwest');
+% % saveas(gcf,pathExportAll + "KLD0vsPe_all",'png')
+% % savefig(gcf,pathExportAll + "KLD0vsPe_all")
 % 
 % 
 % 
