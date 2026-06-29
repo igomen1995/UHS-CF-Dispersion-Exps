@@ -963,6 +963,7 @@ for i = 1:length(Fluid1_unique)
                 Pe_D0_array   = best_method_table.Pe_D0(idx);
             
                 D0 = unique(best_method_table.D0_SI(idx));
+                Dp_SI = unique(best_method_table.L_SI(idx));
             
                 % get alpha for this group
                 idx_alpha = alpha_table.Fluid1 == Fluid1_unique(i) & ...
@@ -976,19 +977,29 @@ for i = 1:length(Fluid1_unique)
                 alpha_cm = alpha_SI * 100;
                 dalpha_cm = dalpha_SI * 100;
             
-                % model (KL = alpha * u)
-                u_model = linspace(0, max(u_array_cmmin)/(60*100), 100);
-                KL_model = alpha_SI * u_model;
-            
-                u_model_cm = u_model * (60*100);
-                KL_model_cm = KL_model * (60*10^4);
+                % % model (KL = alpha * u)
+                % u_model = linspace(0, max(u_array_cmmin)/(60*100), 100);
+                % KL_model = alpha_SI * u_model;
+                % 
+                % u_model_cm = u_model * (60*100);
+                % KL_model_cm = KL_model * (60*10^4);
+
+                % model based on Pe numbers (Pe with D0 denominator)
+                Pe_D0_array_plot = 0:1:ceil(max(Pe_D0_array));
+                % KL_Pe_alpha_only_model(Pe_fromD0,D0,p) % alpha = p * Dp; % Alpha (dispersivity) Dp is L
+                KL_array_SI_plot = KL_Pe_alpha_only_model(Pe_D0_array_plot,D0,alpha_SI/Dp_SI);
+                KL_array_cm2min_plot = KL_array_SI_plot*(60*10^4);
+                u_array_cmmin_plot = (Pe_D0_array_plot*D0/Dp_SI)*(60*10^2);
             
                 % plot
                 figure
                 hold on
             
                 % model line
-                plot(u_model_cm, KL_model_cm, ...
+                % plot(u_model_cm, KL_model_cm, ...
+                %     'k','LineWidth',2,...
+                %     'DisplayName','K_L = \alpha u_x')
+                plot(u_array_cmmin_plot, KL_array_cm2min_plot, ...
                     'k','LineWidth',2,...
                     'DisplayName','K_L = \alpha u_x')
             
@@ -1033,112 +1044,106 @@ for i = 1:length(Fluid1_unique)
     end
 end
 
-%  %%
-% 
-% colors = orderedcolors("glow");
-% 
-% % all params in SI
-% Dp_SI = unique(best_method_table.L_SI);
-% D0 = unique(best_method_table.D0_SI);
-% Pe_D0_array = best_method_table.Pe_D0; % Pe in respect to D0
-% u_array_cmmin = best_method_table.u_cmmin;
-% 
-% % K and alha with best method
-% KL_array = best_method_table.KL_cm2min; % KL and D0 must have same units
-% dKLneg_array = best_method_table.dKL_cm2min;
-% dKLpos_array = best_method_table.dKL_cm2min;
-% alpha_SI = alpha_table.alpha_SI;
-% dalpha_SI = alpha_table.d_alpha_SI;
-% alpha_cm = alpha_table.alpha_cm;
-% dalpha_cm = alpha_table.d_alpha_cm;
-% 
-% x = 0:1:ceil(max(Pe_D0_array));
-% KL_plot = KL_Pe_alpha_only_model(x,D0,alpha_SI);
-% 
-% %%
-% 
-% 
-% figure % dispersivity
-% % KL fit weighted
-% plot((x*D0/Dp_SI)*(60*10^2),KL_plot*(60*10^4), ...
-%     'DisplayName','K_L \approx \alpha_L fit u_x','Color','k'); % Kl_vs_u fitting
-% hold on
-% for i = 1:length(u_array_cmmin)
-%     errorbar(u_array_cmmin(i),KL_array(i),dKLneg_array(i),dKLpos_array(i), ...
-%         'Color','k','HandleVisibility','off')
-%     hold on
-%     scatter(u_array_cmmin(i),KL_array(i),'filled', ...
-%         'DisplayName',"K_L for Q = " + filedataExp.Q(i) +" ml/min", ...
-%         'Color',colors(i,:))
-% end
-% % KL fit non weighted
-% plot((x*D0/Dp_SI)*(60*10^2),KL_plot_nw*(60*10^4), ...
-%     'DisplayName','K_L nw \approx \alpha_L nw u_x','Color',[0.5 0.5 0.5]); % Kl_vs_u fitting
-% hold on
-% for i = 1:length(u_array_cmmin)
-%     errorbar(u_array_cmmin(i),KL_array_nw(i),dKLneg_array(i),dKLpos_array(i), ...
-%         'Color','k','HandleVisibility','off')
-%     hold on
-%     scatter(u_array_cmmin(i),KL_array_nw(i),'filled', ...
-%         'Marker','^', 'DisplayName',"K_L nw for Q = " + filedataExp.Q(i) +" ml/min",...
-%         'Color',colors(i,:))
-% end
-% xlabel('Interstitial velocity (u_x) [cm/min]');
-% ylabel('Longitudinal Dispersion Coefficient (K_L) [cm^2/s]');
-% ylim([0,4.5])
-% grid on;
-% annotText1 = sprintf('\\alpha_{L} = %.2f \\pm %.2f cm', alpha_L, dalpha_L);
-% % annotText2 = sprintf('\\tau = %.2f \\pm %.2f', tau, dtau);
-% annotation('textbox', [0.285, 0.18, 0.8, 0.06], 'String', annotText1, ...
-%     'Interpreter', 'tex', 'FontSize', 9, 'EdgeColor', 'none','FaceAlpha',0.1);
-% annotText3 = sprintf('\\alpha_{L} nw = %.2f \\pm %.2f cm', alpha_L_nw, dalpha_L_nw);
-% annotation('textbox', [0.25, 0.14, 0.8, 0.06], 'String', annotText3, ...
-%     'Interpreter', 'tex', 'FontSize', 9, 'EdgeColor', 'none','FaceAlpha',0.1);
-% 
-% % annotation('textbox', [0.265, 0.13, 0.8, 0.06], 'String', annotText2, ...
-% %     'Interpreter', 'tex', 'FontSize', 9, 'EdgeColor', 'none','FaceAlpha',0.1);
-% legend('Location','northwest');
-% saveas(gcf,pathExportAll + "KLvsVel-alpha_all",'png')
-% savefig(gcf,pathExportAll + "KLvsVel-alpha_all")
-% % 
-% % %% Plot Kl/Dl vs Pe
-% % 
-% % % all params in SI
-% % Pe_array = Pe_alpha_array; % Pe in respect to D0
-% % dPe_array = fitting_results.dPe_alpha;
-% % KL_vs_D0_array = fitting_results.KL_vs_D0;
-% % dKL_vs_D0_array = fitting_results.dKL_vs_D0;
-% % D0 = unique(fitting_results.D0_SI);
-% % dD0 = unique(fitting_results.dD0_SI);
-% % KL_array = fitting_results.KL_dtfixed_SI; % KL and D0 must have same units
-% % dKL_array = fitting_results.SE_KL_dtfixed_SI;
-% % 
-% % x = 0:1:ceil(max(Pe_array));
-% % KL_plot = KL_fun(alpha_SI/Dp_SI,x);
-% % % KL_plot = KL_fun([alpha_SI/Dp_SI,tau],x);
-% % 
-% % figure % dispersivity
-% % plot(x,KL_plot/D0, ...
-% %     'DisplayName','K_L/D_0 \approx \alpha_Lu_x/D_0','Color','k'); % Kl_vs_u fitting
-% % hold on
-% % for i = 1:length(Pe_array)
-% %     errorbar(Pe_array(i),KL_vs_D0_array(i), ...
-% %         dKL_vs_D0_array(i),dKL_vs_D0_array(i), dPe_array(i), dPe_array(i), ...
-% %         'Color','k','HandleVisibility','off')
-% %     hold on
-% %     scatter(Pe_array(i),KL_vs_D0_array(i),'filled', ...
-% %         'DisplayName',"Q = " + filedataExp.Q(i) +" ml/min", ...
-% %         'Color',colors(i,:))
-% %     hold on
-% % end
-% % xlabel('Pe = u_x\alpha/D_0')
-% % ylabel('K_L/D_0');
-% % ylim([0,10])
-% % set(gca, 'XScale','log','YScale','log')
-% % grid on;
-% % legend('Location','northwest');
-% % saveas(gcf,pathExportAll + "KLD0vsPe_all",'png')
-% % savefig(gcf,pathExportAll + "KLD0vsPe_all")
-% 
-% 
-% 
+%% Plot Kl/Dl vs Pe
+
+Fluid1_unique = unique(best_method_table.Fluid1);
+Fluid2_unique = unique(best_method_table.Fluid2);
+T_unique      = unique(best_method_table.T_C);
+P_unique      = unique(best_method_table.P_psig);
+
+colors = orderedcolors("glow");
+
+for i = 1:length(Fluid1_unique)
+    for j = 1:length(Fluid2_unique)
+        for k = 1:length(T_unique)
+            for m = 1:length(P_unique)
+            
+                % filter rows for this group
+                idx = best_method_table.Fluid1 == Fluid1_unique(i) & ...
+                      best_method_table.Fluid2 == Fluid2_unique(j) & ...
+                      best_method_table.T_C == T_unique(k) & ...
+                      best_method_table.P_psig == P_unique(m);
+            
+                % extract data
+                u_array_cmmin = best_method_table.u_cmmin(idx);
+                u_array_SI = best_method_table.u_SI(idx);
+                KL_array      = best_method_table.KL_cm2min(idx);
+                dKL_array     = best_method_table.dKL_cm2min(idx);
+                Pe_D0_array   = best_method_table.Pe_D0(idx);
+            
+                D0 = unique(best_method_table.D0_SI(idx));
+                dD0 = unique(best_method_table.dD0_SI(idx));
+                Dp_SI = unique(best_method_table.L_SI(idx));
+
+                KL_vs_D0_array = best_method_table.KL_SI(idx)/D0;
+                dKL_vs_D0_array = best_method_table.dKL_SI(idx)/D0+best_method_table.KL_SI(idx)*dD0/(D0^2);
+            
+                % get alpha for this group
+                idx_alpha = alpha_table.Fluid1 == Fluid1_unique(i) & ...
+                            alpha_table.Fluid2 == Fluid2_unique(j) & ...
+                            alpha_table.T      == T_unique(k) & ...
+                            alpha_table.P      == P_unique(m);
+            
+                alpha_SI = alpha_table.alpha_SI(idx_alpha);
+                dalpha_SI = alpha_table.d_alpha_SI(idx_alpha);
+            
+                alpha_cm = alpha_SI * 100;
+                dalpha_cm = dalpha_SI * 100;
+
+                Pe_D0_alpha = u_array_SI*alpha_SI/D0;
+            
+                % model based on Pe numbers (Pe with D0 denominator)
+                Pe_D0_array_plot = 0.1:0.1:6;
+                % KL_Pe_alpha_only_model(Pe_fromD0,D0,p) % alpha = p * Dp; % Alpha (dispersivity) Dp is L
+                KL_array_SI_plot = KL_Pe_alpha_only_model(Pe_D0_array_plot,D0,1);
+                KL_array_cm2min_plot = KL_array_SI_plot*(60*10^4);
+                u_array_cmmin_plot = (Pe_D0_array_plot*D0/Dp_SI)*(60*10^2);
+            
+                % plot
+                figure
+                hold on
+            
+                plot(Pe_D0_array_plot, KL_array_SI_plot/D0, ...
+                    'k','LineWidth',2,...
+                    'DisplayName','K_L/D_0 \approx \alpha_Lu_x/D_0')
+            
+                % data
+                for ii = 1:length(Pe_D0_alpha)
+            
+                    errorbar(Pe_D0_alpha(ii), KL_vs_D0_array(ii), ...
+                        dKL_vs_D0_array(ii), dKL_vs_D0_array(ii), ...
+                        'Color','k','HandleVisibility','off')
+            
+                    scatter(Pe_D0_alpha(ii), KL_vs_D0_array(ii), ...
+                        'filled', ...
+                        'Color',colors(ii,:), ...
+                        'DisplayName',"Q = " + best_method_table.Q_mlmin(ii) + " ml/min")            
+                end
+            
+                xlabel('Pe = u_x\alpha/D_0')
+                ylabel('K_L/D_0');
+             
+                xlim([0,10])
+                ylim([0,10])
+                
+                set(gca, 'XScale','log','YScale','log')
+                grid on
+            
+                save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(j)+"_T"+filedataExp.T(k)+"_P"+filedataExp.P(m);
+            
+                title(save_name, 'Interpreter','none')
+            
+                annotation('textbox',[0.25 0.2 0.5 0.05],...
+                    'String',sprintf('\\alpha = %.2f ± %.2f cm', alpha_cm, dalpha_cm),...
+                    'EdgeColor','none')
+            
+                legend('Location','northwest')
+            
+                % save figure
+                saveas(gcf, pathExportAll + "KLD0vsPe_all_" + save_name, 'png')
+                savefig(gcf, pathExportAll + "KLD0vsPe_all_" + save_name)
+            
+            end
+        end
+    end
+end
