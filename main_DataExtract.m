@@ -219,6 +219,10 @@ for i = 1:length(filedataExp.Key)
         expProcData.(filedataExp.Key(i)).MFMData.T_MFM2, ...
         expProcData.(filedataExp.Key(i)).MFMData.q_MFM2, ...
         'VariableNames',{'TimeStamp','TimeElapsed', 'SecondsElapsed', 'rho_MFM','T_MFM','q_MFM'});
+    BTaux_timetable = table2timetable(BTaux);
+    PT_timetable = table2timetable(expProcData.(filedataExp.Key(i)).transData);
+    BTaux_interp = retime(PT_timetable, BTaux_timetable.TimeStamp, 'linear');
+    BTaux.PT2 = BTaux_interp.PT2; % psi
     expProcData.(filedataExp.Key(i)).BT = BTaux;
     % fitting parameters for rho corrected
     % auxLinFit = fittingRhoResultsAll(fittingRhoResultsAll.Q == "QAll",:);
