@@ -306,7 +306,12 @@ for i = 1:length(filedataExp.Key)
     if ismissing(trans_data_name) == 0
         Pmin = floor(min(expProcData.(filedataExp.Key(i)).BT.PT2)*10)/10;
         Pmax = ceil(max(expProcData.(filedataExp.Key(i)).BT.PT2)*10)/10;
-        P_psig = Pmin:1:Pmax;
+        dPtotal = Pmax - Pmin;
+        if dPtotal < 20
+            P_psig = Pmin:1:Pmax;
+        else
+            P_psig = linspace(Pmin, Pmax, 20);
+        end
         P_MPa = (P_psig + 14.7)*0.00689476;
     else
         P_psig = filedataExp.P(i);
