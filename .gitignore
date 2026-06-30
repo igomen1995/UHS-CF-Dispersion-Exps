@@ -3,15 +3,13 @@ results/
 input/
 data/
 
-# input config
-inputCalConfig.xlsx
-inputPRConfig.xlsx
-inputExpConfig.xlsx
-
 % desktop init
 desktop.ini
 
 % Local temporary changes
 *.asv
 
-
+# input config
+inputCalConfig.xlsx
+inputPRConfig.xlsx
+inputExpConfig.xlsx
