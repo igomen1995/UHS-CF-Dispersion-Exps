@@ -1,302 +1,432 @@
-%% main_PlotsIntegration.m
-% Author: Ianna Gomez Mendez
-%
-% PURPOSE
-%   Integrate and compare longitudinal dispersion measurements obtained
-%   in the present study with previously published literature data.
-%
-%   The workflow generates transport-scaling plots commonly used in
-%   porous-media transport studies and evaluates whether dispersion
-%   behavior observed in the current experiments is consistent with
-%   previously reported trends.
-%
-% -------------------------------------------------------------------------
-% OBJECTIVE
-% -------------------------------------------------------------------------
-%
-%   Compare:
-%
-%       Longitudinal dispersion coefficient
-%
-%           KL
-%
-%   and
-%
-%       Dimensionless dispersion
-%
-%           KL / D0
-%
-%   as functions of:
-%
-%       Interstitial velocity
-%
-%           ux
-%
-%   and
-%
-%       Peclet number
-%
-%           Pe
-%
-%   across multiple experimental studies.
-%
-% -------------------------------------------------------------------------
-% INPUT
-% -------------------------------------------------------------------------
-%
-% Literature database:
-%
-%       input_expsAll_results.xlsx
-%
-% The workbook contains one worksheet for each experimental study
-% or dataset.
-%
-% -------------------------------------------------------------------------
-% DATA IMPORT
-% -------------------------------------------------------------------------
-%
-% For each worksheet:
-%
-%       Experimental transport results
-%
-%       Experimental conditions
-%
-% are imported using:
-%
-%       import_inputExpsResults
-%
-%       import_inputExpsParams
-%
-% -------------------------------------------------------------------------
-% EXPERIMENTAL PARAMETERS
-% -------------------------------------------------------------------------
-%
-% For each dataset:
-%
-%       Reference
-%       Fluid system
-%       Sample
-%       Temperature
-%       Pressure
-%       Porosity
-%       Dispersivity
-%       Molecular diffusivity
-%
-% are stored.
-%
-% -------------------------------------------------------------------------
-% VISUALIZATION STRATEGY
-% -------------------------------------------------------------------------
-%
-% Symbols represent:
-%
-%       Sample type
-%
-% Colors represent:
-%
-%       Reference + Fluid system
-%
-% Transparency represents:
-%
-%       Pressure level
-%
-% allowing multiple studies to be compared within a single figure.
-%
-% -------------------------------------------------------------------------
-% FIGURE 1:
-% -------------------------------------------------------------------------
-%
-%       KL vs ux
-%
-% where:
-%
-%       KL   = longitudinal dispersion coefficient
-%
-%       ux   = interstitial velocity
-%
-% Units:
-%
-%       KL  [cm²/min]
-%       ux  [cm/min]
-%
-% Purpose:
-%
-%       Evaluate dispersivity-controlled transport behavior.
-%
-%       Identify velocity-dependent dispersion trends.
-%
-%       Compare measured transport coefficients between studies.
-%
-% -------------------------------------------------------------------------
-% FIGURE 2:
-% -------------------------------------------------------------------------
-%
-%       KL/D0 vs Pe
-%
-% where:
-%
-%       D0 = molecular diffusion coefficient
-%
-%       Pe = ux*alpha/D0
-%
-% Purpose:
-%
-%       Collapse transport data onto a dimensionless framework.
-%
-%       Compare experiments conducted with different:
-%
-%           fluids
-%           pressures
-%           temperatures
-%           porous media
-%
-% -------------------------------------------------------------------------
-% DIMENSIONLESS ANALYSIS
-% -------------------------------------------------------------------------
-%
-% The Peclet number is defined as:
-%
-%       Pe = ux alpha / D0
-%
-% and represents the ratio of:
-%
-%       advective transport
-%
-% to
-%
-%       diffusive transport
-%
-% -------------------------------------------------------------------------
-%
-% The dimensionless dispersion coefficient:
-%
-%       KL / D0
-%
-% quantifies enhancement of transport relative to molecular diffusion.
-%
-% -------------------------------------------------------------------------
-% COLOR CODING
-% -------------------------------------------------------------------------
-%
-% Color groups:
-%
-%       Ref + Fluid2
-%
-% Example:
-%
-%       H2–CO2
-%       H2–N2
-%       H2–CH4
-%
-% from different publications.
-%
-% -------------------------------------------------------------------------
-% SYMBOL CODING
-% -------------------------------------------------------------------------
-%
-% Marker shape identifies:
-%
-%       Rock sample
-%
-% Examples:
-%
-%       Bentheimer
-%       Berea
-%       Carbonate
-%       Sandpack
-%
-% -------------------------------------------------------------------------
-% TRANSPARENCY CODING
-% -------------------------------------------------------------------------
-%
-% Marker transparency is scaled using:
-%
-%       Pressure
-%
-% allowing visual identification of pressure effects while preserving
-% color grouping.
-%
-% -------------------------------------------------------------------------
-% OUTPUT FIGURES
-% -------------------------------------------------------------------------
-%
-% KL versus velocity:
-%
-%       KLvsVel-alpha_allLit.png
-%
-%       KLvsVel-alpha_allLit.fig
-%
-% -------------------------------------------------------------------------
-%
-% Dimensionless transport:
-%
-%       KLD0vsPe_allLit.png
-%
-%       KLD0vsPe_allLit.fig
-%
-% -------------------------------------------------------------------------
-% SCIENTIFIC APPLICATIONS
-% -------------------------------------------------------------------------
-%
-% Typical uses:
-%
-%       - Benchmarking new transport measurements
-%
-%       - Comparing dispersivities across porous media
-%
-%       - Evaluating pressure effects
-%
-%       - Evaluating fluid-composition effects
-%
-%       - Testing transport-scaling relationships
-%
-%       - Preparing publication-quality comparison figures
-%
-% -------------------------------------------------------------------------
-% DEPENDENCIES
-% -------------------------------------------------------------------------
-%
-% Import functions:
-%
-%       import_inputExpsResults
-%
-%       import_inputExpsParams
-%
-% -------------------------------------------------------------------------
-% OUTPUT
-% -------------------------------------------------------------------------
-%
-% Figures only
-%
-% No fitting or parameter estimation is performed.
-%
-% The script is intended exclusively for:
-%
-%       visualization
-%       comparison
-%       benchmarking
-%
-% of transport parameters obtained from multiple studies.
-%
-% -------------------------------------------------------------------------
-% NOTES
-% -------------------------------------------------------------------------
-%
-%   This script represents the final integration stage of the workflow:
-%
-%       main_PR
-%           ↓
-%       main_Cal
-%           ↓
-%       main_Validation
-%           ↓
-%       main_DataExtract
-%           ↓
-%       main_Processing
-%           ↓
-%       main_ProcessingMixingCorrection
-%           ↓
-%       main_PlotsIntegration
-%
-%   allowing direct comparison between internally generated transport
-%   parameters and literature-reported datasets.
+# Hydrogen Transport and Dispersion Analysis Workflow
+
+**Author:** Ianna Gomez Mendez
+
+## Overview
+
+This repository contains a complete workflow for:
+
+- Density calibration of a Coriolis mass flow meter (MFM)
+- Validation of density-based composition estimation
+- Peng–Robinson Equation of State (PR-EOS) calculations
+- Breakthrough curve (BTC) extraction from core-flood experiments
+- Estimation of fluid composition from density measurements
+- Longitudinal dispersion coefficient estimation
+- Dispersivity and tortuosity analysis
+- Mixing correction due to tubing and experimental setup effects
+- Breakthrough curve visualization and comparison
+
+The workflow was developed for transport studies involving hydrogen-containing gas mixtures in porous media using:
+
+- Quizix syringe pumps
+- Bronkhorst Coriolis mass flow meters
+- Omega pressure transducers
+- Cosmos portable gas detectors
+
+---
+
+# Repository Structure
+
+```text
+.
+├── input/
+├── functions/
+├── results/
+│
+├── main_PR.m
+├── main_Cal.m
+├── main_Validation.m
+├── main_DataExtract.m
+├── main_Plots.m
+├── main_Processing.m
+├── main_ProcessingMixingCorrection.m
+└── README.md
+```
+
+---
+
+# Workflow 1 – Peng–Robinson EOS Calculations
+
+## Purpose
+
+Generate thermodynamic properties for pure components and binary mixtures using the Peng–Robinson Equation of State.
+
+### Script
+
+```text
+main_PR.m
+```
+
+### Inputs
+
+- Pure component critical properties
+- Binary interaction parameter correlations
+- Fluid pair
+- Pressure
+- Temperature
+- Composition range
+
+### Outputs
+
+```text
+PR_results.xlsx
+PR_results.mat
+rho-vs-x1.png
+Z-vs-x1.png
+```
+
+### Applications
+
+- Density vs composition databases
+- Compressibility factor calculations
+- Composition estimation support
+- Calibration reference generation
+
+---
+
+# Workflow 2 – Calibration and Validation
+
+This workflow validates the conversion:
+
+```text
+Measured Density
+       ↓
+Corrected Density
+       ↓
+Peng–Robinson EOS
+       ↓
+Composition
+```
+
+## Step 1 – Calibration
+
+### Script
+
+```text
+main_Cal.m
+```
+
+### Objectives
+
+- Import calibration experiments
+- Build density correction models
+- Estimate calibration uncertainty
+- Evaluate density measurement performance
+
+### Outputs
+
+```text
+fittingRhoResultsAll.mat
+nlfittingRhoResultsAll.mat
+
+cal_curve_params.mat
+nl_cal_curve_params.mat
+```
+
+---
+
+## Step 2 – Validation
+
+### Script
+
+```text
+main_Validation.m
+```
+
+### Objectives
+
+Compare:
+
+```text
+Reference Composition
+        vs
+Estimated Composition
+```
+
+using calibrated density measurements and PR-EOS calculations.
+
+### Outputs
+
+```text
+CvalFitResults.xlsx
+CvalFitResults.mat
+
+Val-P1500.png
+```
+
+### Validation Metrics
+
+- RMSE
+- R²
+- Slope
+- Intercept
+
+### Recommended Workflow
+
+```text
+main_Cal
+     ↓
+main_Validation
+```
+
+---
+
+# Workflow 3 – Standard Experimental Processing
+
+This workflow converts raw experimental data into breakthrough curves and transport parameters.
+
+## Step 1 – Data Extraction
+
+### Script
+
+```text
+main_DataExtract.m
+```
+
+### Tasks
+
+- Import raw experimental files
+- Synchronize instruments
+- Trim experimental periods
+- Correct MFM density measurements
+- Estimate composition using PR-EOS
+- Estimate uncertainty
+- Generate breakthrough curves
+
+### Outputs
+
+```text
+expProcData.mat
+
+<Key>.xlsx
+```
+
+---
+
+## Step 2 – Plotting
+
+### Script
+
+```text
+main_Plots.m
+```
+
+### Generates
+
+- Breakthrough curve comparisons
+- Dimensionless breakthrough curves
+- Multi-flow-rate comparisons
+- Publication-ready figures
+
+---
+
+## Step 3 – Transport Parameter Estimation
+
+### Script
+
+```text
+main_Processing.m
+```
+
+### Estimates
+
+- Longitudinal dispersion coefficient (KL)
+- Time delay (dt)
+- Longitudinal dispersivity (α)
+- Tortuosity (τ)
+
+using analytical Advection–Dispersion Equation (ADE) solutions.
+
+### Outputs
+
+```text
+fitting_results.xlsx
+alpha_results.xlsx
+
+expProcFullData.mat
+```
+
+### Recommended Workflow
+
+```text
+main_DataExtract
+     ↓
+main_Plots
+     ↓
+main_Processing
+```
+
+---
+
+# Workflow 4 – Mixing-Corrected Transport Analysis
+
+## Purpose
+
+Determine the intrinsic core dispersion coefficient by removing dispersion contributions generated by:
+
+- Upstream tubing
+- Downstream tubing
+- Dead volume in the flow system
+
+### Script
+
+```text
+main_ProcessingMixingCorrection.m
+```
+
+### Concept
+
+Traditional analysis:
+
+```text
+Breakthrough Curve
+       ↓
+KLapp
+```
+
+Mixing-corrected analysis:
+
+```text
+Upstream Tubing
+       ↓
+Core
+       ↓
+Downstream Tubing
+       ↓
+Observed BTC
+
+       ↓
+
+KLcore
+```
+
+### Estimates
+
+- Core dispersion coefficient
+- Residence time distributions
+- Variance contributions
+- Mixing contributions from each section
+
+### Outputs
+
+```text
+g_functions_Q*.png
+
+C_mixing_lines_effect_Q*.png
+
+expProcFullData.mat
+```
+
+### Recommended Workflow
+
+```text
+main_DataExtract
+     ↓
+main_Processing
+     ↓
+main_ProcessingMixingCorrection
+```
+
+---
+
+# Complete Workflow
+
+```text
+main_PR
+     ↓
+main_Cal
+     ↓
+main_Validation
+     ↓
+main_DataExtract
+     ↓
+main_Plots
+     ↓
+main_Processing
+     ↓
+main_ProcessingMixingCorrection
+```
+
+---
+
+# Typical Use Cases
+
+## 1. Thermodynamic Properties Only
+
+```text
+main_PR
+```
+
+Generate:
+
+- Density vs composition
+- Compressibility factors
+- PR-EOS reference databases
+
+---
+
+## 2. Calibration and Validation
+
+```text
+main_Cal
+     ↓
+main_Validation
+```
+
+Validate density-based composition estimation.
+
+---
+
+## 3. Standard Core-Flood Analysis
+
+```text
+main_DataExtract
+     ↓
+main_Plots
+     ↓
+main_Processing
+```
+
+Generate breakthrough curves and estimate transport parameters.
+
+---
+
+## 4. Mixing-Corrected Analysis
+
+```text
+main_DataExtract
+     ↓
+main_Processing
+     ↓
+main_ProcessingMixingCorrection
+```
+
+Estimate intrinsic core-scale dispersion by correcting for external mixing.
+
+---
+
+# Outputs Summary
+
+| Workflow | Main Outputs |
+|----------|--------------|
+| PR | Density and compressibility databases |
+| Calibration | Density correction models |
+| Validation | Composition validation metrics |
+| Data Extraction | Breakthrough-curve datasets |
+| Processing | KL, α, τ |
+| Mixing Correction | KLcore and RTD analysis |
+
+---
+
+# Requirements
+
+- MATLAB
+- Statistics and Machine Learning Toolbox
+- Optimization Toolbox
+- Signal Processing Toolbox (recommended)
+
+---
+
+# License
+
+Intended for academic and research applications involving gas transport in porous media.
