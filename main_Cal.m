@@ -1,33 +1,178 @@
-% main_Cal.m
+%% main_Cal.m
 % Author: Ianna Gomez Mendez
 %
-% Objective: 
-% Extract data for density calibration of Corilis MFM
-% collected during bypass experiments at fix temperature 
-% and variable  pressure and fluids
-% using 3 Quizix pumps, 2 mass flow meters Bronkhorst, 2 transducers Omega
-% and 2 portable gas detectors Cosmos (DOD Technologies)
-% 
-% Input:
-% 1. Experiment file:
-% - Pumps file (.dat) (mandatory)
-% - Transducer file (.csv)
-% - Mass Flow Meters (.csv) (mandatory)
-% - Gas detectors - could be more than one file (.csv)
-% 2. Cal reference file
-% 
-% Procedure:
-% 1 - Take input file 
-% 2 - Import files (and prepare time data)
-% 3 - Create one file with all raw data and save
-% 4 - Inspect data in plot density and temperature vs time
-% 5 - Calculate error of density for a given period of time with Temperature and pressure stable
-% 6 - Plot density inst vs Ref data
-% 
-% Output: 
-% - Excel (and csv) file with all variables with same time and time elapsed
-% - Figures
+% PURPOSE
+%   Process density-calibration experiments used to calibrate the
+%   Coriolis Mass Flow Meter (MFM) density measurement.
 %
+%   Experimental data are collected during bypass-flow calibration tests
+%   performed at fixed temperature and varying pressure, flow rate, and
+%   fluid composition using:
+%
+%       - Quizix syringe pumps
+%       - Bronkhorst mass flow meters (MFM)
+%       - Omega pressure transducers
+%       - Cosmos portable gas detectors (PGD)
+%
+%   The script imports raw acquisition files, identifies stable operating
+%   periods, compares measured densities against Peng-Robinson EOS
+%   predictions, and generates calibration correlations for the MFM.
+%
+% -------------------------------------------------------------------------
+% INPUT FILES
+% -------------------------------------------------------------------------
+%
+% Configuration:
+%       inputCalConfig.xlsx
+%
+% Calibration metadata:
+%       inputCal.xlsx
+%
+% Thermodynamic properties:
+%       PR pure-component parameter file
+%       PR binary interaction parameter (BIP) file
+%
+% Experimental acquisition files:
+%
+%       Pumps (.dat)
+%       Pressure transducers (.csv)
+%       Mass flow meters (.csv)
+%       Gas detectors PGD1 / PGD2 (.csv)
+%
+% -------------------------------------------------------------------------
+% WORKFLOW
+% -------------------------------------------------------------------------
+%
+%   1. Read calibration configuration and metadata.
+%
+%   2. Import Peng-Robinson EOS parameters.
+%
+%   3. Import raw experimental datasets:
+%          - Pumps
+%          - Pressure transducers
+%          - MFM
+%          - PGD sensors
+%
+%   4. Synchronize timestamps and trim data using user-defined start and
+%      end times.
+%
+%   5. Save raw datasets to:
+%          - MAT files
+%          - Excel workbooks
+%
+%   6. Identify stable operating intervals for specified pressure and
+%      flow-rate conditions using TRIM_TIME_P_Q.
+%
+%   7. Calculate statistics for every operating condition:
+%          - Mean pressure
+%          - Mean flow rate
+%          - Mean temperature
+%          - Mean density
+%          - Standard deviations
+%
+%   8. Compute reference density and compressibility factor using the
+%      Peng-Robinson EOS:
+%
+%          rho_ref(T,P)
+%          Z(T,P)
+%
+%   9. Assemble processed calibration datasets:
+%
+%          calProcData
+%          calResults
+%          calResultsQAll
+%          calData
+%
+%  10. Generate MFM density calibration correlations.
+%
+%  11. Save processed results and calibration parameters.
+%
+%  12. Generate quality-control plots and calibration figures.
+%
+% -------------------------------------------------------------------------
+% CALIBRATION MODEL
+% -------------------------------------------------------------------------
+%
+%   A piecewise nonlinear density calibration curve is fitted:
+%
+%       rho_MFM =
+%           p1 + p2*rho_ref
+%           + p3*max(0,rho_ref-p4)
+%
+%   where:
+%
+%       rho_ref  = Peng-Robinson reference density
+%       rho_MFM  = measured MFM density
+%
+%   The model allows different slopes in low- and high-density regions.
+%
+% -------------------------------------------------------------------------
+% OUTPUTS
+% -------------------------------------------------------------------------
+%
+% Raw data:
+%
+%       expRawData.mat
+%       *_Raw.xlsx
+%
+% Trimmed data:
+%
+%       expTrimData.mat
+%       *_Trim.xlsx
+%
+% Processed calibration data:
+%
+%       calProcData.mat
+%       calResults.mat/.xlsx
+%       calResultsQAll.mat/.xlsx
+%       calData.mat/.xlsx
+%
+% Calibration parameters:
+%
+%       nl_cal_curve_params.mat
+%       nlfittingRhoResultsAll.mat
+%       nlfittingRhoResultsAll.xlsx
+%
+% Figures:
+%
+%       *_All_vars_Raw.png
+%       *_All_vars_Trim.png
+%       Cal-all-HP400+-nl.png
+%       Cal-curve-nonlin-zoom-in.png
+%
+% -------------------------------------------------------------------------
+% DEPENDENCIES
+% -------------------------------------------------------------------------
+%
+% Import functions:
+%       import_inputCal
+%       import_inputPR_params_pure
+%       import_inputPR_params_BIP
+%       import_pumps_data
+%       import_trans_data
+%       import_MFM_data
+%       import_PGD1_data
+%       import_PGD2_data
+%
+% Processing functions:
+%       trim_time_P_Q
+%       densZ_PR
+%
+% -------------------------------------------------------------------------
+% NOTES
+% -------------------------------------------------------------------------
+%
+%   - Pressure and flow tolerances used for interval detection strongly
+%     influence the quality of the calibration dataset.
+%
+%   - Peng-Robinson EOS predictions are used as density reference values.
+%
+%   - The nonlinear calibration fit is currently performed using data
+%     above approximately 400 psig.
+%
+%   - This script is intended for MFM density calibration and not for
+%     transport-parameter estimation.
+
 %% INPUT
 
 % INTRODUCE HERE INPUT AND OUTPUT PATH

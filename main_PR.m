@@ -1,29 +1,324 @@
-% main_PR.m
-% version: v1_Feb2026
+%% main_PR.m
+% Version: v1_Feb2026
 % Author: Ianna Gomez Mendez
 %
-% Objective: 
-% Estimate rho of the mixture or pure elements, given an array of x1 using PR EOS
-% 
-% Input:
-% - state fluids, P, T and x1init x1final, dx in an excel file
-% - input NIST data pure components
-% - input kij A12 and B12 fitting params for binary interaction parameters
-% 
-% Procedure:
-% 1 - import fluids @P, T and x to study
-% 2 - import NIST data pure components and kij fitting params
-% 3 - calculate ai and bi pure parameters with function, provide results in
-% an array
-% 4 - calculate a and b mixture, provide results in an array, including kij, aij matrices and a and b
-% 5 - calculate A, B, m3, m2, m2, m0 to fit PR Cubic equation
-% 6 - Estimate Zvapor, assume is Z mixture for H2 mixtures
-% 7 - Estimate rho mixture for xi, store until forming an array of rho_mix
-% vs xi
-% 
-% Output: 
-% - array of rho_mix and xi in excel
-% - plot rho_mix vs xi
+% PURPOSE
+%   Calculate fluid density and compressibility factor using the
+%   Peng-Robinson Equation of State (PR-EOS).
+%
+%   The script generates density-composition relationships for pure
+%   components or binary mixtures over a specified composition range
+%   at fixed pressure and temperature.
+%
+%   The generated density database can subsequently be used for:
+%
+%       - Coriolis density calibration
+%       - Composition estimation
+%       - Breakthrough-curve data processing
+%       - Transport-model analysis
+%
+% -------------------------------------------------------------------------
+% OBJECTIVE
+% -------------------------------------------------------------------------
+%
+%   Estimate:
+%
+%       rho = f(P,T,x)
+%
+%   and
+%
+%       Z = f(P,T,x)
+%
+%   using the Peng-Robinson Equation of State.
+%
+% -------------------------------------------------------------------------
+% INPUTS
+% -------------------------------------------------------------------------
+%
+% Configuration:
+%
+%       inputPRConfig.xlsx
+%
+% Pure-component properties:
+%
+%       input_PR_pure.xlsx
+%
+%       containing:
+%
+%           Critical temperature (Tc)
+%           Critical pressure (Pc)
+%           Acentric factor (omega)
+%           Molecular weight (M)
+%
+% Binary-mixture properties:
+%
+%       input_PR_BIP.xlsx
+%
+%       containing:
+%
+%           A12
+%           B12
+%
+%       parameters used to estimate:
+%
+%           kij(T)
+%
+% -------------------------------------------------------------------------
+% USER-DEFINED PARAMETERS
+% -------------------------------------------------------------------------
+%
+% Fluid system:
+%
+%       Fluid1
+%       Fluid2
+%
+% Composition range:
+%
+%       xi
+%       xf
+%       dx
+%
+% Pressure:
+%
+%       P_MPa
+%
+% Temperature:
+%
+%       T_C
+%
+% -------------------------------------------------------------------------
+% THERMODYNAMIC MODEL
+% -------------------------------------------------------------------------
+%
+%   Peng-Robinson Equation of State:
+%
+%                   RT
+%       P = ---------------- - a(T)
+%           (V-b)      ...
+%
+%   where:
+%
+%       a(T)     attractive term
+%       b        covolume term
+%
+% -------------------------------------------------------------------------
+% PURE-COMPONENT PARAMETERS
+% -------------------------------------------------------------------------
+%
+%   For each component:
+%
+%       ai
+%       bi
+%
+%   are calculated from:
+%
+%       Tc
+%       Pc
+%       omega
+%
+%   using standard PR-EOS correlations.
+%
+% -------------------------------------------------------------------------
+% BINARY INTERACTION PARAMETERS
+% -------------------------------------------------------------------------
+%
+%   For binary systems:
+%
+%       kij
+%
+%   is calculated using:
+%
+%       A12
+%       B12
+%
+%   through:
+%
+%       kij = f(T)
+%
+% -------------------------------------------------------------------------
+% MIXTURE PROPERTIES
+% -------------------------------------------------------------------------
+%
+%   For each composition x1:
+%
+%       aij
+%       amix
+%       bmix
+%
+%   are calculated using conventional PR mixing rules.
+%
+% -------------------------------------------------------------------------
+% EOS SOLUTION PROCEDURE
+% -------------------------------------------------------------------------
+%
+%   For each composition:
+%
+%       1. Calculate ai and bi
+%
+%       2. Calculate kij
+%
+%       3. Construct:
+%
+%              aij matrix
+%
+%       4. Calculate:
+%
+%              amix
+%              bmix
+%
+%       5. Generate PR cubic equation
+%
+%       6. Calculate compressibility roots:
+%
+%              Z1
+%              Z2
+%              Z3
+%
+%       7. Select the vapor-phase root
+%
+%              Zvapor
+%
+%       8. Calculate:
+%
+%              Density
+%
+% -------------------------------------------------------------------------
+% CALCULATED VARIABLES
+% -------------------------------------------------------------------------
+%
+%   For each x1:
+%
+%       x1
+%
+%       Z
+%
+%       rho
+%
+% -------------------------------------------------------------------------
+% OUTPUT TABLES
+% -------------------------------------------------------------------------
+%
+% PR_input:
+%
+%       Fluid1
+%       Fluid2
+%       P_MPa
+%       T_C
+%
+% -------------------------------------------------------------------------
+%
+% PR_results:
+%
+%       x1
+%       Z
+%       rho
+%
+% -------------------------------------------------------------------------
+% GENERATED FIGURES
+% -------------------------------------------------------------------------
+%
+% Density-composition relationship:
+%
+%       rho(x1)
+%
+%       rho-vs-x1.png
+%
+% -------------------------------------------------------------------------
+%
+% Compressibility relationship:
+%
+%       Z(x1)
+%
+%       Z-vs-x1.png
+%
+% -------------------------------------------------------------------------
+% OUTPUT FILES
+% -------------------------------------------------------------------------
+%
+% Excel:
+%
+%       PR_results.xlsx
+%
+% MATLAB:
+%
+%       PR_results.mat
+%
+% Figures:
+%
+%       rho-vs-x1.png
+%
+%       Z-vs-x1.png
+%
+% -------------------------------------------------------------------------
+% DEPENDENCIES
+% -------------------------------------------------------------------------
+%
+% Import functions:
+%
+%       import_inputPR_params_pure
+%       import_inputPR_params_BIP
+%
+% EOS functions:
+%
+%       calc_ai_bi
+%       calc_BIP
+%       calc_abmix
+%       calc_Z
+%
+% -------------------------------------------------------------------------
+% APPLICATIONS
+% -------------------------------------------------------------------------
+%
+%   Typical uses include:
+%
+%       - Generating rho-versus-composition lookup tables
+%
+%       - Supporting composition estimation from Coriolis density
+%         measurements
+%
+%       - Producing reference datasets for calibration workflows
+%
+%       - Validating EOS performance against experimental data
+%
+%       - Studying pressure and temperature effects on mixture density
+%
+% -------------------------------------------------------------------------
+% ASSUMPTIONS
+% -------------------------------------------------------------------------
+%
+%   - Peng-Robinson EOS adequately represents the investigated fluids.
+%
+%   - Binary-mixture behavior can be represented using the selected
+%     binary interaction parameter correlation.
+%
+%   - The vapor root of the PR cubic equation is assumed to represent
+%     the physical phase of interest.
+%
+%   - Units are:
+%
+%         Pressure      MPa (input)
+%         Temperature   °C (input)
+%         Density       kg/m³ (output)
+%
+% -------------------------------------------------------------------------
+% NOTES
+% -------------------------------------------------------------------------
+%
+%   This script is the thermodynamic backbone of the workflow:
+%
+%       main_PR
+%           ↓
+%       main_Cal
+%           ↓
+%       main_Validation
+%           ↓
+%       main_DataExtract
+%           ↓
+%       main_Processing
+%
+%   The density-composition surfaces generated through Peng-Robinson EOS
+%   are ultimately used to convert corrected MFM density measurements
+%   into molar compositions during breakthrough-curve analysis.
 %
 %% INPUT
 
@@ -122,7 +417,7 @@ end
 
 %% Save results
 
-PR_input = table(string(fl{1}),string(fl{2}), P_MPa, T_C,'VariableNames',{'fluid1', 'fluid2' 'P_MPa', 'T_C'});
+PR_input = table(string(fl{1}),string(fl{2}), P_MPa, T_C,'VariableNames',{'fluid1', 'fluid2', 'P_MPa', 'T_C'});
 PR_results = table(x1',Z',rho','VariableNames',{'x1','Z','rho'});
 
 delete(pathExportAll + filenameOutput + ".xlsx")

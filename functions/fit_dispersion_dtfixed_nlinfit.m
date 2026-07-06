@@ -1,8 +1,50 @@
 function out = fit_dispersion_dtfixed_nlinfit(C,t,u,Cj,Ci,L,dt_fixed,p0,dC,Cmin,Cmax)
-%fit_dispersion solves KL (SI) given concentration and time array, interstitial velocity, 
-% boundary conditions in x = 0 (Cj), initial concentration, length of the
-% core, initial guess parameters
-% p includes intital guess for Kl = p(1)^2 and a fixed dt = p(2);
+
+%FIT_DISPERSION_DTFIXED_NLINFIT Fit KL with fixed delay using weighted NLINFIT.
+%
+%   OUT = FIT_DISPERSION_DTFIXED_NLINFIT(C,T,U,CJ,CI,L,...
+%                                        DT_FIXED,P0,DC,...
+%                                        CMIN,CMAX)
+%   estimates the longitudinal dispersion coefficient (KL) by fitting a
+%   time-shifted analytical Advection-Dispersion Equation (ADE) solution
+%   to breakthrough-curve data using weighted nonlinear least squares.
+%
+%   Unlike FIT_DISPERSION_DT_NLINFIT, the breakthrough delay parameter
+%   (dt) is held fixed during optimization and only the dispersion
+%   coefficient is estimated.
+%
+%   The function additionally computes parameter uncertainties,
+%   prediction intervals, goodness-of-fit metrics, and regression
+%   diagnostics.
+%
+%   INPUTS
+%       C         : Measured concentration data
+%
+%       t         : Time vector [s]
+%
+%       u         : Average interstitial velocity [m/s]
+%
+%       Cj        : Injected concentration step amplitude
+%
+%       Ci        : Initial/background concentration
+%
+%       L         : Core length or transport distance [m]
+%
+%       dt_fixed  : Fixed breakthrough delay parameter [s]
+%
+%       p0        : Initial parameter guess
+%
+%                   p0(1) = sqrt(KL)
+%
+%       dC        : Measurement uncertainty associated with each
+%                   concentration observation
+%
+%       Cmin      : Lower concentration bound used for fitting
+%
+%       Cmax      : Upper concentration bound used for fitting
+%
+%   OUTPUT
+
 
 out = struct('KL', NaN, 'dKL', NaN, 'dt', NaN, 'ddt', NaN, 'C_fit', NaN(size(C)), ...
     'C_pred', NaN(size(C)), 'dC_pred', NaN(size(C)), 'RMSE', NaN, 'R2', NaN, ...
