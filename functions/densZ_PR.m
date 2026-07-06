@@ -1,5 +1,108 @@
 function [PR_input,PR_results] = densZ_PR(fl,x1,P_MPa,T_C,filedataPure,filedataBIP)
 
+%DENSZ_PR Calculate density and compressibility factor using PR EOS.
+%
+%   [PR_INPUT, PR_RESULTS] = DENSZ_PR(FL,X1,P_MPA,T_C,...
+%                                     FILEDATAPURE,FILEDATABIP)
+%   calculates the compressibility factor (Z) and density (rho) of a pure
+%   fluid or binary mixture using the Peng-Robinson equation of state
+%   (PR EOS).
+%
+%   The function retrieves pure-component critical properties and
+%   acentric factors, computes EOS parameters, evaluates binary
+%   interaction parameters (BIPs) when applicable, and solves the
+%   Peng-Robinson EOS over the specified composition range.
+%
+%   INPUTS
+%       fl            : Cell array containing fluid names.
+%
+%                       Pure fluid:
+%                           {"CO2"}
+%
+%                       Binary mixture:
+%                           {"H2","CO2"}
+%
+%       x1            : Mole fraction(s) of component 1.
+%
+%       P_MPa         : Pressure [MPa]
+%
+%       T_C           : Temperature [°C]
+%
+%       filedataPure  : Table containing pure-component properties:
+%                           - Fluid
+%                           - Pc
+%                           - Tc
+%                           - AcentricFactor
+%                           - M
+%
+%       filedataBIP   : Table containing fitted binary interaction
+%                       parameters:
+%                           - Fluid1
+%                           - Fluid2
+%                           - A12
+%                           - B12
+%
+%   OUTPUTS
+%       PR_input      : Summary table containing:
+%                           - Fluid names
+%                           - Pressure
+%                           - Temperature
+%
+%       PR_results    : Results table containing:
+%                           - x1    : Mole fraction component 1
+%                           - Z     : Vapor-phase compressibility factor
+%                           - rho   : Mixture density [kg/m^3]
+%
+%   WORKFLOW
+%       1. Read pure-component critical properties.
+%       2. Compute pure-component Peng-Robinson parameters:
+%
+%              ai, bi
+%
+%       3. For binary mixtures:
+%
+%          a) Compute temperature-dependent binary interaction
+%             parameter (kij).
+%
+%          b) Apply classical mixing rules.
+%
+%          c) Calculate mixture parameters:
+%
+%                 amix, bmix
+%
+%          d) Solve the Peng-Robinson cubic EOS.
+%
+%       4. Extract the vapor-phase root (Z).
+%
+%       5. Compute mixture density:
+%
+%              rho = P*Mmix/(ZRT)
+%
+%   NOTES
+%       - Supports both pure fluids and binary mixtures.
+%       - Binary interaction parameters are calculated using the
+%         Jaubert-Mutelet correlation.
+%       - Density calculations are based on the vapor-phase EOS root.
+%       - Intended for thermodynamic, transport-property, and dispersion
+%         analyses involving H2, CO2, N2, CH4, and related mixtures.
+%
+%   EXAMPLE
+%       fl = {"H2","CO2"};
+%       x1 = 0:0.01:1;
+%
+%       [PR_input,PR_results] = densZ_PR(fl,...
+%                                        x1,...
+%                                        10.4,...
+%                                        32,...
+%                                        filedataPure,...
+%                                        filedataBIP);
+%
+%       plot(PR_results.x1,PR_results.rho)
+%       xlabel('H_2 Mole Fraction')
+%       ylabel('Density (kg/m^3)')
+%
+%   See also CALC_AI_BI, CALC_BIP, CALC_ABMIX, CALC_Z.
+
 addpath('functions/');
 
 % % Variables of interest for this mixture

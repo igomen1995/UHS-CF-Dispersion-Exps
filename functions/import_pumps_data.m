@@ -1,8 +1,72 @@
 function pumps_data = import_pumps_data(filename, workingPump, confPump, cushionPump, dataLines)
-% Import pumps data from a text file given opts
-% Working pump must be number
-% This works if pump data is excatly the one described in the variable
-% names
+
+%IMPORT_PUMPS_DATA Import syringe-pump acquisition data.
+%
+%   PUMPS_DATA = IMPORT_PUMPS_DATA(FILENAME,WORKINGPUMP,...
+%                                  CONFPUMP,CUSHIONPUMP)
+%   imports pump acquisition data from a CSV file and returns the data as
+%   a MATLAB table containing pressures, flow rates, cumulative volumes,
+%   and a unified timestamp variable.
+%
+%   The function automatically identifies the working, confining, and
+%   cushion pumps based on the user-specified pump identifiers and
+%   creates standardized variables to simplify downstream processing.
+%
+%   PUMPS_DATA = IMPORT_PUMPS_DATA(...,DATALINES) specifies the rows to
+%   import from the file.
+%
+%   INPUTS
+%       filename
+%           Path to the pump data file.
+%
+%       workingPump
+%           Identifier of the working pump.
+%
+%           Example:
+%
+%               "1"
+%               "2"
+%               "3"
+%
+%       confPump
+%           Identifier of the confining-pressure pump.
+%
+%           Use a string corresponding to the desired pump number.
+%
+%       cushionPump
+%           Identifier of the cushion-fluid pump.
+%
+%           Use a string corresponding to the desired pump number.
+%
+%       dataLines
+%           Row interval(s) to import.
+%
+%           Default:
+%
+%               [7 Inf]
+%
+%   OUTPUT
+%       pumps_data
+%           MATLAB table containing the imported pump measurements and
+%           derived variables.
+%
+%   IMPORTED DATA
+%       The function imports:
+%
+%           - Pump pressures
+%           - Flow rates
+%           - Pump volumes
+%           - Cumulative injected volumes
+%           - Acquisition timestamps
+%
+%       for all pumps available in the acquisition file.
+%
+%   DATA PROCESSING
+%       The function performs the following steps:
+%
+%       1. Imports pump acquisition data from CSV.
+%
+
 
 % If dataLines is not specified, define defaults
 if nargin < 5

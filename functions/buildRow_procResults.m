@@ -1,7 +1,78 @@
 function row = buildRow_procResults(filedataExp, expProcData, KL_out, i)
 
-    % takes filedatExp table and expProcData structure that contains the
-    % following fields
+    %BUILDROW_PROCRESULTS Build a summary table row for a processed experiment.
+    %
+    %   ROW = BUILDROW_PROCRESULTS(FILEDATAEXP, EXPPROCDATA, KL_OUT, I)
+    %   creates a one-row table containing the experimental metadata,
+    %   processed experimental parameters, fitted dispersion results, and
+    %   derived transport metrics for experiment I.
+    %
+    %   This utility function consolidates information from the experimental
+    %   design table, processed breakthrough-curve data structure, and ADE
+    %   fitting results into a standardized format suitable for result
+    %   aggregation, statistical analysis, and export.
+    %
+    %   INPUTS
+    %       filedataExp : Table containing experiment metadata and operating
+    %                     conditions.
+    %
+    %       expProcData : Structure containing processed experimental data,
+    %                     breakthrough curves, and calculated experimental
+    %                     parameters. Fields are indexed using the experiment
+    %                     key stored in FILEDATAEXP.Key.
+    %
+    %       KL_out      : Structure containing fitted ADE parameters and
+    %                     fitting statistics, including:
+    %                       - KL      : Longitudinal dispersion coefficient
+    %                       - dKL     : Dispersion coefficient uncertainty
+    %                       - dt      : Time-shift correction
+    %                       - ddt     : Time-shift uncertainty
+    %                       - RMSE    : Root mean square error
+    %                       - R2      : Coefficient of determination
+    %                       - C_fit   : Fitted concentration profile
+    %
+    %       i           : Experiment index corresponding to the row of
+    %                     FILEDATAEXP being processed.
+    %
+    %   OUTPUT
+    %       row         : Single-row table containing:
+    %                       - Experimental metadata
+    %                       - Core properties
+    %                       - Flow conditions
+    %                       - Diffusion coefficients
+    %                       - Peclet numbers
+    %                       - Fitted ADE parameters
+    %                       - Parameter uncertainties
+    %                       - Derived line volumes and lengths
+    %                       - Fit quality metrics
+    %                       - Fitted breakthrough curve
+    %
+    %   DERIVED PARAMETERS
+    %       The function computes several transport quantities including:
+    %
+    %           Pe         = u*L/KL
+    %           Pe_D0      = u*L/D0
+    %           dtD        = u*dt/L
+    %           L_lines    = v_lines*dt
+    %           V_lines    = Q*dt
+    %
+    %       together with propagated uncertainties where available.
+    %
+    %   NOTES
+    %       - Unit conversions between SI and laboratory units are performed
+    %         automatically.
+    %       - The resulting table row is designed to be vertically
+    %         concatenated with rows from other experiments.
+    %       - Intended for post-processing and reporting of tracer dispersion
+    %         core-flood experiments.
+    %
+    %   EXAMPLE
+    %       row = buildRow_procResults(filedataExp,...
+    %                                  expProcData,...
+    %                                  KL_out,...
+    %                                  i);
+    %
+    %   See also TABLE, STRUCT, VERTCAT.
 
     u = expProcData.(filedataExp.Key(i)).exp_params.u_SI;
     L = expProcData.(filedataExp.Key(i)).exp_params.L_SI;
