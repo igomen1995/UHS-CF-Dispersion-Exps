@@ -3,10 +3,13 @@ results/
 input/
 data/
 
-% desktop init
+# integration
+main_PlotsIntegration.m
+
+# desktop init
 desktop.ini
 
-% Local temporary changes
+# Local temporary changes
 *.asv
 
 # input config
