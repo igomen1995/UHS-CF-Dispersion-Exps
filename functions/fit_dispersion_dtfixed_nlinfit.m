@@ -34,7 +34,7 @@ function out = fit_dispersion_dtfixed_nlinfit(C,t,u,Cj,Ci,L,dt_fixed,p0,dC,Cmin,
 %
 %       p0        : Initial parameter guess
 %
-%                   p0(1) = sqrt(KL)
+%                   p0 = sqrt(KL)
 %
 %       dC        : Measurement uncertainty associated with each
 %                   concentration observation
@@ -59,13 +59,15 @@ w_vals = w((C>=Cmin)&(C<=Cmax));
 % Cj, Ci, u not fitting, fitting p where Kl = p(1)^2
 % Corrects BT curve due to extra volume before core
 
+p = [dt_fixed; p0];
+
 C_function = @(p,tvals) ADE_short_dt_shift(p,tvals,u,Cj,Ci,L);
 
 % Weighted nonlinear fit
 opts = statset('nlinfit');
 
 try
-    [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_vals, C_vals, C_function, p0, opts, 'Weights', w_vals);
+    [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_vals, C_vals, C_function, p, opts, 'Weights', w_vals);
 catch ME
     % Only exit if truly fatal
     if contains(ME.message,'Inf') || contains(ME.message,'NaN')
