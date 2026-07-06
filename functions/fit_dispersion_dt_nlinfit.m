@@ -4,6 +4,10 @@ function out = fit_dispersion_dt_nlinfit(C,t,u,Cj,Ci,L,p0,dC)
 % core, initial guess parameters
 % p includes intital guess for Kl = p(1)^2 and dt = p(2);
 
+out = struct('KL', NaN, 'dKL', NaN, 'dt', NaN, 'ddt', NaN, 'C_fit', NaN(size(C)), ...
+    'C_pred', NaN(size(C)), 'dC_pred', NaN(size(C)), 'RMSE', NaN, 'R2', NaN, ...
+    'Cfun', [], 'R', [], 'J', [], 'CovB', [], 'MSE', NaN, 'ErrorModelInfo', []);
+
 w = 1./(dC.^2); % weights = 1/variance
 
 C_trim = C;
@@ -17,16 +21,25 @@ w_trim = w;
 % Cj, Ci, u not fitting, fitting p where Kl = p(1)^2 and dt = p(2)
 % Corrects BT curve due to extra volume before core
 
-C_function = @(p,tvals)(Ci + (Cj/2)*erfc((L-u.*(tvals-p(2)))./(2*(max((tvals-p(2)),eps).^(1/2)).*p(1)))); % dt numerator and denominator
-% C_function = @(p,t)(Ci + (Cj/2)*erfc((L-u.*(t-p(2)))./(2*(t.^(1/2)).*p(1)))); % dt only numerator
-
-% full function
-% C_function = @(p,t) Ci + (Cj/2) .* (erfc( (L - u.*(t - p(2))) ./ (2 * p(1) .* sqrt(max(t - p(2), eps))) ) + ...
-%     exp( u*L / (p(1)^2) ) .*erfc( (L + u.*(t - p(2))) ./ (2 * p(1) .* sqrt(max(t - p(2), eps))) ));
+C_function = @(p,tvals) ADE_short_dt_shift(p,tvals,u,Cj,Ci,L);
 
 % Weighted nonlinear fit
 opts = statset('nlinfit');
-[p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
+
+try
+    [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
+catch ME
+    % Only exit if truly fatal
+    if contains(ME.message,'Inf') || contains(ME.message,'NaN')
+        return
+    else
+        rethrow(ME)
+    end
+end
+
+if any(~isfinite(p_est))
+    return
+end
 
 % Confidence intervals for parameters 95%
 ci = nlparci(p_est, R, 'jacobian', J);
