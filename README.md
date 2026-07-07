@@ -28,7 +28,7 @@ The workflow was developed for transport studies involving hydrogen-containing g
 # Repository Structure
 
 ```text
-+ data/
++ data/ (upon request)
 + input/
 + functions/
 + results/
