@@ -28,19 +28,20 @@ The workflow was developed for transport studies involving hydrogen-containing g
 # Repository Structure
 
 ```text
-.
-├── input/
-├── functions/
-├── results/
-│
-├── main_PR.m
-├── main_Cal.m
-├── main_Validation.m
-├── main_DataExtract.m
-├── main_Plots.m
-├── main_Processing.m
-├── main_ProcessingMixingCorrection.m
-└── README.md
++ data/
++ input/
++ functions/
++ results/
+
++ main_PR.m (Peng Robisnon Independent Pipeline to plot Composition of a binary mixture vs density or compressibility)
++ main_Cal.m 
++ main_Validation.m
++ main_DataExtract.m
++ main_Plots.m
++ main_Processing.m
++ main_LinesMixing.m (Mixing in lines with Aris Dispersion and convolution of the lines + core responses)
+
++ README.md
 ```
 
 ---
@@ -258,7 +259,7 @@ main_Processing
 
 ---
 
-# Workflow 4 – Mixing-Corrected Transport Analysis
+# Workflow 4 – Mixing in Lines
 
 ## Purpose
 
@@ -324,7 +325,7 @@ main_DataExtract
      ↓
 main_Processing
      ↓
-main_ProcessingMixingCorrection
+main_LinesMixing
 ```
 
 ---
@@ -332,11 +333,11 @@ main_ProcessingMixingCorrection
 # Complete Workflow
 
 ```text
-main_PR
+main_PR (optional)
      ↓
-main_Cal
+main_Cal (only once)
      ↓
-main_Validation
+main_Validation (only once)
      ↓
 main_DataExtract
      ↓
@@ -344,64 +345,8 @@ main_Plots
      ↓
 main_Processing
      ↓
-main_ProcessingMixingCorrection
+main_LinesMixing (optional)
 ```
-
----
-
-# Typical Use Cases
-
-## 1. Thermodynamic Properties Only
-
-```text
-main_PR
-```
-
-Generate:
-
-- Density vs composition
-- Compressibility factors
-- PR-EOS reference databases
-
----
-
-## 2. Calibration and Validation
-
-```text
-main_Cal
-     ↓
-main_Validation
-```
-
-Validate density-based composition estimation.
-
----
-
-## 3. Standard Core-Flood Analysis
-
-```text
-main_DataExtract
-     ↓
-main_Plots
-     ↓
-main_Processing
-```
-
-Generate breakthrough curves and estimate transport parameters.
-
----
-
-## 4. Mixing-Corrected Analysis
-
-```text
-main_DataExtract
-     ↓
-main_Processing
-     ↓
-main_ProcessingMixingCorrection
-```
-
-Estimate intrinsic core-scale dispersion by correcting for external mixing.
 
 ---
 
