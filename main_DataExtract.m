@@ -702,8 +702,8 @@ for i = 1:length(filedataExp.Key)
     % vol injected q MFM
     % Vinj = sum(Q(i) * dt(i)) (,l)
     t = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed;
-    QMFM = expProcData.(filedataExp.Key(i)).BT.q_MFM;  % mL/min
-    Vinj_QMFM = cumtrapz(t,QMFM)/60;
+    QMFM_SI = expProcData.(filedataExp.Key(i)).BT.q_MFM/60;  % mL/min
+    Vinj_QMFM = cumtrapz(t,QMFM_SI);
 
     % Vinj_QMFM = zeros(length(Vinj),1);
     % Vinj_QMFM(1) = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed(1)*expProcData.(filedataExp.Key(i)).BT.q_MFM(1)/60;
@@ -728,6 +728,15 @@ for i = 1:length(filedataExp.Key)
     expProcData.(filedataExp.Key(i)).BT.tDtotal = ... % in respect to Vtotal
         expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*filedataExp.Q(i)/...
         (60*filedataExp.Vtotal(i));
+
+    % traveled distance
+    u_pump_SI = expProcData.(filedataExp.Key(i)).exp_params.u_SI; % one value
+    uavg_MFM_SI = expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI; % one value
+    u_MFM_SI = expProcData.(filedataExp.Key(i)).BT.u_MFM_SI; % array
+    
+    expProcData.(filedataExp.Key(i)).BT.s_u_pump_SI = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*u_pump_SI;
+    expProcData.(filedataExp.Key(i)).BT.s_uavg_MFM_SI = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*uavg_MFM_SI;
+    expProcData.(filedataExp.Key(i)).BT.s_u_MFM_SI = cumtrapz(t,u_MFM_SI);
 
     % T_K_real = expProcData.(filedataExp.Key(i)).BT.T_MFM + 275.15;
     % T_K_base = 25 + 275.15;
