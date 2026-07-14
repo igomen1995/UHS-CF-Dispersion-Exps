@@ -457,11 +457,38 @@ for i = 1:length(filedataExp.Key)
         expProcData.(filedataExp.Key(i)).MFMData.T_MFM2, ...
         expProcData.(filedataExp.Key(i)).MFMData.q_MFM2, ...
         'VariableNames',{'TimeStamp','TimeElapsed', 'SecondsElapsed', 'rho_MFM','T_MFM','q_MFM'});
+    BTaux.mflow_MFM = BTaux.rho_MFM.*BTaux.q_MFM*(10^-6)/60; % mass flow in kg/s
+    BTaux.v_MFM_SI = (BTaux.q_MFM*(10^-6)/60)/expProcData.(filedataExp.Key(i)).exp_params.A_SI; % v darcy
+    BTaux.v_MFM_cmmin = BTaux.v_MFM_SI*60*100; % v darcy
+    BTaux.u_MFM_SI = BTaux.v_MFM_SI/expProcData.(filedataExp.Key(i)).exp_params.phi; % vint
+    BTaux.u_MFM_cmmin = BTaux.u_MFM_SI*60*100; % vint
+    expProcData.(filedataExp.Key(i)).exp_params.Qavg_MFM_mlmin = mean(BTaux.q_MFM);
+    expProcData.(filedataExp.Key(i)).exp_params.Qstd_MFM_mlmin = std(BTaux.q_MFM);
+    expProcData.(filedataExp.Key(i)).exp_params.Qavg_MFM_SI = mean(BTaux.q_MFM)*(10^-6)/60;
+    expProcData.(filedataExp.Key(i)).exp_params.Qstd_MFM_SI = std(BTaux.q_MFM)*(10^-6)/60;
+    expProcData.(filedataExp.Key(i)).exp_params.mflow_avg_MFM_SI = mean(BTaux.mflow_MFM);
+    expProcData.(filedataExp.Key(i)).exp_params.mflow_std_MFM_SI = std(BTaux.mflow_MFM);
+    expProcData.(filedataExp.Key(i)).exp_params.vavg_MFM_SI = mean(BTaux.v_MFM_SI);
+    expProcData.(filedataExp.Key(i)).exp_params.vstd_MFM_SI = std(BTaux.v_MFM_SI);
+    expProcData.(filedataExp.Key(i)).exp_params.vavg_MFM_cmmin = mean(BTaux.v_MFM_cmmin);
+    expProcData.(filedataExp.Key(i)).exp_params.vstd_MFM_cmmin = std(BTaux.v_MFM_cmmin);
+    expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI = mean(BTaux.u_MFM_SI);
+    expProcData.(filedataExp.Key(i)).exp_params.ustd_MFM_SI = std(BTaux.u_MFM_SI);
+    expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_cmmin = mean(BTaux.u_MFM_cmmin);
+    expProcData.(filedataExp.Key(i)).exp_params.ustd_MFM_cmmin = std(BTaux.u_MFM_cmmin);
     if ismissing(trans_data_name) == 0
         BTaux_timetable = table2timetable(BTaux);
         PT_timetable = table2timetable(expProcData.(filedataExp.Key(i)).transData);
         BTaux_interp = retime(PT_timetable, BTaux_timetable.TimeStamp, 'linear');
+        BTaux.PT1 = BTaux_interp.PT1; % psi
         BTaux.PT2 = BTaux_interp.PT2; % psi
+        BTaux.dP = abs(BTaux.PT2 - BTaux.PT1); % psi
+        BTaux.Pavg = (BTaux.PT1 + BTaux.PT2)/2;
+        expProcData.(filedataExp.Key(i)).exp_params.dP_avg = mean(BTaux.dP);
+        expProcData.(filedataExp.Key(i)).exp_params.dP_std = std(BTaux.dP);
+        expProcData.(filedataExp.Key(i)).exp_params.Pavg_avg = mean(BTaux.Pavg);
+        expProcData.(filedataExp.Key(i)).exp_params.Pavg_std = std(BTaux.Pavg);
+        expProcData.(filedataExp.Key(i)).exp_params.Psens = expProcData.(filedataExp.Key(i)).exp_params.dP_avg/expProcData.(filedataExp.Key(i)).exp_params.Pavg_avg;
     end
     expProcData.(filedataExp.Key(i)).BT = BTaux;
     % fitting parameters for rho corrected
@@ -541,8 +568,8 @@ for i = 1:length(filedataExp.Key)
     Tmax = ceil(max(expProcData.(filedataExp.Key(i)).BT.T_MFM)*10)/10;
     T_PR_aux = Tmin:0.1:Tmax;
     if ismissing(trans_data_name) == 0
-        Pmin = floor(min(expProcData.(filedataExp.Key(i)).BT.PT2)*10)/10;
-        Pmax = ceil(max(expProcData.(filedataExp.Key(i)).BT.PT2)*10)/10;
+        Pmin = floor(min(expProcData.(filedataExp.Key(i)).BT.Pavg)*10)/10;
+        Pmax = ceil(max(expProcData.(filedataExp.Key(i)).BT.Pavg)*10)/10;
         dPtotal = Pmax - Pmin;
         if dPtotal < 20
             P_psig = Pmin:1:Pmax;
@@ -580,17 +607,17 @@ for i = 1:length(filedataExp.Key)
         % at rho corr value
         expProcData.(filedataExp.Key(i)).BT.Ci = ...
             100*scatInterp(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
-            expProcData.(filedataExp.Key(i)).BT.PT2, ...
+            expProcData.(filedataExp.Key(i)).BT.Pavg, ...
             expProcData.(filedataExp.Key(i)).BT.rho_corr);
         % at rho min value
         expProcData.(filedataExp.Key(i)).BT.CiMax = ...
             100*scatInterp(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
-            expProcData.(filedataExp.Key(i)).BT.PT2, ...
+            expProcData.(filedataExp.Key(i)).BT.Pavg, ...
             expProcData.(filedataExp.Key(i)).BT.rho_corrMin);
         % at rho max value
         expProcData.(filedataExp.Key(i)).BT.CiMin = ...
             100*scatInterp(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
-            expProcData.(filedataExp.Key(i)).BT.PT2, ...
+            expProcData.(filedataExp.Key(i)).BT.Pavg, ...
             expProcData.(filedataExp.Key(i)).BT.rho_corrMax);
         
         % Z interpoland
@@ -600,17 +627,17 @@ for i = 1:length(filedataExp.Key)
         % at rho corr value
         expProcData.(filedataExp.Key(i)).BT.Z = ...
             scatInterpZ(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
-            expProcData.(filedataExp.Key(i)).BT.PT2, ...
+            expProcData.(filedataExp.Key(i)).BT.Pavg, ...
             expProcData.(filedataExp.Key(i)).BT.rho_corr);
         % at rho min value
         expProcData.(filedataExp.Key(i)).BT.ZMax = ...
             scatInterpZ(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
-            expProcData.(filedataExp.Key(i)).BT.PT2, ...
+            expProcData.(filedataExp.Key(i)).BT.Pavg, ...
             expProcData.(filedataExp.Key(i)).BT.rho_corrMin);
         % at rho max value
         expProcData.(filedataExp.Key(i)).BT.ZMin = ...
             scatInterpZ(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
-            expProcData.(filedataExp.Key(i)).BT.PT2, ...
+            expProcData.(filedataExp.Key(i)).BT.Pavg, ...
             expProcData.(filedataExp.Key(i)).BT.rho_corrMax);
     else
         % 2D interpolation
@@ -666,19 +693,55 @@ for i = 1:length(filedataExp.Key)
         -expProcData.(filedataExp.Key(i)).BT.ZMin)/2;
 
     % dimensionless values 
+
+    % vol injected q pump
+    % Vinj = Q * t (ml)
+    Vinj = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*filedataExp.Q(i)/60;
+    expProcData.(filedataExp.Key(i)).BT.Vinj_QMFM = Vinj;
+
+    % vol injected q MFM
+    % Vinj = sum(Q(i) * dt(i)) (,l)
+    t = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed;
+    QMFM_SI = expProcData.(filedataExp.Key(i)).BT.q_MFM/60;  % mL/min
+    Vinj_QMFM = cumtrapz(t,QMFM_SI);
+
+    % Vinj_QMFM = zeros(length(Vinj),1);
+    % Vinj_QMFM(1) = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed(1)*expProcData.(filedataExp.Key(i)).BT.q_MFM(1)/60;
+    % for j = 2:length(Vinj)
+    %     t1 = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed(j-1);
+    %     t2 = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed(j);
+    %     dt = t2-t1;
+    %     Vinj_QMFM(j) = Vinj_QMFM(j-1) + dt*expProcData.(filedataExp.Key(i)).BT.q_MFM(j)/60;
+    % end
+
+    expProcData.(filedataExp.Key(i)).BT.Vinj_Qpump = Vinj;
+    expProcData.(filedataExp.Key(i)).BT.Vinj_QMFM = Vinj_QMFM;
+
     % td = Q t / V
+    % with Q pump
     expProcData.(filedataExp.Key(i)).BT.tD = ... % in respect to Vcore
-        expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*filedataExp.Q(i)/...
-        (60*filedataExp.Vcore(i));
+        expProcData.(filedataExp.Key(i)).BT.Vinj_Qpump/filedataExp.Vcore(i);
+    % with Q MFM
+    expProcData.(filedataExp.Key(i)).BT.tD_QMFM = ... % in respect to Vcore
+        expProcData.(filedataExp.Key(i)).BT.Vinj_QMFM/filedataExp.Vcore(i);
 
     expProcData.(filedataExp.Key(i)).BT.tDtotal = ... % in respect to Vtotal
         expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*filedataExp.Q(i)/...
         (60*filedataExp.Vtotal(i));
 
-    T_K_real = expProcData.(filedataExp.Key(i)).BT.T_MFM + 275.15;
-    T_K_base = 25 + 275.15;
-    P_MPa_base = (0 + 14.7)*0.00689476;
+    % % traveled distance
+    % u_pump_SI = expProcData.(filedataExp.Key(i)).exp_params.u_SI; % one value
+    % uavg_MFM_SI = expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI; % one value
+    % u_MFM_SI = expProcData.(filedataExp.Key(i)).BT.u_MFM_SI; % array
+    % 
+    % expProcData.(filedataExp.Key(i)).BT.s_u_pump_SI = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*u_pump_SI;
+    % expProcData.(filedataExp.Key(i)).BT.s_uavg_MFM_SI = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*uavg_MFM_SI;
+    % expProcData.(filedataExp.Key(i)).BT.s_u_MFM_SI = cumtrapz(t,u_MFM_SI);
 
+    % T_K_real = expProcData.(filedataExp.Key(i)).BT.T_MFM + 275.15;
+    % T_K_base = 25 + 275.15;
+    % P_MPa_base = (0 + 14.7)*0.00689476;
+    %
     % expProcData.(filedataExp.Key(i)).BT.tDZ = ... % in respect to Vcore
     %     expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*filedataExp.Q(i)./...
     %     (60*(expProcData.(filedataExp.Key(i)).BT.Z.*(T_K_real/T_K_base)*(P_MPa_base/P_MPa)*filedataExp.Vcore(i)));
