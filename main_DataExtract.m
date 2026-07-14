@@ -729,14 +729,14 @@ for i = 1:length(filedataExp.Key)
         expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*filedataExp.Q(i)/...
         (60*filedataExp.Vtotal(i));
 
-    % traveled distance
-    u_pump_SI = expProcData.(filedataExp.Key(i)).exp_params.u_SI; % one value
-    uavg_MFM_SI = expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI; % one value
-    u_MFM_SI = expProcData.(filedataExp.Key(i)).BT.u_MFM_SI; % array
-    
-    expProcData.(filedataExp.Key(i)).BT.s_u_pump_SI = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*u_pump_SI;
-    expProcData.(filedataExp.Key(i)).BT.s_uavg_MFM_SI = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*uavg_MFM_SI;
-    expProcData.(filedataExp.Key(i)).BT.s_u_MFM_SI = cumtrapz(t,u_MFM_SI);
+    % % traveled distance
+    % u_pump_SI = expProcData.(filedataExp.Key(i)).exp_params.u_SI; % one value
+    % uavg_MFM_SI = expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI; % one value
+    % u_MFM_SI = expProcData.(filedataExp.Key(i)).BT.u_MFM_SI; % array
+    % 
+    % expProcData.(filedataExp.Key(i)).BT.s_u_pump_SI = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*u_pump_SI;
+    % expProcData.(filedataExp.Key(i)).BT.s_uavg_MFM_SI = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*uavg_MFM_SI;
+    % expProcData.(filedataExp.Key(i)).BT.s_u_MFM_SI = cumtrapz(t,u_MFM_SI);
 
     % T_K_real = expProcData.(filedataExp.Key(i)).BT.T_MFM + 275.15;
     % T_K_base = 25 + 275.15;
