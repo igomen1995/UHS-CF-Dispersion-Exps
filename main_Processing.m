@@ -549,7 +549,7 @@ mean_R2 = [];
 mean_RMSE = [];
 
 
-for m = 1:length(method_names)
+for m = 3:length(method_names)
 
     method_table = method_results.(method_names{m});
 
@@ -564,7 +564,8 @@ end
 
 % Select best method
 [~, idx_best] = max(mean_R2./mean_RMSE);
-best_method = valid_methods(idx_best);
+% best_method = valid_methods(idx_best);
+best_method = "dt_fixed_wdt_wfit_lim";
 
 disp("Best method: " + best_method)
 

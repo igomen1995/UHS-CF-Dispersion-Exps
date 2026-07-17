@@ -604,20 +604,20 @@ for i = 1:length(filedataExp.Key)
     Tmin = floor(min(expProcData.(filedataExp.Key(i)).BT.T_MFM)*10)/10;
     Tmax = ceil(max(expProcData.(filedataExp.Key(i)).BT.T_MFM)*10)/10;
     T_PR_aux = Tmin:0.1:Tmax;
-    % if ismissing(trans_data_name) == 0
-    %     Pmin = floor(min(expProcData.(filedataExp.Key(i)).BT.Pavg)*10)/10;
-    %     Pmax = ceil(max(expProcData.(filedataExp.Key(i)).BT.Pavg)*10)/10;
-    %     dPtotal = Pmax - Pmin;
-    %     if dPtotal < 20
-    %         P_psig = Pmin:1:Pmax;
-    %     else
-    %         P_psig = linspace(Pmin, Pmax, 20);
-    %     end
-    %     P_MPa = (P_psig + 14.7)*0.00689476;
-    % else
+    if ismissing(trans_data_name) == 0
+        Pmin = floor(min(expProcData.(filedataExp.Key(i)).BT.Pavg)*10)/10;
+        Pmax = ceil(max(expProcData.(filedataExp.Key(i)).BT.Pavg)*10)/10;
+        dPtotal = Pmax - Pmin;
+        if dPtotal < 20
+            P_psig = Pmin:1:Pmax;
+        else
+            P_psig = linspace(Pmin, Pmax, 20);
+        end
+        P_MPa = (P_psig + 14.7)*0.00689476;
+    else
         P_psig = filedataExp.P(i);
         P_MPa = (P_psig + 14.7)*0.00689476;
-    % end
+    end
     PTXrho_PR_ref = table();
     for m = 1:length(T_PR_aux)
         for n = 1:length(P_MPa)
