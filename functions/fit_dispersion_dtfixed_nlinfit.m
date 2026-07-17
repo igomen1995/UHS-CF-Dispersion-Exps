@@ -59,15 +59,16 @@ w_vals = w((C>=Cmin)&(C<=Cmax));
 % Cj, Ci, u not fitting, fitting p where Kl = p(1)^2
 % Corrects BT curve due to extra volume before core
 
-p = [dt_fixed; p0];
+% p = [p0; dt_fixed];
 
-C_function = @(p,tvals) ADE_short_dt_shift(p,tvals,u,Cj,Ci,L);
+C_function = @(p,tvals) ADE_short_dt_shift([p; dt_fixed],tvals,u,Cj,Ci,L);
 
 % Weighted nonlinear fit
 opts = statset('nlinfit');
 
 try
-    [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_vals, C_vals, C_function, p, opts, 'Weights', w_vals);
+    [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_vals, C_vals, C_function, p0, opts, 'Weights', w_vals);
+
 catch ME
     % Only exit if truly fatal
     if contains(ME.message,'Inf') || contains(ME.message,'NaN')

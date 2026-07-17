@@ -349,10 +349,10 @@ load(pathImportAll+"expProcData.mat")
 method_results = struct();
 
 methods = {'dt_free_wfit', 'dt_free_nwfit', ...
-    'dt_fixed_wfit_wdt_lim','dt_fixed_wfit_nwdt_lim', ...
-    'dt_fixed_nwfit_wdt_lim', 'dt_fixed_nwfit_nwdt_lim', ...
-    'dt_fixed_wfit_wdt_full','dt_fixed_wfit_nwdt_full', ...
-    'dt_fixed_nwfit_wdt_full', 'dt_fixed_nwfit_nwdt_full'};
+    'dt_fixed_wdt_wfit_lim','dt_fixed_nwdt_wfit_lim', ...
+    'dt_fixed_wdt_nwfit_lim', 'dt_fixed_nwdt_nwfit_lim', ...
+    'dt_fixed_wdt_wfit_full','dt_fixed_nwdt_wfit_full', ...
+    'dt_fixed_wdt_nwfit_full', 'dt_fixed_nwdt_nwfit_full'};
 
 for m = 1:length(methods)
     method_results.(methods{m}) = table();
@@ -369,7 +369,8 @@ for i = 1:length(filedataExp.Key)
         % experiment params (fixed for fitting)
         Ci = filedataExp.C1init(i)/100;
         Cj = filedataExp.C1j(i)/100;
-        u = expProcData.(filedataExp.Key(i)).exp_params.u_SI;
+        u = expProcData.(filedataExp.Key(i)).exp_params.u_SI; % from pump
+        % u = expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI; % from MFM average
         L = expProcData.(filedataExp.Key(i)).exp_params.L_SI;
 
         % dt shift guess = Vlines total / Q 
@@ -432,7 +433,7 @@ for i = 1:length(filedataExp.Key)
             dtD_guess = (method_results.dt_free_wfit.dtD(valid_dtD_fixed_w)')*(method_results.dt_free_wfit.d_dtD(valid_dtD_fixed_w)/sum(method_results.dt_free_wfit.d_dtD(valid_dtD_fixed_w))); % dtD fixed is a weigthed average
             d_dt_dtfixed_SI = (method_results.dt_free_wfit.d_dt_SI(valid_dtD_fixed_w)')*(method_results.dt_free_wfit.d_dtD(valid_dtD_fixed_w)/sum(method_results.dt_free_wfit.d_dtD(valid_dtD_fixed_w)));
             dt_fixed = dtD_guess*L/u; %  dt estimate according to velocity of each experiment
-            p_guess = sqrt(method_results.dt_free_wfit.KL_SI);
+            p_guess = sqrt(method_results.dt_free_wfit.KL_SI(i));
 
             % dt fixed weigthed fit wit dt weigthed limited C
             % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
@@ -441,9 +442,9 @@ for i = 1:length(filedataExp.Key)
             % exp params for table
             row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
     
-            method_results.dt_fixed_wfit_wdt_lim = [method_results.dt_fixed_wfit_wdt_lim; row];
+            method_results.dt_fixed_wdt_wfit_lim = [method_results.dt_fixed_wdt_wfit_lim; row];
 
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wfit_wdt_lim = 100*KL_out.C_fit;
+            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wdt_wfit_lim = 100*KL_out.C_fit;
 
             % dt fixed non weigthed fit wit dt weigthed limited C
 
@@ -453,9 +454,9 @@ for i = 1:length(filedataExp.Key)
             % exp params for table
             row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
     
-            method_results.dt_fixed_nwfit_wdt_lim = [method_results.dt_fixed_nwfit_wdt_lim; row];
+            method_results.dt_fixed_wdt_nwfit_lim = [method_results.dt_fixed_wdt_nwfit_lim; row];
 
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwfit_wdt_lim = 100*KL_out.C_fit;
+            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wdt_nwfit_lim = 100*KL_out.C_fit;
 
             % dt fixed weigthed fit wit dt weigthed full
             % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
@@ -464,9 +465,9 @@ for i = 1:length(filedataExp.Key)
             % exp params for table
             row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
     
-            method_results.dt_fixed_wfit_wdt_full = [method_results.dt_fixed_wfit_wdt_full; row];
+            method_results.dt_fixed_wdt_wfit_full = [method_results.dt_fixed_wdt_wfit_full; row];
 
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wfit_wdt_full = 100*KL_out.C_fit;
+            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wdt_wfit_full = 100*KL_out.C_fit;
 
             % dt fixed non weigthed fit wit dt weigthed full
             % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
@@ -475,9 +476,9 @@ for i = 1:length(filedataExp.Key)
             % exp params for table
             row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
     
-            method_results.dt_fixed_nwfit_wdt_full = [method_results.dt_fixed_nwfit_wdt_full; row];
+            method_results.dt_fixed_wdt_nwfit_full = [method_results.dt_fixed_wdt_nwfit_full; row];
 
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwfit_wdt_full = 100*KL_out.C_fit;
+            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wdt_nwfit_full = 100*KL_out.C_fit;
         end
 
         % Non weigthed for dtfixed
@@ -487,9 +488,9 @@ for i = 1:length(filedataExp.Key)
         if any(valid_dtD_fixed_nw)
             % dtD guess nw fixed is a weigthed average of previous dtD non weigthed
             dtD_guess = (method_results.dt_free_nwfit.dtD(valid_dtD_fixed_nw)')*(method_results.dt_free_nwfit.d_dtD(valid_dtD_fixed_nw)/sum(method_results.dt_free_nwfit.d_dtD(valid_dtD_fixed_nw))); % dtD fixed is a weigthed average
-            d_dt_dtfixed_SI = (method_results.dt_free_nwfit.d_dt_SI(valid_dtD_fixed_nw)')*(method_results.dt_free_nwfit.d_dtD/sum(method_results.dt_free_nwfit.d_dtD(valid_dtD_fixed_nw)));
+            d_dt_dtfixed_SI = (method_results.dt_free_nwfit.d_dt_SI(valid_dtD_fixed_nw)')*(method_results.dt_free_nwfit.d_dtD(valid_dtD_fixed_nw)/sum(method_results.dt_free_nwfit.d_dtD(valid_dtD_fixed_nw)));
             dt_fixed = dtD_guess*L/u; %  dt estimate according to velocity of each experiment
-            p_guess = sqrt(method_results.dt_free_nwfit.KL_SI);
+            p_guess = sqrt(method_results.dt_free_nwfit.KL_SI(i));
 
             % dt fixed weigthed fit wit dt non weigthed limited C
             % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
@@ -498,9 +499,9 @@ for i = 1:length(filedataExp.Key)
             % exp params for table
             row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
     
-            method_results.dt_fixed_wfit_nwdt_lim = [method_results.dt_fixed_wfit_nwdt_lim; row];
+            method_results.dt_fixed_nwdt_wfit_lim = [method_results.dt_fixed_nwdt_wfit_lim; row];
 
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wfit_nwdt_lim = 100*KL_out.C_fit;
+            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwdt_wfit_lim = 100*KL_out.C_fit;
 
             % dt fixed non weigthed fit wit dt non weigthed limited C
 
@@ -510,9 +511,9 @@ for i = 1:length(filedataExp.Key)
             % exp params for table
             row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
     
-            method_results.dt_fixed_nwfit_nwdt_lim = [method_results.dt_fixed_nwfit_nwdt_lim; row];
+            method_results.dt_fixed_nwdt_nwfit_lim = [method_results.dt_fixed_nwdt_nwfit_lim; row];
 
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwfit_nwdt_lim = 100*KL_out.C_fit;
+            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwdt_nwfit_lim = 100*KL_out.C_fit;
 
             % dt fixed weigthed fit wit dt weigthed full
             % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
@@ -521,9 +522,9 @@ for i = 1:length(filedataExp.Key)
             % exp params for table
             row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
 
-            method_results.dt_fixed_wfit_nwdt_full = [method_results.dt_fixed_wfit_nwdt_full; row];
+            method_results.dt_fixed_nwdt_wfit_full = [method_results.dt_fixed_nwdt_wfit_full; row];
 
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wfit_nwdt_full = 100*KL_out.C_fit;
+            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwdt_wfit_full = 100*KL_out.C_fit;
 
             % dt fixed non weigthed fit wit dt non weigthed full
             % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
@@ -532,9 +533,9 @@ for i = 1:length(filedataExp.Key)
             % exp params for table
             row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
     
-            method_results.dt_fixed_nwfit_nwdt_full = [method_results.dt_fixed_nwfit_nwdt_full; row];
+            method_results.dt_fixed_nwdt_nwfit_full = [method_results.dt_fixed_nwdt_nwfit_full; row];
 
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwfit_wdt_full = 100*KL_out.C_fit;
+            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wdt_nwfit_full = 100*KL_out.C_fit;
         end
     end
 end
@@ -545,6 +546,7 @@ nExp = height(filedataExp);
 
 valid_methods = [];
 mean_R2 = [];
+mean_RMSE = [];
 
 
 for m = 1:length(method_names)
@@ -556,11 +558,12 @@ for m = 1:length(method_names)
     if all(valid)
         valid_methods = [valid_methods; string(method_names{m})];
         mean_R2 = [mean_R2; mean(method_table.R2)];
+        mean_RMSE = [mean_RMSE; mean(method_table.RMSE)];
     end
 end
 
 % Select best method
-[~, idx_best] = max(mean_R2);
+[~, idx_best] = max(mean_R2./mean_RMSE);
 best_method = valid_methods(idx_best);
 
 disp("Best method: " + best_method)
