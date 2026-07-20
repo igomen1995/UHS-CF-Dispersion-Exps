@@ -15,7 +15,7 @@ function out = fit_dispersion_params_alpha_tau(KL,Pe_fromD0,D0,Dp,p0,dKL)
 %
 %       KL   : Longitudinal dispersion coefficient
 %       D0   : Molecular diffusion coefficient
-%       Pe   : Peclet number
+%       Pe   : Peclet number with Ddiffusion and Dp as L
 %       C2   : Mechanical-dispersion coefficient
 %       tau  : Tortuosity factor
 %
