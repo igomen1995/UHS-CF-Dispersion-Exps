@@ -1048,6 +1048,36 @@ for j = 1:length(Fluid1_unique)
     end
 end
 
+%% BTC metrics
+
+BTC_Metrics_All = table();
+
+for i = 1:length(filedataExp.Key)
+    if filedataExp.Type(i) == "CF"
+
+        % data
+        key = filedataExp.Key(i);
+        t_vals = expProcData.(key).BT.SecondsElapsed;
+        tD_vals = expProcData.(key).BT.tD;
+        C1_vals = expProcData.(key).BT.Ci/100;
+
+        [C1_unique,idx] = unique(C1_vals,'stable');
+        t_unique = t_vals(idx);
+        tD_unique = tD_vals(idx);
+
+        BTC_Metrics = getBTCMetrics(t_unique,tD_unique,C1_unique);
+
+        expProcData.key.BTC_Metrics = BTC_Metrics;
+
+        BTC_Row = struct2table(BTC_Metrics);
+        BTC_Row.Key = key;
+        BTC_Row = movevars(BTC_Row,'Key','Before',1);
+
+        BTC_Metrics_All = [BTC_Metrics_All; BTC_Row];
+
+    end
+end
+
 %% alpha estimation with best method only 
 
 min_points_alpha = 2;
@@ -1219,7 +1249,11 @@ T(:, vars_to_remove) = [];
 writetable(T, fitting_results_name, ...
     'Sheet','best_method')
 
-% Sheet 2+: each method
+% Sheet 2: BTC Metrics
+writetable(BTC_Metrics_All,fitting_results_name,...
+           'Sheet','BTC');
+
+% Sheet 3+: each method
 method_names = fieldnames(method_results);
 
 for j = 1:length(method_names)
