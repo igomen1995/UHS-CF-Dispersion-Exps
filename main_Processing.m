@@ -369,12 +369,13 @@ for i = 1:length(filedataExp.Key)
         % experiment params (fixed for fitting)
         Ci = filedataExp.C1init(i)/100;
         Cj = filedataExp.C1j(i)/100;
-        u = expProcData.(filedataExp.Key(i)).exp_params.u_SI; % from pump
-        % u = expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI; % from MFM average
+        % u = expProcData.(filedataExp.Key(i)).exp_params.u_SI; % from pump
+        u = expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI; % from MFM average
         L = expProcData.(filedataExp.Key(i)).exp_params.L_SI;
 
         % dt shift guess = Vlines total / Q 
-        dt_guess = (filedataExp.Vlinesbefore(i)+filedataExp.Vlinesafter(i))*60/filedataExp.Q(i); % time in seconds
+        % dt_guess = (filedataExp.Vlinesbefore(i)+filedataExp.Vlinesafter(i))*60/filedataExp.Q(i); % time in seconds
+        dt_guess = (filedataExp.Vlinesbefore(i)+filedataExp.Vlinesafter(i))*60/expProcData.(filedataExp.Key(i)).exp_params.Qavg_MFM_mlmin; % time in seconds
         p_guess = [1,dt_guess];
 
         % dt_free_w dt free weigthed
@@ -419,7 +420,8 @@ for i = 1:length(filedataExp.Key)
         % experiment params (fixed for fitting)
         Ci = filedataExp.C1init(i)/100;
         Cj = filedataExp.C1j(i)/100;
-        u = expProcData.(filedataExp.Key(i)).exp_params.u_SI;
+        %u = expProcData.(filedataExp.Key(i)).exp_params.u_SI;
+        u = expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI; % from MFM average
         L = expProcData.(filedataExp.Key(i)).exp_params.L_SI;
 
         % run dt fixed fitting only if dt guess from weigthed or non weigthed dt free are valid
