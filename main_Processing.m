@@ -369,13 +369,13 @@ for i = 1:length(filedataExp.Key)
         % experiment params (fixed for fitting)
         Ci = filedataExp.C1init(i)/100;
         Cj = filedataExp.C1j(i)/100;
-        % u = expProcData.(filedataExp.Key(i)).exp_params.u_SI; % from pump
-        u = expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI; % from MFM average
+        u = expProcData.(filedataExp.Key(i)).exp_params.u_SI; % from pump
+        % u = expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI; % from MFM average
         L = expProcData.(filedataExp.Key(i)).exp_params.L_SI;
 
         % dt shift guess = Vlines total / Q 
-        % dt_guess = (filedataExp.Vlinesbefore(i)+filedataExp.Vlinesafter(i))*60/filedataExp.Q(i); % time in seconds
-        dt_guess = (filedataExp.Vlinesbefore(i)+filedataExp.Vlinesafter(i))*60/expProcData.(filedataExp.Key(i)).exp_params.Qavg_MFM_mlmin; % time in seconds
+        dt_guess = (filedataExp.Vlinesbefore(i)+filedataExp.Vlinesafter(i))*60/filedataExp.Q(i); % time in seconds
+        % dt_guess = (filedataExp.Vlinesbefore(i)+filedataExp.Vlinesafter(i))*60/expProcData.(filedataExp.Key(i)).exp_params.Qavg_MFM_mlmin; % time in seconds
         p_guess = [1,dt_guess];
 
         % dt_free_w dt free weigthed
@@ -420,8 +420,8 @@ for i = 1:length(filedataExp.Key)
         % experiment params (fixed for fitting)
         Ci = filedataExp.C1init(i)/100;
         Cj = filedataExp.C1j(i)/100;
-        %u = expProcData.(filedataExp.Key(i)).exp_params.u_SI;
-        u = expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI; % from MFM average
+        u = expProcData.(filedataExp.Key(i)).exp_params.u_SI;
+        % u = expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI; % from MFM average
         L = expProcData.(filedataExp.Key(i)).exp_params.L_SI;
 
         % run dt fixed fitting only if dt guess from weigthed or non weigthed dt free are valid
@@ -1132,7 +1132,7 @@ for i = 1:length(Fluid1_unique)
                 alpha_results(count_row).d_tau = NaN;
             
                 % alpha only fitting
-                if n_points >= min_points_alpha && range(Pe_D0) > 1e-4 && std(KL) > 1e-12
+                if n_points >= min_points_alpha
             
                     try
                         out_alpha = fit_dispersion_params_alpha( ...
@@ -1150,16 +1150,13 @@ for i = 1:length(Fluid1_unique)
                 end
             
                 % alpha + tau if possible
-                if n_points >= min_points_alpha_tau && range(Pe_D0) > 1e-3 && std(KL) > 1e-12
+                if n_points >= min_points_alpha_tau
             
                     try
                         out_tau = fit_dispersion_params_alpha_tau( ...
                             KL, Pe_D0, D0_val, Dp_val, p_guess_alpha_tau, dKL);
             
-                        if isfinite(out_tau.tau) && ...
-                           out_tau.tau > 0 && ...
-                           out_tau.tau < 10 && ...
-                           abs(out_tau.d_tau / out_tau.tau) < 1
+                        if isfinite(out_tau.tau) 
 
                             alpha_results(count_row).alpha_tau_SI   = out_tau.alpha_SI;
                             alpha_results(count_row).d_alpha_tau_SI = out_tau.d_alpha_SI;
@@ -1282,6 +1279,15 @@ for i = 1:length(Fluid1_unique)
             
                 alpha_cm = alpha_SI * 100;
                 dalpha_cm = dalpha_SI * 100;
+
+                alpha_tau_SI = alpha_table.alpha_tau_SI(idx_alpha);
+                dalpha_tau_SI = alpha_table.d_alpha_tau_SI(idx_alpha);
+            
+                alpha_tau_cm = alpha_tau_SI * 100;
+                dalpha_tau_cm = dalpha_tau_SI * 100;
+
+                tau = alpha_table.tau;
+                d_tau = alpha_table.tau;
             
                 % % model (KL = alpha * u)
                 % u_model = linspace(0, max(u_array_cmmin)/(60*100), 100);
@@ -1293,8 +1299,10 @@ for i = 1:length(Fluid1_unique)
                 % model based on Pe numbers (Pe with D0 denominator)
                 Pe_D0_array_plot = 0:1:ceil(max(Pe_D0_array));
                 % KL_Pe_alpha_only_model(Pe_fromD0,D0,p) % alpha = p * Dp; % Alpha (dispersivity) Dp is L
-                KL_array_SI_plot = KL_Pe_alpha_only_model(Pe_D0_array_plot,D0,alpha_SI/Dp_SI);
-                KL_array_cm2min_plot = KL_array_SI_plot*(60*10^4);
+                KL_array_alpha_SI_plot = KL_Pe_alpha_only_model(Pe_D0_array_plot,D0,alpha_SI/Dp_SI);
+                KL_array_tau_SI_plot = KL_Pe_alpha_tau_model(Pe_D0_array_plot,D0,[alpha_tau_SI/Dp_SI;tau]);
+                KL_array_alpha_cm2min_plot = KL_array_alpha_SI_plot*(60*10^4);
+                KL_array_tau_cm2min_plot = KL_array_tau_SI_plot*(60*10^4);
                 u_array_cmmin_plot = (Pe_D0_array_plot*D0/Dp_SI)*(60*10^2);
             
                 % plot
@@ -1305,9 +1313,13 @@ for i = 1:length(Fluid1_unique)
                 % plot(u_model_cm, KL_model_cm, ...
                 %     'k','LineWidth',2,...
                 %     'DisplayName','K_L = \alpha u_x')
-                plot(u_array_cmmin_plot, KL_array_cm2min_plot, ...
+                plot(u_array_cmmin_plot, KL_array_alpha_cm2min_plot, ...
                     'k','LineWidth',2,...
                     'DisplayName','K_L = \alpha u_x')
+                hold on
+                plot(u_array_cmmin_plot, KL_array_tau_cm2min_plot, ...
+                    'k','LineWidth',2,'LineStyle','--',...
+                    'DisplayName','K_L = D_0/\tau + \alpha u_x')
             
                 % data
                 for ii = 1:length(u_array_cmmin)
@@ -1336,7 +1348,11 @@ for i = 1:length(Fluid1_unique)
                 title(save_name, 'Interpreter','none')
             
                 annotation('textbox',[0.25 0.2 0.5 0.05],...
-                    'String',sprintf('\\alpha = %.2f ± %.2f cm', alpha_cm, dalpha_cm),...
+                    'String',sprintf('\\alpha_1 = %.2f ± %.2f cm', alpha_cm, dalpha_cm),...
+                    'EdgeColor','none')
+
+                annotation('textbox',[0.25 0.15 0.5 0.05],...
+                    'String',sprintf('\\alpha_2 = %.2f ± %.2f cm', alpha_tau_cm, dalpha_tau_cm),...
                     'EdgeColor','none')
             
                 legend('Location','northwest')
@@ -1396,22 +1412,37 @@ for i = 1:length(Fluid1_unique)
                 alpha_cm = alpha_SI * 100;
                 dalpha_cm = dalpha_SI * 100;
 
+                alpha_tau_SI = alpha_table.alpha_tau_SI(idx_alpha);
+                dalpha_tau_SI = alpha_table.d_alpha_tau_SI(idx_alpha);
+            
+                alpha_tau_cm = alpha_tau_SI * 100;
+                dalpha_tau_cm = dalpha_tau_SI * 100;
+
+                tau = alpha_table.tau;
+                d_tau = alpha_table.tau;
+
                 Pe_D0_alpha = u_array_SI*alpha_SI/D0;
             
                 % model based on Pe numbers (Pe with D0 denominator)
                 Pe_D0_array_plot = 0.1:0.1:6;
                 % KL_Pe_alpha_only_model(Pe_fromD0,D0,p) % alpha = p * Dp; % Alpha (dispersivity) Dp is L
-                KL_array_SI_plot = KL_Pe_alpha_only_model(Pe_D0_array_plot,D0,1);
-                KL_array_cm2min_plot = KL_array_SI_plot*(60*10^4);
+                KL_array_alpha_SI_plot = KL_Pe_alpha_only_model(Pe_D0_array_plot,D0,1);
+                KL_array_tau_SI_plot = KL_Pe_alpha_tau_model(Pe_D0_array_plot,D0,[alpha_tau_SI/Dp_SI;tau]);
+                KL_array_alpha_cm2min_plot = KL_array_alpha_SI_plot*(60*10^4);
+                KL_array_tau_cm2min_plot = KL_array_tau_SI_plot*(60*10^4);
                 u_array_cmmin_plot = (Pe_D0_array_plot*D0/Dp_SI)*(60*10^2);
             
                 % plot
                 figure
                 hold on
             
-                plot(Pe_D0_array_plot, KL_array_SI_plot/D0, ...
+                plot(Pe_D0_array_plot, KL_array_alpha_SI_plot/D0, ...
                     'k','LineWidth',2,...
                     'DisplayName','K_L/D_0 \approx \alpha_Lu_x/D_0')
+                hold on
+                plot(Pe_D0_array_plot, KL_array_tau_SI_plot/D0, ...
+                    'k','LineWidth',2,'LineStyle', '--',...
+                    'DisplayName','K_L/D_0 \approx 1/\tau + \alpha_Lu_x/D_0') 
             
                 % data
                 for ii = 1:length(Pe_D0_alpha)
