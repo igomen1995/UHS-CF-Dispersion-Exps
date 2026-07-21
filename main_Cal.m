@@ -1037,13 +1037,12 @@ figure
 set(gcf, 'Position', [100, 100, 700, 550])
 ax1 = axes;
 rho_ref_0 = fittingRhoResultsAll.p1(fittingRhoResultsAll.Q == "QAll");
-drho_corr_low = rho_ref_0 - fittingRhoResultsAll.RMSE(fittingRhoResultsAll.Q == "QAll");
-drho_corr_high = rho_ref_0 + fittingRhoResultsAll.RMSE(fittingRhoResultsAll.Q == "QAll");
+drho_corr = fittingRhoResultsAll.RMSE(fittingRhoResultsAll.Q == "QAll");
 step = 1;
-errorbar(0:step:rho_ref_0,feval(cal_curve_params_Qall,0:step:rho_ref_0),drho_corr_low,'LineStyle', 'none', ...
+errorbar(0:step:rho_ref_0,feval(cal_curve_params_Qall,0:step:rho_ref_0),drho_corr,'LineStyle', 'none', ...
     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
 hold on
-errorbar(rho_ref_0:step:800,feval(cal_curve_params_Qall,rho_ref_0:step:800),drho_corr_high,'LineStyle', 'none', ...
+errorbar(rho_ref_0:step:800,feval(cal_curve_params_Qall,rho_ref_0:step:800),drho_corr,'LineStyle', 'none', ...
     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
 scatter(calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM,20,calData_aux.T_MFM,'filled','DisplayName','Measured density')
 plot(0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k','DisplayName','Linear calibration curve') % fitting responds to high pressure only
@@ -1318,9 +1317,9 @@ plot([rho_ref_0,rho_ref_0],[0,rho_MFM_0],'--','Color','k','LineWidth',1.0);
 % annotations
 annotText1 = sprintf('{%.1f} kg/m^{3}', rho_MFM_0);
 annotText2 = sprintf('{%.1f} kg/m^{3}', rho_ref_0);
-annotation('textbox', [xNorm+0.01, yNorm-0.02, 0.1, 0.05], 'String', annotText1, ...
+annotation('textbox', [axPos(1), yNorm+0.02, 0.2, 0.05], 'String', annotText1, ...
     'Interpreter', 'tex', 'FontSize', 9, 'EdgeColor', 'none');
-annotation('textbox', [xNorm-0.03, yNorm-0.05, 0.1, 0.05], 'String', annotText2, ...
+annotation('textbox', [xNorm+0.025, axPos(2) + 0.015, 0.2, 0.05], 'String', annotText2, ...
     'Interpreter', 'tex', 'FontSize', 9, 'EdgeColor', 'none','Rotation',90);
 xlabel('\rho_{ref} [kg/m^{3}]', 'FontSize', 14);
 ylabel('\rho_{MFM} [kg/m^{3}]', 'FontSize', 14);
