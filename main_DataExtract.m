@@ -412,7 +412,7 @@ for i = 1:length(filedataExp.Key)
     % Assumes only one row is output, unique parasm for fluid 1 and 2
     filedataDiffaux = filedataDiff((filedataDiff.Fluid1 == filedataExp.Fluid1{i} & filedataDiff.Fluid2 == filedataExp.Fluid2{i}),:);
     
-    %[D12, dD12] = calc_diff_marrero(T_C,P_psig, A, B, C, D, E, group, dev_pc)
+    %[D12, dD12] = calc_diff_marrero(T_C,P_REF_psig, A, B, C, D, E, group, dev_pc)
     [D12,dD12] = calc_diff_marrero(filedataExp.T(i), ...
         filedataExp.P(i), filedataDiffaux.A, filedataDiffaux.B, ...
         filedataDiffaux.C, filedataDiffaux.D, filedataDiffaux.E, ...
@@ -585,49 +585,72 @@ end
 
 %% Add molar concentration to breakthrough data and error
 
-x1 = 0:0.01:1; % array for binary mixture
+x1 = 0:0.1:1; % array for binary mixture
 for i = 1:length(filedataExp.Key)
     fluidPair = [filedataExp.Fluid1(i),filedataExp.Fluid2(i)];
     Tmin = floor(min(expProcData.(filedataExp.Key(i)).BT.T_MFM)*10)/10;
     Tmax = ceil(max(expProcData.(filedataExp.Key(i)).BT.T_MFM)*10)/10;
-    T_PR_aux = Tmin:0.1:Tmax;
+    T_REF_aux = Tmin:0.1:Tmax;
     if ismissing(trans_data_name) == 0
         Pmin = floor(min(expProcData.(filedataExp.Key(i)).BT.Pavg)*10)/10;
         Pmax = ceil(max(expProcData.(filedataExp.Key(i)).BT.Pavg)*10)/10;
         dPtotal = Pmax - Pmin;
         if dPtotal < 20
-            P_psig = Pmin:1:Pmax;
+            P_REF_psig = Pmin:1:Pmax;
         else
-            P_psig = linspace(Pmin, Pmax, 20);
+            P_REF_psig = linspace(Pmin, Pmax, 20);
         end
-        P_MPa = (P_psig + 14.7)*0.00689476;
+        P_REF_MPa = (P_REF_psig + 14.7)*0.00689476;
     else
-        P_psig = filedataExp.P(i);
-        P_MPa = (P_psig + 14.7)*0.00689476;
+        P_REF_psig = filedataExp.P(i);
+        P_REF_MPa = (P_REF_psig + 14.7)*0.00689476;
     end
-    PTXrho_PR_ref = table();
-    for m = 1:length(T_PR_aux)
-        for n = 1:length(P_MPa)
-            [PR_input_T_PR_aux,PR_results_T_PR_aux] = densZ_PR(fluidPair,x1,P_MPa(n),T_PR_aux(m),filedataPure,filedataBIP);
-            % Compressibility factor from Peng Robinson at T_MFM and T_mean
-            Z_PR_T_PR_aux = PR_results_T_PR_aux.Z;
-            % density from Peng Robinson at T_MFM and T_mean
-            dens_PR_T_PR_aux = PR_results_T_PR_aux.rho;        
-            % PTXrho_PR_ref table aux
-            PTXrho_PR_ref_aux = table(repmat(join(fluidPair),length(x1),1), ...
-                repmat(P_psig(n),length(x1),1), repmat(T_PR_aux(m),length(x1),1), x1', ...
-                Z_PR_T_PR_aux, dens_PR_T_PR_aux, 'VariableNames',{'fluidPair', ...
-                'P_cal_psig','T_PR', 'x_PR','Z_PR_T_PR', 'rho_PR_T_PR'});
-            PTXrho_PR_ref = [PTXrho_PR_ref;PTXrho_PR_ref_aux];
+    PTXrho_REF = table();
+    for m = 1:length(T_REF_aux)
+        for n = 1:length(P_REF_MPa)
+            % % Using Peng Robinson EoS
+            % [PR_input_T_REF_aux,PR_results_T_REF_aux] = densZ_PR(fluidPair,x1,P_REF_MPa(n),T_REF_aux(m),filedataPure,filedataBIP);
+            % % Compressibility factor from Peng Robinson at T_MFM and T_mean
+            % Z_REF = PR_results_T_REF_aux.Z;
+            % % density from Peng Robinson at T_MFM and T_mean
+            % rho_REF = PR_results_T_REF_aux.rho;  
+
+            % Using REFPROP
+            rho_REF = zeros(length(x1),1);
+            Z_REF   = zeros(length(x1),1);
+            for xi = 1:length(x1)        
+                z = [x1(xi) 1-x1(xi)];
+                Mix = getMixtureProps_REFPROP( ...
+                    RP,...
+                    {char(filedataExp.Fluid1(i)), ...
+                     char(filedataExp.Fluid2(i))},...
+                    z,...
+                    T_REF_aux(m)+273.15,...
+                    P_REF_MPa(n)*1000);
+                rho_REF(xi) = Mix.rho;
+                Z_REF(xi) = Mix.Z;
+            end 
+
+            % PTXrho_REF table aux
+            PTXrho_REF_aux = table( ...
+                repmat(join(fluidPair),length(x1),1), ...
+                repmat(P_REF_psig(n),length(x1),1), ...
+                repmat(T_REF_aux(m),length(x1),1), ...
+                x1', ...
+                Z_REF, ...
+                rho_REF, ...
+                'VariableNames',{'fluidPair', ...
+                'P_REF_psig','T_REF', 'x_REF','Z_REF', 'rho_REF'});
+            PTXrho_REF = [PTXrho_REF;PTXrho_REF_aux];
         end
     end   
-    if numel(unique(PTXrho_PR_ref.P_cal_psig)) > 1
+    if numel(unique(PTXrho_REF.P_REF_psig)) > 1
         % 3D interpolation
 
         % C interpoland
         % x1 interpolation function based on T and rho_corr
-        scatInterp = scatteredInterpolant(PTXrho_PR_ref.T_PR, PTXrho_PR_ref.P_cal_psig, ...
-            PTXrho_PR_ref.rho_PR_T_PR, PTXrho_PR_ref.x_PR, 'linear', 'linear');
+        scatInterp = scatteredInterpolant(PTXrho_REF.T_REF, PTXrho_REF.P_REF_psig, ...
+            PTXrho_REF.rho_REF, PTXrho_REF.x_REF, 'linear', 'linear');
         % at rho corr value
         expProcData.(filedataExp.Key(i)).BT.Ci = ...
             100*scatInterp(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
@@ -646,8 +669,8 @@ for i = 1:length(filedataExp.Key)
         
         % Z interpoland
         % Z interpolation function based on T and rho_corr
-        scatInterpZ = scatteredInterpolant(PTXrho_PR_ref.T_PR, PTXrho_PR_ref.P_cal_psig, ...
-            PTXrho_PR_ref.rho_PR_T_PR, PTXrho_PR_ref.Z_PR_T_PR, 'linear', 'linear');
+        scatInterpZ = scatteredInterpolant(PTXrho_REF.T_REF, PTXrho_REF.P_REF_psig, ...
+            PTXrho_REF.rho_REF, PTXrho_REF.Z_REF, 'linear', 'linear');
         % at rho corr value
         expProcData.(filedataExp.Key(i)).BT.Z = ...
             scatInterpZ(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
@@ -668,11 +691,8 @@ for i = 1:length(filedataExp.Key)
         
         % C interpoland
         % x1 interpolation function based on T and rho_corr
-        scatInterp = scatteredInterpolant(PTXrho_PR_ref.T_PR, ...
-            PTXrho_PR_ref.rho_PR_T_PR, PTXrho_PR_ref.x_PR, 'linear', 'linear');
-        % Z interpolation function based on T and rho_corr
-        scatInterpZ = scatteredInterpolant(PTXrho_PR_ref.T_PR, ...
-            PTXrho_PR_ref.rho_PR_T_PR, PTXrho_PR_ref.Z_PR_T_PR, 'linear', 'linear');
+        scatInterp = scatteredInterpolant(PTXrho_REF.T_REF, ...
+            PTXrho_REF.rho_REF, PTXrho_REF.x_REF, 'linear', 'linear');
         % at rho corr value
         expProcData.(filedataExp.Key(i)).BT.Ci = ...
             100*scatInterp(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
@@ -687,6 +707,9 @@ for i = 1:length(filedataExp.Key)
             expProcData.(filedataExp.Key(i)).BT.rho_corrMax);
 
         % Z interpoland
+        % Z interpolation function based on T and rho_corr
+        scatInterpZ = scatteredInterpolant(PTXrho_REF.T_REF, ...
+            PTXrho_REF.rho_REF, PTXrho_REF.Z_REF, 'linear', 'linear');
         % at rho corr value
         expProcData.(filedataExp.Key(i)).BT.Z = ...
             scatInterpZ(expProcData.(filedataExp.Key(i)).BT.T_MFM, ...
@@ -768,11 +791,11 @@ for i = 1:length(filedataExp.Key)
     %
     % expProcData.(filedataExp.Key(i)).BT.tDZ = ... % in respect to Vcore
     %     expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*filedataExp.Q(i)./...
-    %     (60*(expProcData.(filedataExp.Key(i)).BT.Z.*(T_K_real/T_K_base)*(P_MPa_base/P_MPa)*filedataExp.Vcore(i)));
+    %     (60*(expProcData.(filedataExp.Key(i)).BT.Z.*(T_K_real/T_K_base)*(P_MPa_base/P_REF_MPa)*filedataExp.Vcore(i)));
     % 
     % expProcData.(filedataExp.Key(i)).BT.tDZtotal = ... % in respect to Vcore
     %     expProcData.(filedataExp.Key(i)).BT.SecondsElapsed*filedataExp.Q(i)./...
-    %     (60*(expProcData.(filedataExp.Key(i)).BT.Z).*(T_K_real/T_K_base)*(P_MPa_base/P_MPa)*filedataExp.Vtotal(i));
+    %     (60*(expProcData.(filedataExp.Key(i)).BT.Z).*(T_K_real/T_K_base)*(P_MPa_base/P_REF_MPa)*filedataExp.Vtotal(i));
     
     % Cd = (C - Ciinit) / (Cj - Cinit)
     expProcData.(filedataExp.Key(i)).BT.CDi = ...

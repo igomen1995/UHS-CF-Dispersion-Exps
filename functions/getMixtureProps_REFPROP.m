@@ -1,29 +1,26 @@
-function props = getMixtureProps_REFPROP( ...
-    RP,...
-    fluidString,...
-    z,...
-    T,...
-    P)
+function props = getMixtureProps_REFPROP(RP,fluids,z,T,P)
 
-% fluidString example:
-%   'HELIUM*XENON'
+% fluids
+%   {'HELIUM','XENON'}
 %
-% z:
+% z
+%   mole fractions
 %   [0.25 0.75]
 %
 % T [K]
 % P [kPa]
 
-% REFPROP expects up to 20 mole fractions
+props = struct();
 
+% REFPROP mixture string
+fluidString = strjoin(fluids,'*');
+
+% REFPROP composition vector
 zREF = zeros(1,20);
-
 zREF(1:length(z)) = z;
-
 zREF = py.list(num2cell(zREF));
 
 % Density
-
 out = RP.REFPROPdll( ...
     fluidString,...
     'TP',...
@@ -35,6 +32,35 @@ out = RP.REFPROPdll( ...
     P,...
     zREF);
 
-props.rho = double(out.Output(1));
+D_molL = double(out.Output(1));
+
+% Molecular weight from mole fractions
+MW = 0;
+for k = 1:length(fluids)
+    pure = getFluidProps_REFPROP( ...
+        RP,...
+        fluids{k},...
+        T,...
+        P);
+    MW = MW + z(k)*pure.MW;
+end
+
+% Convert density
+props.rho = D_molL*(MW*1000);
+
+% Compressibility
+out = RP.REFPROPdll( ...
+    fluidString,...
+    'TP',...
+    'Z',...
+    int32(0),...
+    int32(0),...
+    int32(0),...
+    T,...
+    P,...
+    zREF);
+
+props.Z = double(out.Output(1));
+props.MW = MW;
 
 end
