@@ -195,7 +195,7 @@ pathExportAll = inputFileConfig.exportPath{:}; % Path for OUTPUT
 mkdir(pathExportAll); % Create directory for output
 
 
-%% Import data
+%% Import input
 
 addpath('functions/');
 
@@ -205,6 +205,16 @@ filedataExp = import_inputCal(filenameExp); % import input to a local variable
 filedataPure = import_inputPR_params_pure(filenamePure);
 % import mixture components A12 and B12 factor to estimate BIP (kij)
 filedataBIP = import_inputPR_params_BIP(filenameBIP);
+
+%% Initialize Python for CProP or REFPROP
+
+% % Initialize CProp
+% initCoolProp()
+
+% Initialize REFPROP
+RP = initREFPROP();
+
+%% Import data
 
 for i = 1:length(filedataExp.Key)
 
@@ -422,7 +432,7 @@ for i = 1:length(filedataExp.Key)
                     (P_unique_field(j)).(Q_unique_field(k)).MFMData = MFM_data_aux; %MFM data is added. Structure is calProcData.fluid.T.P.Q.pumpsData   
     
                 % MFM main data arrays for cal data for cal curve, freq and Q MFMF could be added too
-                dens_MFM = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.dens_MFM2;
+                rho_MFM = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.dens_MFM2;
                 T_MFM = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.T_MFM2;
                 Q_MFM = calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).MFMData.q_MFM2;
     
@@ -434,7 +444,7 @@ for i = 1:length(filedataExp.Key)
                         % MFM data
                 T_mean = mean(MFM_data_aux.T_MFM2);
                 Q_MFM_mean = mean(MFM_data_aux.q_MFM2);
-                dens_mean = mean(MFM_data_aux.dens_MFM2);
+                rho_mean = mean(MFM_data_aux.dens_MFM2);
                 freq_MFM_mean = mean(MFM_data_aux.freq_MFM2);
                     % std for a specific P and Q
                         % pumps data
@@ -443,7 +453,7 @@ for i = 1:length(filedataExp.Key)
                         % MFM data      
                 T_std = std(MFM_data_aux.T_MFM2);
                 Q_MFM_std = std(MFM_data_aux.q_MFM2);
-                dens_std = std(MFM_data_aux.dens_MFM2);
+                rho_std = std(MFM_data_aux.dens_MFM2);
                 freq_MFM_std = std(MFM_data_aux.freq_MFM2);
 
                 % Reference density from Peng Robinson model  
@@ -452,38 +462,54 @@ for i = 1:length(filedataExp.Key)
                 [PR_input_T_max,PR_results_T_max] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean+T_std, filedataPure,filedataBIP); % at Tmax
                 [PR_input_T_min,PR_results_T_min] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean-T_std, filedataPure,filedataBIP); % at Tmin
                     % Compressibility factor from Peng Robinson T_mean
-                Z_PR_T_mean = PR_results_T_mean.Z;
-                Z_PR_T_max = PR_results_T_max.Z;
-                Z_PR_T_min = PR_results_T_min.Z;
-                Z_PR_T_mean_std = abs(Z_PR_T_max-Z_PR_T_min); % error of Z depending on T
+                Z_REF_T_mean = PR_results_T_mean.Z;
+                Z_REF_T_max = PR_results_T_max.Z;
+                Z_REF_T_min = PR_results_T_min.Z;
+                Z_REF_T_mean_std = abs(Z_REF_T_max-Z_REF_T_min); % error of Z depending on T
                     % density from Peng Robinson at T_mean
-                dens_PR_T_mean = PR_results_T_mean.rho;
-                dens_PR_T_max = PR_results_T_max.rho;
-                dens_PR_T_min = PR_results_T_min.rho;
-                dens_PR_T_mean_std = abs(dens_PR_T_max-dens_PR_T_min); % error of dens depending on T
+                rho_REF_T_mean = PR_results_T_mean.rho;
+                rho_REF_T_max = PR_results_T_max.rho;
+                rho_REF_T_min = PR_results_T_min.rho;
+                rho_REF_T_mean_std = abs(rho_REF_T_max-rho_REF_T_min); % error of rho depending on T
+
+                % % Reference density from REFPROP 
+                %     % at T mean values
+                % fluidProp_REF_T_mean = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean+273.15,P_unique_MPa(j)*1000);
+                % fluidProp_REF_T_max = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean+T_std+273.15,P_unique_MPa(j)*1000);
+                % fluidProp_REF_T_min = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean+T_std+273.15,P_unique_MPa(j)*1000);
+                %     % Compressibility factor from Peng Robinson T_mean
+                % Z_REF_T_mean = fluidProp_REF_T_mean.Z;
+                % Z_REF_T_max = fluidProp_REF_T_max.Z;
+                % Z_REF_T_min = fluidProp_REF_T_min.Z;
+                % Z_REF_T_mean_std = abs(Z_REF_T_max-Z_REF_T_min); % error of Z depending on T
+                %     % density from Peng Robinson at T_mean
+                % rho_REF_T_mean = fluidProp_REF_T_mean.rho;
+                % rho_REF_T_max = fluidProp_REF_T_max.rho;
+                % rho_REF_T_min = fluidProp_REF_T_min.rho;
+                % rho_REF_T_mean_std = abs(rho_REF_T_max-rho_REF_T_min); % error of rho depending on T
               
                 % cal results gathers mean and std
                 calResults_temp = table(fluid_cal,T_cal,P_unique(j), Q_unique(k), ...
                     T_mean,T_std, P_mean,P_std, Q_mean,Q_std, Q_MFM_mean,Q_MFM_std, ...
-                    dens_mean,dens_std,freq_MFM_mean,freq_MFM_std, ...
+                    rho_mean,rho_std,freq_MFM_mean,freq_MFM_std, ...
                     {TimeStamp_st},{TimeStamp_et}, ...
-                    Z_PR_T_mean , Z_PR_T_mean_std, dens_PR_T_mean , dens_PR_T_mean_std, ...
+                    Z_REF_T_mean , Z_REF_T_mean_std, rho_REF_T_mean , rho_REF_T_mean_std, ...
                     'VariableNames',{'Fluid_cal','T_cal_C','P_cal_psig', 'Q_cal_mlmin', ...
                     'T_mean','T_std','P_psig_mean','P_psig_std','Q_mean','Q_std', 'Q_MFM_mean', 'Q_MFM_std', ...
-                    'dens_mean','dens_std','freq_MFM_mean','freq_MFM_std', ...
-                    'st','et','Z_PR_T_mean','Z_PR_T_mean_std','dens_PR_T_mean','dens_PR_T_mean_std'});
+                    'rho_mean','rho_std','freq_MFM_mean','freq_MFM_std', ...
+                    'st','et','Z_REF_T_mean','Z_REF_T_mean_std','rho_REF_T_mean','rho_REF_T_mean_std'});
     
                 % cal data gathers all punctual data and its mean and cal experiment ref value
-                calData_temp = table(repmat(fluid_cal,length(dens_MFM),1), ...
-                    repmat(T_cal,length(dens_MFM),1), repmat(P_unique(j),length(dens_MFM),1), ...
-                    repmat(Q_unique(k),length(dens_MFM),1), ...
-                    Q_MFM,T_MFM, repmat(T_mean,length(dens_MFM),1), repmat(T_std,length(dens_MFM),1), ...
-                    dens_MFM, repmat(dens_mean,length(dens_MFM),1), repmat(dens_std,length(dens_MFM),1), ...
-                    repmat(Z_PR_T_mean,length(dens_MFM),1), repmat(Z_PR_T_mean_std,length(dens_MFM),1), ...
-                    repmat(dens_PR_T_mean,length(dens_MFM),1), repmat(dens_PR_T_mean_std,length(dens_MFM),1), ...
+                calData_temp = table(repmat(fluid_cal,length(rho_MFM),1), ...
+                    repmat(T_cal,length(rho_MFM),1), repmat(P_unique(j),length(rho_MFM),1), ...
+                    repmat(Q_unique(k),length(rho_MFM),1), ...
+                    Q_MFM,T_MFM, repmat(T_mean,length(rho_MFM),1), repmat(T_std,length(rho_MFM),1), ...
+                    rho_MFM, repmat(rho_mean,length(rho_MFM),1), repmat(rho_std,length(rho_MFM),1), ...
+                    repmat(Z_REF_T_mean,length(rho_MFM),1), repmat(Z_REF_T_mean_std,length(rho_MFM),1), ...
+                    repmat(rho_REF_T_mean,length(rho_MFM),1), repmat(rho_REF_T_mean_std,length(rho_MFM),1), ...
                     'VariableNames',{'Fluid_cal','T_cal_C', 'P_cal_psig', 'Q_cal_mlmin', ...
-                    'Q_MFM','T_MFM','T_mean','T_std','dens_MFM','dens_mean','dens_std', ...
-                    'Z_PR_T_mean','Z_PR_T_mean_std','dens_PR_T_mean','dens_PR_T_mean_std'});
+                    'Q_MFM','T_MFM','T_mean','T_std','rho_MFM','rho_mean','rho_std', ...
+                    'Z_REF_T_mean','Z_REF_T_mean_std','rho_REF_T_mean','rho_REF_T_mean_std'});
                 
                 % calProcData struct collects calResults_temp and calData_temp
                 calProcData.(fluid_cal).(T_unique_field).(P_unique_field(j)).(Q_unique_field(k)).calResults = calResults_temp;
@@ -563,7 +589,7 @@ for i = 1:length(filedataExp.Key)
             % MFM data
         T_mean = mean(MFM_data_trim_QAll.T_MFM2);
         Q_MFM_mean = mean(MFM_data_trim_QAll.q_MFM2);
-        dens_mean = mean(MFM_data_trim_QAll.dens_MFM2);
+        rho_mean = mean(MFM_data_trim_QAll.dens_MFM2);
         freq_MFM_mean = mean(MFM_data_trim_QAll.freq_MFM2);
         % std for a specific P and Q
             % pumps data
@@ -572,7 +598,7 @@ for i = 1:length(filedataExp.Key)
             % MFM data      
         T_std = std(MFM_data_trim_QAll.T_MFM2);
         Q_MFM_std = std(MFM_data_trim_QAll.q_MFM2);
-        dens_std = std(MFM_data_trim_QAll.dens_MFM2);
+        rho_std = std(MFM_data_trim_QAll.dens_MFM2);
         freq_MFM_std = std(MFM_data_trim_QAll.freq_MFM2);
                        
         % xxx_data_trim is feeded with xxx_data_aux for each fluid, T, P and Q, gathers all
@@ -598,11 +624,11 @@ for i = 1:length(filedataExp.Key)
         % cal results gathers mean and std QAll
         calResultsQAll_temp = table(fluid_cal,T_cal,P_unique(j), "QAll", ...
             T_mean,T_std, P_mean,P_std, Q_mean,Q_std, Q_MFM_mean,Q_MFM_std, ...
-            dens_mean,dens_std,freq_MFM_mean,freq_MFM_std, ...
+            rho_mean,rho_std,freq_MFM_mean,freq_MFM_std, ...
             {TimeStamp_st},{TimeStamp_et}, ...
             'VariableNames',{'Fluid_cal','T_cal_C','P_cal_psig', 'Q_cal_mlmin', ...
             'T_mean','T_std','P_psig_mean','P_psig_std','Q_mean','Q_std', 'Q_MFM_mean', 'Q_MFM_std', ...
-            'dens_mean','dens_std','freq_MFM_mean','freq_MFM_std', ...
+            'rho_mean','rho_std','freq_MFM_mean','freq_MFM_std', ...
             'st','et'});
         
         % cal proc data gets calResults and Data for each fluid, T and P, QAll
@@ -624,7 +650,7 @@ for i = 1:length(filedataExp.Key)
 
 end
 
-%% Peng Robinson for T_MFM and cal data all
+%% Thermodynamic model for T_MFM and cal data all
 
 % Run for all Q after calData is finished
 fluid_unique = fieldnames(calProcData);
@@ -639,48 +665,67 @@ for i = 1:length(fields(calProcData)) % for each fluid
             x1 = filedataExp.x1(filedataExp.Fluid1 == string(fluid_unique{i}));
             Tmin = floor(min(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.T_MFM)*10)/10;
             Tmax = ceil(max(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.T_MFM)*10)/10;
-            T_PR_aux = Tmin:0.1:Tmax;
+            T_REF_aux = Tmin:0.1:Tmax;
             P_psig = str2double(P_unique_field{j}(2:end));
             P_MPa = (P_psig + 14.7)*0.00689476;
-            Z_PR_T_PR = [];
-            dens_PR_T_PR = [];
-            for m = 1:length(T_PR_aux)
-                [PR_input_T_PR_aux,PR_results_T_PR_aux] = densZ_PR(string(fluid_unique{i}),x1,P_MPa,T_PR_aux(m),filedataPure,filedataBIP);
+            Z_REF_T_REF = [];
+            rho_REF_T_REF = [];
+            for m = 1:length(T_REF_aux)
+                % Using Peng Robinson EoS
+                [PR_input_T_REF_aux,PR_results_T_REF_aux] = densZ_PR(string(fluid_unique{i}),x1,P_MPa,T_REF_aux(m),filedataPure,filedataBIP);
                 % Compressibility factor from Peng Robinson at T_MFM and T_mean
-                Z_PR_T_PR_aux = PR_results_T_PR_aux.Z;
+                Z_REF_T_REF_aux = PR_results_T_REF_aux.Z;
                 % density from Peng Robinson at T_MFM and T_mean
-                dens_PR_T_PR_aux = PR_results_T_PR_aux.rho;        
+                rho_REF_T_REF_aux = PR_results_T_REF_aux.rho;        
                 % Z and rho arrays for each fluid, P, Q and T
-                Z_PR_T_PR = [Z_PR_T_PR;Z_PR_T_PR_aux];
-                dens_PR_T_PR = [dens_PR_T_PR;dens_PR_T_PR_aux];
+                Z_REF_T_REF = [Z_REF_T_REF;Z_REF_T_REF_aux];
+                rho_REF_T_REF = [rho_REF_T_REF;rho_REF_T_REF_aux];
+
+                % % Using REFPROP
+                % rho_REF_T_REF = zeros(length(x1),1);
+                % Z_REF_T_REF   = zeros(length(x1),1);
+                % for xi = 1:length(x1)        
+                %     z = [x1(xi) 1-x1(xi)];
+                %     Mix = getMixtureProps_REFPROP( ...
+                %         RP,...
+                %         {char(filedataExp.Fluid1(i)), ...
+                %          char(filedataExp.Fluid2(i))},...
+                %         z,...
+                %         T_REF_aux(m)+273.15,...
+                %         P_MPa*1000);
+                %     rho_REF_T_REF(xi) = Mix.rho;
+                %     Z_REF_T_REF(xi) = Mix.Z;
+                % end 
             end
-            PTXrho_PR_ref = table(repmat(fluid_unique{i},length(T_PR_aux),1), ...
-                repmat(P_psig,length(T_PR_aux),1), T_PR_aux', repmat(x1,length(T_PR_aux),1), ...
-                Z_PR_T_PR, dens_PR_T_PR, 'VariableNames',{'Fluid_cal', ...
-                'P_cal_psig','T_PR', 'x_PR','Z_PR_T_PR', 'dens_PR_T_PR'});
-            calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.PTXrho_PR_ref = PTXrho_PR_ref;
-                        calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.dens_PR_T_MFM = ...
-                interp1(PTXrho_PR_ref.T_PR, PTXrho_PR_ref.dens_PR_T_PR, ...
+
+            PTXrho_REF = table(repmat(fluid_unique{i},length(T_REF_aux),1), ...
+                repmat(P_psig,length(T_REF_aux),1), T_REF_aux', repmat(x1,length(T_REF_aux),1), ...
+                Z_REF_T_REF, rho_REF_T_REF, 'VariableNames',{'Fluid_cal', ...
+                'P_cal_psig','T_REF', 'x_PR','Z_REF_T_REF', 'rho_REF_T_REF'});
+            calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.PTXrho_REF = PTXrho_REF;
+                        calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.rho_REF_T_MFM = ...
+                interp1(PTXrho_REF.T_REF, PTXrho_REF.rho_REF_T_REF, ...
                 calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.T_MFM, 'linear');
-            calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.Z_PR_T_MFM = ...
-                interp1(PTXrho_PR_ref.T_PR, PTXrho_PR_ref.Z_PR_T_PR, ...
+            calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.Z_REF_T_MFM = ...
+                interp1(PTXrho_REF.T_REF, PTXrho_REF.Z_REF_T_REF, ...
                 calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.T_MFM, 'linear');
 
             % create table with PR_Results QAll
-            Z_PR_T_MFM_mean = mean(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.Z_PR_T_MFM);
-            Z_PR_T_MFM_std = std(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.Z_PR_T_MFM);
-            dens_PR_T_MFM_mean = mean(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.dens_PR_T_MFM);
-            dens_PR_T_MFM_std = std(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.dens_PR_T_MFM);
+            Z_REF_T_MFM_mean = mean(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.Z_REF_T_MFM);
+            Z_REF_T_MFM_std = std(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.Z_REF_T_MFM);
+            rho_REF_T_MFM_mean = mean(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.rho_REF_T_MFM);
+            rho_REF_T_MFM_std = std(calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData.rho_REF_T_MFM);
 
             calResultsQAll_PR_temp = table(string(fluid_unique{i}),str2double(T_unique_field{ii}(2:end)),str2double(P_unique_field{j}(2:end)), "QAll", ...
-                Z_PR_T_MFM_mean,Z_PR_T_MFM_std, dens_PR_T_MFM_mean,dens_PR_T_MFM_std, ...
+                Z_REF_T_MFM_mean,Z_REF_T_MFM_std, rho_REF_T_MFM_mean,rho_REF_T_MFM_std, ...
                 'VariableNames',{'Fluid_cal','T_cal_C','P_cal_psig', 'Q_cal_mlmin', ...
-                'Z_PR_T_mean','Z_PR_T_mean_std','dens_PR_T_mean','dens_PR_T_mean_std'});
+                'Z_REF_T_mean','Z_REF_T_mean_std','rho_REF_T_mean','rho_REF_T_mean_std'});
 
             % create calData with all data for cal curve
             calResultsQAll_PR = [calResultsQAll_PR;calResultsQAll_PR_temp];
             calData = [calData;calProcData.(fluid_unique{i}).(T_unique_field{ii}).(P_unique_field{j}).QAll.calData];
         end
+
     end
 end
 
@@ -917,8 +962,8 @@ end
 % calData_aux = calData(calData.P_cal_psig > 1000,:);
 % for k = 1:length(Q_unique)
 %     cal_curve_params_Qeach_aux = fitlm ...
-%         (calData_aux.dens_PR_T_MFM(calData_aux.Q_cal_mlmin == Q_unique(k)), ...
-%         calData_aux.dens_MFM(calData_aux.Q_cal_mlmin == Q_unique(k)));
+%         (calData_aux.rho_REF_T_MFM(calData_aux.Q_cal_mlmin == Q_unique(k)), ...
+%         calData_aux.rho_MFM(calData_aux.Q_cal_mlmin == Q_unique(k)));
 %     % Add Fitting Qeach to table fittingRhoResultsAll
 %     cal_curve_params_Qeach{end+1} = cal_curve_params_Qeach_aux;
 %     fittingRhoResultsAll(k,:) = {Q_unique_field{k}, ...
@@ -927,7 +972,7 @@ end
 %         cal_curve_params_Qeach_aux.RMSE};
 % end
 % % Fitting for all Qs
-% cal_curve_params_Qall = fitlm(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM);
+% cal_curve_params_Qall = fitlm(calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM);
 % % Add Fitting QAll to table fittingRhoResultsAll
 % cal_curve_params = {cal_curve_params_Qeach;cal_curve_params_Qall};
 % fittingRhoResultsAll(length(Q_unique)+1,:) = {"QAll", ...
@@ -957,8 +1002,8 @@ nlfittingRhoResultsAll = table('Size',[0 11],'VariableTypes', ...
 calData_aux = calData(calData.P_cal_psig > 400,:);
 for k = 1:length(Q_unique)
     cal_curve_params_Qeach_aux = fitnlm ...
-        (calData_aux.dens_PR_T_MFM(calData_aux.Q_cal_mlmin == Q_unique(k)), ...
-        calData_aux.dens_MFM(calData_aux.Q_cal_mlmin == Q_unique(k)),rho_MFM,pinit);
+        (calData_aux.rho_REF_T_MFM(calData_aux.Q_cal_mlmin == Q_unique(k)), ...
+        calData_aux.rho_MFM(calData_aux.Q_cal_mlmin == Q_unique(k)),rho_MFM,pinit);
     % Add Fitting Qeach to table fittingRhoResultsAll
     nl_cal_curve_params_Qeach{end+1} = cal_curve_params_Qeach_aux;
     nlfittingRhoResultsAll(k,:) = {Q_unique_field{k}, ...
@@ -973,7 +1018,7 @@ for k = 1:length(Q_unique)
         ((1/(cal_curve_params_Qeach_aux.Coefficients.Estimate(2)))*(cal_curve_params_Qeach_aux.RMSE^2))^(1/2), ((1/(cal_curve_params_Qeach_aux.Coefficients.Estimate(2)+cal_curve_params_Qeach_aux.Coefficients.Estimate(3)))*(cal_curve_params_Qeach_aux.RMSE^2))^(1/2)};
 end
 % Fitting for all Qs
-nl_cal_curve_params_Qall = fitnlm(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,rho_MFM,pinit);
+nl_cal_curve_params_Qall = fitnlm(calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM,rho_MFM,pinit);
 % Add Fitting QAll to table fittingRhoResultsAll
 nl_cal_curve_params = {nl_cal_curve_params_Qeach;nl_cal_curve_params_Qall};
 nlfittingRhoResultsAll(length(Q_unique)+1,:) = {"QAll", ...
@@ -1007,9 +1052,9 @@ save(pathExportAll + "nlfittingRhoResultsAll.mat",'nlfittingRhoResultsAll')
 % % fitting for each Q
 % % take only High Pressure Data
 % calData_aux = calData(calData.P_cal_psig > 400,:);
-% calData_aux = calData_aux(calData_aux.dens_MFM < rho_MFM_0,:);
+% calData_aux = calData_aux(calData_aux.rho_MFM < rho_MFM_0,:);
 % % Fitting for all Qs
-% nl_Q_cal_curve_params_Qall = fitnlm([calData_aux.dens_PR_T_MFM,calData_aux.Q_cal_mlmin],calData_aux.dens_MFM,rho_MFM_low_dens,pinit);
+% nl_Q_cal_curve_params_Qall = fitnlm([calData_aux.rho_REF_T_MFM,calData_aux.Q_cal_mlmin],calData_aux.rho_MFM,rho_MFM_low_dens,pinit);
 % % Add Fitting QAll to table fittingRhoResultsAll
 % nl_Q_cal_curve_params = nl_Q_cal_curve_params_Qall;
 % 
@@ -1062,7 +1107,7 @@ save(pathExportAll + "nlfittingRhoResultsAll.mat",'nlfittingRhoResultsAll')
 % % % take only High Pressure Data
 % % calData_aux = calData(calData.P_cal_psig > 400,:);
 % % % Fitting for all Qs
-% % nl_Q_cal_curve_params_Qall = fitnlm([calData_aux.dens_PR_T_MFM,calData_aux.Q_cal_mlmin],calData_aux.dens_MFM,rho_MFM,pinit);
+% % nl_Q_cal_curve_params_Qall = fitnlm([calData_aux.rho_REF_T_MFM,calData_aux.Q_cal_mlmin],calData_aux.rho_MFM,rho_MFM,pinit);
 % % % Add Fitting QAll to table fittingRhoResultsAll
 % % nl_Q_cal_curve_params = nl_Q_cal_curve_params_Qall;
 % % nlQfittingRhoResultsAll(length(Q_unique)+1,:) = {"QAll", ...
@@ -1096,7 +1141,7 @@ errorbar(0:step:rho_ref_0,feval(nl_cal_curve_params_Qall,0:step:rho_ref_0),drho_
 hold on 
 errorbar(rho_ref_0:step:800,feval(nl_cal_curve_params_Qall,rho_ref_0:step:800),drho_corr_high,'LineStyle', 'none', ...
     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
-scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled')
+scatter(calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM,20,calData_aux.T_MFM,'filled')
 plot(0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k','LineWidth',0.8) % fitting responds to high pressure only
 x1 = xlabel('\rho_{ref} [kg/m^{3}]', 'FontSize', 14);
 ylabel('\rho_{MFM} [kg/m^{3}]', 'FontSize', 14);
@@ -1134,7 +1179,7 @@ saveas(gcf,pathExportAll + "Cal-all-HP400+-nl",'png')
 % 
 % figure
 % set(gcf, 'Position', [100, 100, 700, 550])
-% scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled','DisplayName','Measured density')
+% scatter(calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM,20,calData_aux.T_MFM,'filled','DisplayName','Measured density')
 % hold on
 % plot(0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k','DisplayName','Linear calibration curve') % fitting responds to high pressure only
 % xlabel('\rho_{ref} [kg/m^{3}]');
@@ -1163,7 +1208,7 @@ saveas(gcf,pathExportAll + "Cal-all-HP400+-nl",'png')
 % % 
 % % figure
 % % set(gcf, 'Position', [100, 100, 700, 550])
-% % scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled')
+% % scatter(calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM,20,calData_aux.T_MFM,'filled')
 % % hold on
 % % plot(0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k') % fitting responds to high pressure only
 % % xlabel('\rho_{ref} [kg/m^{3}]');
@@ -1193,7 +1238,7 @@ saveas(gcf,pathExportAll + "Cal-all-HP400+-nl",'png')
 % figure;
 % set(gcf, 'Position', [100, 100, 700, 550])
 % ax1 = axes;
-% scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled')
+% scatter(calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM,20,calData_aux.T_MFM,'filled')
 % hold on
 % plot(0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k') % fitting responds to high pressure only
 % x1 = xlabel('\rho_{ref} [kg/m^{3}]', 'FontSize', 14);
@@ -1224,7 +1269,7 @@ saveas(gcf,pathExportAll + "Cal-all-HP400+-nl",'png')
 % % H2
 % insetAx = axes('Position', [0.19 0.72 0.1 0.15]);  % [x y width height]
 % box(insetAx, 'on');  % Add border to inset
-% scatter(insetAx,calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,15,calData_aux.T_MFM,'filled')
+% scatter(insetAx,calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM,15,calData_aux.T_MFM,'filled')
 % hold on
 % plot(insetAx,0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k')
 % xlim([4,12])
@@ -1234,7 +1279,7 @@ saveas(gcf,pathExportAll + "Cal-all-HP400+-nl",'png')
 % % He
 % insetAx = axes('Position', [0.37 0.72 0.1 0.15]);  % [x y width height]
 % box(insetAx, 'on');  % Add border to inset
-% scatter(insetAx,calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,15,calData_aux.T_MFM,'filled')
+% scatter(insetAx,calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM,15,calData_aux.T_MFM,'filled')
 % hold on
 % plot(insetAx,0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k')
 % xlim([12,20])
@@ -1244,7 +1289,7 @@ saveas(gcf,pathExportAll + "Cal-all-HP400+-nl",'png')
 % % CO2
 % insetAx = axes('Position', [0.19 0.47 0.1 0.15]);  % [x y width height]
 % box(insetAx, 'on');  % Add border to inset
-% scatter(insetAx,calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,15,calData_aux.T_MFM,'filled')
+% scatter(insetAx,calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM,15,calData_aux.T_MFM,'filled')
 % hold on
 % plot(insetAx,0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k')
 % xlim([692,716])
@@ -1272,7 +1317,7 @@ errorbar(0:step:rho_ref_0,feval(nl_cal_curve_params_Qall,0:step:rho_ref_0),drho_
 hold on 
 errorbar(rho_ref_0:step:800,feval(nl_cal_curve_params_Qall,rho_ref_0:step:800),drho_corr_high,'LineStyle', 'none', ...
     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
-scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled')
+scatter(calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM,20,calData_aux.T_MFM,'filled')
 hold on
 plot(0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k','LineWidth',0.8) % fitting responds to high pressure only
 p1 = plot([0,rho_ref_0],[rho_MFM_0,rho_MFM_0],'--','Color','k','LineWidth',1.0);
@@ -1314,7 +1359,7 @@ legend({'\rho_{MFM}','\rho_{MFM_{fit}} \pm \Delta\rho_{MFM_{fit}}'},'Location','
 insetAx = axes('Position', [0.18 0.65 0.1 0.15]);  % [x y width height]
 limScale = (insetAx.Position(3)/insetAx.Position(4))/((range(ax1.XLim)*ax1.Position(3))/(range(ax1.YLim)*ax1.Position(4)));
 box(insetAx, 'on');  % Add border to inset
-scatter(insetAx,calData_aux.dens_PR_T_MFM(calData_aux.Fluid_cal == 'H2'),calData_aux.dens_MFM(calData_aux.Fluid_cal == 'H2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'H2'),'filled')
+scatter(insetAx,calData_aux.rho_REF_T_MFM(calData_aux.Fluid_cal == 'H2'),calData_aux.rho_MFM(calData_aux.Fluid_cal == 'H2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'H2'),'filled')
 hold on
 plot(insetAx,0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 xlim([0,10])
@@ -1327,7 +1372,7 @@ grid on
 insetAx = axes('Position', [0.34 0.65 0.1 0.15]);  % [x y width height]
 limScale = (insetAx.Position(3)/insetAx.Position(4))/((range(ax1.XLim)*ax1.Position(3))/(range(ax1.YLim)*ax1.Position(4)));
 box(insetAx, 'on');  % Add border to inset
-scatter(insetAx,calData_aux.dens_PR_T_MFM(calData_aux.Fluid_cal == 'He'),calData_aux.dens_MFM(calData_aux.Fluid_cal == 'He'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'He'),'filled')
+scatter(insetAx,calData_aux.rho_REF_T_MFM(calData_aux.Fluid_cal == 'He'),calData_aux.rho_MFM(calData_aux.Fluid_cal == 'He'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'He'),'filled')
 hold on
 plot(insetAx,0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 xlim([3,19])
@@ -1340,7 +1385,7 @@ grid on
 insetAx = axes('Position', [0.18 0.41 0.1 0.15]);  % [x y width height]
 limScale = (insetAx.Position(3)/insetAx.Position(4))/((range(ax1.XLim)*ax1.Position(3))/(range(ax1.YLim)*ax1.Position(4)));
 box(insetAx, 'on');  % Add border to inset
-scatter(insetAx,calData_aux.dens_PR_T_MFM(calData_aux.Fluid_cal == 'CO2'),calData_aux.dens_MFM(calData_aux.Fluid_cal == 'CO2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'CO2'),'filled')
+scatter(insetAx,calData_aux.rho_REF_T_MFM(calData_aux.Fluid_cal == 'CO2'),calData_aux.rho_MFM(calData_aux.Fluid_cal == 'CO2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'CO2'),'filled')
 hold on
 plot(insetAx,0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 xlim([75,80])
@@ -1358,7 +1403,7 @@ annotation('textbox', [0.21, 0.81, 0.3, 0.1], 'String', annotText3, ...
 insetAx = axes('Position', [0.54 0.41 0.1 0.15]);  % [x y width height]
 limScale = (insetAx.Position(3)/insetAx.Position(4))/((range(ax1.XLim)*ax1.Position(3))/(range(ax1.YLim)*ax1.Position(4)));
 box(insetAx, 'on');  % Add border to inset
-scatter(insetAx,calData_aux.dens_PR_T_MFM(calData_aux.Fluid_cal == 'CO2'),calData_aux.dens_MFM(calData_aux.Fluid_cal == 'CO2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'CO2'),'filled')
+scatter(insetAx,calData_aux.rho_REF_T_MFM(calData_aux.Fluid_cal == 'CO2'),calData_aux.rho_MFM(calData_aux.Fluid_cal == 'CO2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'CO2'),'filled')
 hold on
 plot(insetAx,0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 xlim([184,204])
@@ -1371,7 +1416,7 @@ grid on
 insetAx = axes('Position', [0.68 0.41 0.1 0.15]);  % [x y width height]
 limScale = (insetAx.Position(3)/insetAx.Position(4))/((range(ax1.XLim)*ax1.Position(3))/(range(ax1.YLim)*ax1.Position(4)));
 box(insetAx, 'on');  % Add border to inset
-scatter(insetAx,calData_aux.dens_PR_T_MFM(calData_aux.Fluid_cal == 'CO2'),calData_aux.dens_MFM(calData_aux.Fluid_cal == 'CO2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'CO2'),'filled')
+scatter(insetAx,calData_aux.rho_REF_T_MFM(calData_aux.Fluid_cal == 'CO2'),calData_aux.rho_MFM(calData_aux.Fluid_cal == 'CO2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'CO2'),'filled')
 hold on
 plot(insetAx,0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 xlim([692,716])
@@ -1397,7 +1442,7 @@ saveas(gcf,pathExportAll + "Cal-curve-nonlin-zoom-in",'png')
 % figure;
 % set(gcf, 'Position', [100, 100, 700, 550])
 % ax1 = axes;
-% scatter(calData_aux.dens_PR_T_MFM,calData_aux.dens_MFM,20,calData_aux.T_MFM,'filled','DisplayName','Measured density')
+% scatter(calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM,20,calData_aux.T_MFM,'filled','DisplayName','Measured density')
 % hold on
 % for k = 1:length(Q_unique)
 %     leg = sprintf('Cal. curve Low \\rho, Q = %.0f ml/min', Q_unique(k));
@@ -1438,8 +1483,8 @@ saveas(gcf,pathExportAll + "Cal-curve-nonlin-zoom-in",'png')
 % insetAx = axes('Position', [0.19 0.68 0.1 0.17]);  % [x y width height]
 % limScale = (insetAx.Position(3)/insetAx.Position(4))/((range(ax1.XLim)*ax1.Position(3))/(range(ax1.YLim)*ax1.Position(4)));
 % box(insetAx, 'on');  % Add border to inset
-% scatter(insetAx,calData_aux.dens_PR_T_MFM(calData_aux.Fluid_cal == 'H2'), ...
-%     calData_aux.dens_MFM(calData_aux.Fluid_cal == 'H2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'H2'),'filled')
+% scatter(insetAx,calData_aux.rho_REF_T_MFM(calData_aux.Fluid_cal == 'H2'), ...
+%     calData_aux.rho_MFM(calData_aux.Fluid_cal == 'H2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'H2'),'filled')
 % hold on
 % for k = 1:length(Q_unique)
 %     plot(0:1:round(rho_ref_0),feval(nl_Q_cal_curve_params_Qall,[(0:1:round(rho_ref_0))',repmat(Q_unique(k),length(0:1:round(rho_ref_0)),1)]),'DisplayName',leg,'LineStyle',Q_symbol_line{k},"Color",'k') % fitting responds to high pressure only
@@ -1455,7 +1500,7 @@ saveas(gcf,pathExportAll + "Cal-curve-nonlin-zoom-in",'png')
 % insetAx = axes('Position', [0.35 0.68 0.1 0.17]);  % [x y width height]
 % limScale = (insetAx.Position(3)/insetAx.Position(4))/((range(ax1.XLim)*ax1.Position(3))/(range(ax1.YLim)*ax1.Position(4)));
 % box(insetAx, 'on');  % Add border to inset
-% scatter(insetAx,calData_aux.dens_PR_T_MFM(calData_aux.Fluid_cal == 'He'),calData_aux.dens_MFM(calData_aux.Fluid_cal == 'He'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'He'),'filled')
+% scatter(insetAx,calData_aux.rho_REF_T_MFM(calData_aux.Fluid_cal == 'He'),calData_aux.rho_MFM(calData_aux.Fluid_cal == 'He'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'He'),'filled')
 % hold on
 % for k = 1:length(Q_unique)
 %     plot(0:1:round(rho_ref_0),feval(nl_Q_cal_curve_params_Qall,[(0:1:round(rho_ref_0))',repmat(Q_unique(k),length(0:1:round(rho_ref_0)),1)]),'DisplayName',leg,'LineStyle',Q_symbol_line{k},"Color",'k') % fitting responds to high pressure only
@@ -1471,7 +1516,7 @@ saveas(gcf,pathExportAll + "Cal-curve-nonlin-zoom-in",'png')
 % insetAx = axes('Position', [0.19 0.42 0.1 0.17]);  % [x y width height]
 % limScale = (insetAx.Position(3)/insetAx.Position(4))/((range(ax1.XLim)*ax1.Position(3))/(range(ax1.YLim)*ax1.Position(4)));
 % box(insetAx, 'on');  % Add border to inset
-% scatter(insetAx,calData_aux.dens_PR_T_MFM(calData_aux.Fluid_cal == 'CO2'),calData_aux.dens_MFM(calData_aux.Fluid_cal == 'CO2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'CO2'),'filled')
+% scatter(insetAx,calData_aux.rho_REF_T_MFM(calData_aux.Fluid_cal == 'CO2'),calData_aux.rho_MFM(calData_aux.Fluid_cal == 'CO2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'CO2'),'filled')
 % hold on
 % for k = 1:length(Q_unique)
 %     plot(0:1:round(rho_ref_0),feval(nl_Q_cal_curve_params_Qall,[(0:1:round(rho_ref_0))',repmat(Q_unique(k),length(0:1:round(rho_ref_0)),1)]),'DisplayName',leg,'LineStyle',Q_symbol_line{k},"Color",'k') % fitting responds to high pressure only
@@ -1487,7 +1532,7 @@ saveas(gcf,pathExportAll + "Cal-curve-nonlin-zoom-in",'png')
 % insetAx = axes('Position', [0.54 0.42 0.1 0.17]);  % [x y width height]
 % limScale = (insetAx.Position(3)/insetAx.Position(4))/((range(ax1.XLim)*ax1.Position(3))/(range(ax1.YLim)*ax1.Position(4)));
 % box(insetAx, 'on');  % Add border to inset
-% scatter(insetAx,calData_aux.dens_PR_T_MFM(calData_aux.Fluid_cal == 'CO2'),calData_aux.dens_MFM(calData_aux.Fluid_cal == 'CO2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'CO2'),'filled')
+% scatter(insetAx,calData_aux.rho_REF_T_MFM(calData_aux.Fluid_cal == 'CO2'),calData_aux.rho_MFM(calData_aux.Fluid_cal == 'CO2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'CO2'),'filled')
 % hold on
 % plot(0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 % xlim([184,204])
@@ -1500,7 +1545,7 @@ saveas(gcf,pathExportAll + "Cal-curve-nonlin-zoom-in",'png')
 % insetAx = axes('Position', [0.68 0.42 0.1 0.17]);  % [x y width height]
 % limScale = (insetAx.Position(3)/insetAx.Position(4))/((range(ax1.XLim)*ax1.Position(3))/(range(ax1.YLim)*ax1.Position(4)));
 % box(insetAx, 'on');  % Add border to inset
-% scatter(insetAx,calData_aux.dens_PR_T_MFM(calData_aux.Fluid_cal == 'CO2'),calData_aux.dens_MFM(calData_aux.Fluid_cal == 'CO2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'CO2'),'filled')
+% scatter(insetAx,calData_aux.rho_REF_T_MFM(calData_aux.Fluid_cal == 'CO2'),calData_aux.rho_MFM(calData_aux.Fluid_cal == 'CO2'),15,calData_aux.T_MFM(calData_aux.Fluid_cal == 'CO2'),'filled')
 % hold on
 % plot(0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k')
 % xlim([692,716])
