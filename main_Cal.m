@@ -1,43 +1,84 @@
 %% main_Cal.m
+
 % Author: Ianna Gomez Mendez
 %
 % PURPOSE
 %   Process density-calibration experiments used to calibrate the
-%   Coriolis Mass Flow Meter (MFM) density measurement.
+%   Bronkhorst Coriolis Mass Flow Meter (MFM) density measurement.
 %
 %   Experimental data are collected during bypass-flow calibration tests
-%   performed at fixed temperature and varying pressure, flow rate, and
-%   fluid composition using:
-%
-%       - Quizix syringe pumps
-%       - Bronkhorst mass flow meters (MFM)
-%       - Omega pressure transducers
-%       - Cosmos portable gas detectors (PGD)
+%   performed at controlled pressure, temperature, and flow-rate
+%   conditions using pure calibration gases.
 %
 %   The script imports raw acquisition files, identifies stable operating
-%   periods, compares measured densities against Peng-Robinson EOS
-%   predictions, and generates calibration correlations for the MFM.
+%   intervals, computes reference thermodynamic properties using
+%   NIST REFPROP, and generates calibration correlations relating
+%   measured MFM density to reference fluid density.
+%
+%   Calibration fluids currently include:
+%
+%       - Hydrogen (H2)
+%       - Helium (He)
+%       - Carbon dioxide (CO2)
 %
 % -------------------------------------------------------------------------
 % INPUT FILES
 % -------------------------------------------------------------------------
 %
 % Configuration:
+%
 %       inputCalConfig.xlsx
 %
 % Calibration metadata:
+%
 %       inputCal.xlsx
 %
-% Thermodynamic properties:
-%       PR pure-component parameter file
-%       PR binary interaction parameter (BIP) file
+% Legacy EOS files (optional):
+%
+%       Pure-component parameter file
+%       Binary interaction parameter (BIP) file
+%
+%       NOTE:
+%       These files were originally used for Peng-Robinson calculations.
+%       Current density calibration uses REFPROP and does not require
+%       Peng-Robinson predictions.
 %
 % Experimental acquisition files:
 %
 %       Pumps (.dat)
 %       Pressure transducers (.csv)
 %       Mass flow meters (.csv)
-%       Gas detectors PGD1 / PGD2 (.csv)
+%       Portable gas detectors PGD1 / PGD2 (.csv)
+%
+% -------------------------------------------------------------------------
+% THERMODYNAMIC MODEL
+% -------------------------------------------------------------------------
+%
+%   Thermodynamic properties are obtained from:
+%
+%       NIST REFPROP
+%
+%   Properties calculated include:
+%
+%       Density
+%       Compressibility factor
+%       Dynamic viscosity
+%       Molecular weight
+%
+%   During calibration, REFPROP density values are used as the reference
+%   density against which MFM measurements are calibrated.
+%
+%   REFPROP input units:
+%
+%       Temperature : K
+%       Pressure    : kPa
+%
+%   REFPROP output units stored in MATLAB:
+%
+%       Density     : kg/m^3
+%       Viscosity   : Pa·s
+%       MW          : kg/mol
+%       Z           : -
 %
 % -------------------------------------------------------------------------
 % WORKFLOW
@@ -45,99 +86,156 @@
 %
 %   1. Read calibration configuration and metadata.
 %
-%   2. Import Peng-Robinson EOS parameters.
+%   2. Initialize REFPROP.
 %
 %   3. Import raw experimental datasets:
+%
 %          - Pumps
 %          - Pressure transducers
 %          - MFM
 %          - PGD sensors
 %
-%   4. Synchronize timestamps and trim data using user-defined start and
-%      end times.
+%   4. Synchronize timestamps and trim data using user-defined start
+%      and end times.
 %
 %   5. Save raw datasets to:
+%
 %          - MAT files
 %          - Excel workbooks
 %
-%   6. Identify stable operating intervals for specified pressure and
-%      flow-rate conditions using TRIM_TIME_P_Q.
+%   6. Identify stable operating intervals corresponding to specified
+%      pressure and flow-rate conditions.
 %
-%   7. Calculate statistics for every operating condition:
+%   7. Calculate statistics for each operating condition:
+%
 %          - Mean pressure
 %          - Mean flow rate
 %          - Mean temperature
 %          - Mean density
 %          - Standard deviations
 %
-%   8. Compute reference density and compressibility factor using the
-%      Peng-Robinson EOS:
+%   8. Compute REFPROP reference properties:
 %
-%          rho_ref(T,P)
-%          Z(T,P)
+%          rho_REF(T,P)
+%          Z_REF(T,P)
 %
-%   9. Assemble processed calibration datasets:
+%   9. Interpolate reference density and compressibility factor to the
+%      instantaneous MFM temperature.
+%
+%  10. Assemble processed calibration datasets:
 %
 %          calProcData
 %          calResults
 %          calResultsQAll
 %          calData
 %
-%  10. Generate MFM density calibration correlations.
+%  11. Fit calibration correlations using:
 %
-%  11. Save processed results and calibration parameters.
+%          - Linear regression
+%          - Piecewise nonlinear regression
 %
-%  12. Generate quality-control plots and calibration figures.
+%  12. Estimate calibration uncertainty.
+%
+%  13. Save processed datasets and calibration parameters.
+%
+%  14. Generate publication-quality calibration figures.
 %
 % -------------------------------------------------------------------------
-% CALIBRATION MODEL
+% CALIBRATION MODELS
 % -------------------------------------------------------------------------
 %
-%   A piecewise nonlinear density calibration curve is fitted:
+% Linear calibration:
+%
+%       rho_MFM = p1 + p2*rho_REF
+%
+%
+% Piecewise nonlinear calibration:
 %
 %       rho_MFM =
-%           p1 + p2*rho_ref
-%           + p3*max(0,rho_ref-p4)
 %
-%   where:
+%           p1
+%         + p2*rho_REF
+%         + p3*max(0,rho_REF-p4)
 %
-%       rho_ref  = Peng-Robinson reference density
-%       rho_MFM  = measured MFM density
 %
-%   The model allows different slopes in low- and high-density regions.
+% where:
+%
+%       rho_REF = REFPROP reference density
+%
+%       rho_MFM = measured MFM density
+%
+%       p4      = transition density
+%
+% The nonlinear model allows separate low-density and high-density
+% sensitivities while preserving continuity at rho_REF = p4.
 %
 % -------------------------------------------------------------------------
-% OUTPUTS
+% GENERATED DATASETS
 % -------------------------------------------------------------------------
 %
-% Raw data:
+% Raw datasets:
+%
+%       expRawData
+%
+% Trimmed datasets:
+%
+%       expTrimData
+%
+% Processed calibration datasets:
+%
+%       calProcData
+%       calResults
+%       calResultsQAll
+%       calData
+%
+% Reference-property tables:
+%
+%       PTXrho_REF
+%
+% Calibration models:
+%
+%       cal_curve_params
+%       nl_cal_curve_params
+%
+% Linear fitting results:
+%
+%       fittingRhoResultsAll
+%
+% Nonlinear fitting results:
+%
+%       nlfittingRhoResultsAll
+%
+% -------------------------------------------------------------------------
+% OUTPUT FILES
+% -------------------------------------------------------------------------
+%
+% MAT files:
 %
 %       expRawData.mat
-%       *_Raw.xlsx
-%
-% Trimmed data:
-%
 %       expTrimData.mat
-%       *_Trim.xlsx
-%
-% Processed calibration data:
-%
 %       calProcData.mat
-%       calResults.mat/.xlsx
-%       calResultsQAll.mat/.xlsx
-%       calData.mat/.xlsx
+%       calResults.mat
+%       calResultsQAll.mat
+%       calData.mat
+%
+% Excel files:
+%
+%       calResults.xlsx
+%       calResultsQAll.xlsx
+%       calData.xlsx
 %
 % Calibration parameters:
 %
+%       cal_curve_params.mat
 %       nl_cal_curve_params.mat
-%       nlfittingRhoResultsAll.mat
-%       nlfittingRhoResultsAll.xlsx
 %
 % Figures:
 %
 %       *_All_vars_Raw.png
 %       *_All_vars_Trim.png
+%       Cal-all-HP400+-l.png
 %       Cal-all-HP400+-nl.png
+%       Cal-curve-lin-zoom-in.png
 %       Cal-curve-nonlin-zoom-in.png
 %
 % -------------------------------------------------------------------------
@@ -145,6 +243,7 @@
 % -------------------------------------------------------------------------
 %
 % Import functions:
+%
 %       import_inputCal
 %       import_inputPR_params_pure
 %       import_inputPR_params_BIP
@@ -154,24 +253,35 @@
 %       import_PGD1_data
 %       import_PGD2_data
 %
+% Property functions:
+%
+%       initREFPROP
+%       getFluidProps_REFPROP
+%
+% Optional backup property package:
+%
+%       initCoolProp
+%       getFluidProps_CProp
+%
 % Processing functions:
+%
 %       trim_time_P_Q
-%       densZ_PR
 %
 % -------------------------------------------------------------------------
 % NOTES
 % -------------------------------------------------------------------------
 %
-%   - Pressure and flow tolerances used for interval detection strongly
-%     influence the quality of the calibration dataset.
+%   - REFPROP is used as the reference source for density and
+%     compressibility-factor calculations.
 %
-%   - Peng-Robinson EOS predictions are used as density reference values.
+%   - Calibration fits are currently generated using data above
+%     approximately 400 psig.
 %
-%   - The nonlinear calibration fit is currently performed using data
-%     above approximately 400 psig.
+%   - The calibration correlation is intended to correct MFM density
+%     readings during high-pressure gas transport experiments.
 %
-%   - This script is intended for MFM density calibration and not for
-%     transport-parameter estimation.
+%   - Generated calibration parameters are subsequently used in
+%     breakthrough and CT-processing workflows.
 
 %% INPUT
 
@@ -476,7 +586,7 @@ for i = 1:length(filedataExp.Key)
                     % at T mean values
                 fluidProp_REF_T_mean = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean+273.15,P_unique_MPa(j)*1000);
                 fluidProp_REF_T_max = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean+T_std+273.15,P_unique_MPa(j)*1000);
-                fluidProp_REF_T_min = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean+T_std+273.15,P_unique_MPa(j)*1000);
+                fluidProp_REF_T_min = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean-T_std+273.15,P_unique_MPa(j)*1000);
                     % Compressibility factor from Peng Robinson T_mean
                 Z_REF_T_mean = fluidProp_REF_T_mean.Z;
                 Z_REF_T_max = fluidProp_REF_T_max.Z;
@@ -680,7 +790,7 @@ for i = 1:length(fields(calProcData)) % for each fluid
 
                 % Using REFPROP
                 fluidProp_REFPROP = getFluidProps_REFPROP( ...
-                    RP,upper(filedataExp.Fluid1(i)), ...
+                    RP,upper(fluid_unique{i}), ...
                     T_REF_aux(m)+273.15,P_MPa*1000);
                 Z_REF_T_REF_aux = fluidProp_REFPROP.Z;
                 rho_REF_T_REF_aux = fluidProp_REFPROP.rho;
