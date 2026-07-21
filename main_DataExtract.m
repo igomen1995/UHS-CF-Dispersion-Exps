@@ -292,34 +292,13 @@ pathImportCal = inputFileConfig.importPath{:};
 pathExportAll = inputFileConfig.exportPath{:}; % Path for OUTPUT
 mkdir(pathExportAll); % Create directory for output
 
-%% Initialize Python/CoolProp
+%% Initialize Python for CProP or REFPROP
 
-try
+% % Initialize CProp
+% initCoolProp()
 
-    pe = pyenv;
-
-    if pe.Status == "NotLoaded"
-
-        pyenv('Version', ...
-        'C:\Users\izg5132\AppData\Local\anaconda3\python.exe');
-
-    end
-
-catch
-
-    pyenv('Version', ...
-    'C:\Users\izg5132\AppData\Local\anaconda3\python.exe');
-
-end
-% Verify CoolProp
-
-try
-    pyrun("import CoolProp");
-    fprintf('CoolProp loaded successfully.\n');
-catch ME
-    error('CoolProp could not be loaded:\n%s',ME.message);
-end
-
+% Initialize REFPROP
+RP = initREFPROP();
 
 %% IMPORT data
 
@@ -443,9 +422,17 @@ for i = 1:length(filedataExp.Key)
     % KL_lines = KL_lines_taylor_aris(v, r, Dm)
     KL_lines =  KL_lines_taylor_aris(v_lines, filedataExp.IDlines_cm(i)/100, D12/(60*(10^4)));
 
-    % fluid properties from CoolProp
-    Fluid1props = getFluidProps(filedataExp.Fluid1(i),filedataExp.T(i),(filedataExp.P(i)+ 14.7)*6894.76); % T in K and P in Pa all in SI
-    Fluid2props = getFluidProps(filedataExp.Fluid2(i),filedataExp.T(i),(filedataExp.P(i)+ 14.7)*6894.76); % T in K and P in Pa all in SI
+    T_K = filedataExp.T(i)+273.15;
+    P_Pa = (filedataExp.P(i)+ 14.7)*6894.76;
+    P_kPa = (filedataExp.P(i)+ 14.7)*6.89476;
+
+    % % fluid properties from CoolProp
+    % Fluid1props = getFluidProps_CProp(filedataExp.Fluid1(i),T_K,P_Pa); % T in K and P in Pa all in SI
+    % Fluid2props = getFluidProps_CProp(filedataExp.Fluid2(i),T_K,P_Pa); % T in K and P in Pa all in SI
+    
+    % fluid properties from REFPROP
+    Fluid1props = getFluidProps_REFPROP(RP,upper(filedataExp.Fluid1(i)),T_K,P_kPa);
+    Fluid2props = getFluidProps_REFPROP(RP,upper(filedataExp.Fluid2(i)),T_K,P_kPa);
 
     exp_params = table(filedataExp.Key(i), filedataExp.Date(i), filedataExp.Type(i), filedataExp.Fluid1(i), filedataExp.Fluid2(i), ...
         D12, dD12,...

@@ -16,3 +16,7 @@ desktop.ini
 
 # Local temporary changes
 *.asv
+
+# Local init configuration
+functions/initCoolProp.m
+functions/initREFPROP.m

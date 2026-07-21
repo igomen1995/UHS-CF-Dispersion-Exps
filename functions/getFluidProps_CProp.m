@@ -1,4 +1,4 @@
-function props = getFluidProps(fluid,T,P)
+function props = getFluidProps_CProp(fluid,T,P)
 
 % GETFLUIDPROPS Retrieve common thermophysical properties from CoolProp.
 %
@@ -66,9 +66,9 @@ function props = getFluidProps(fluid,T,P)
 %   CPprop, pyenv
 %
 
-props.rho = CPprop('D',T,P,fluid);
-props.mu  = CPprop('VISCOSITY',T,P,fluid);
-props.Z   = CPprop('Z',T,P,fluid);
-props.MW  = CPprop('M',T,P,fluid);
+[props.rho,props.rhoErr] = CPprop('D',T,P,fluid);
+[props.mu,props.muErr]  = CPprop('VISCOSITY',T,P,fluid);
+[props.Z,props.ZErr]   = CPprop('Z',T,P,fluid);
+[props.MW,props.MWErr]  = CPprop('M',T,P,fluid);
 
 end
