@@ -7,7 +7,7 @@
 %
 %       - Corrected Coriolis density measurements
 %       - MFM temperature measurements
-%       - Peng-Robinson EOS calculations
+%       - EOS to convert density to composition
 %
 %   The workflow evaluates the accuracy of converting measured density
 %   into fluid composition and compares estimated compositions against
@@ -28,7 +28,7 @@
 %   can be estimated accurately using:
 %
 %       1. Density calibration
-%       2. Peng-Robinson EOS
+%       2. Peng-Robinson EOS or NIST REFPROP
 %       3. Density-composition interpolation
 %
 % -------------------------------------------------------------------------
@@ -81,7 +81,7 @@
 %
 %   6. Compute uncertainty bounds on corrected density.
 %
-%   7. Generate Peng-Robinson EOS density surfaces:
+%   7. Generate Peng-Robinson EOS or NIST REFPROP density surfaces:
 %
 %          rho(T,P,x)
 %
@@ -119,11 +119,15 @@
 % DENSITY CORRECTION
 % -------------------------------------------------------------------------
 %
-%   Raw MFM density measurements are corrected using the nonlinear
-%   calibration model obtained from:
+%   Raw MFM density measurements are corrected using the linear 
+%   calibration model or nonlinear calibration model obtained from:
 %
 %       main_Cal.m
+% 
+%   if linear:
+%   All region: rho_corr =(rho_MFM - p1)/p2
 %
+%   if non-linear:
 %   Low-density region:
 %
 %       rho_corr =
@@ -147,7 +151,7 @@
 %
 %   For each pressure level:
 %
-%       1. Generate Peng-Robinson EOS densities on a grid:
+%       1. Generate Peng-Robinson EOS or NIST REFPROP densities on a grid:
 %
 %              T
 %              x
@@ -274,6 +278,7 @@
 %       densZ_PR
 %       calc_BIP
 %       calc_ai_bi
+%       getMixtureProps_REFPROP
 %
 % Utility functions:
 %
@@ -285,10 +290,10 @@
 %
 %   - Assumes binary-mixture systems.
 %
-%   - Assumes Peng-Robinson EOS adequately describes mixture densities.
+%   - Assumes Peng-Robinson EOS or NIST REFPROP adequately describes mixture densities.
 %
 %   - Composition error is strongly influenced by density-calibration
-%     uncertainty.
+%     uncertainty, which is better if using NIST REFPROP
 %
 %   - Intended as a validation workflow for density-derived composition
 %     estimates before applying the methodology to breakthrough-curve
@@ -296,6 +301,8 @@
 
 %% INPUT
 % INTRODUCE HERE INPUT AND OUTPUT PATH
+
+addpath('functions/');
 
 %Cal Experimental data
 filenameExp = 'input/input_val_H2CO2_260303.xlsx';
@@ -312,6 +319,14 @@ pathImportCal = 'results/cal_250725_PR/';
 
 mkdir('results/val_PR_H2CO2_260303'); % Create directory for output
 pathExportAll = 'results/val_PR_H2CO2_260303/'; % Path for OUTPUT
+
+%% Initialize Python for CProP or REFPROP
+
+% % Initialize CProp
+% initCoolProp()
+
+% Initialize REFPROP
+RP = initREFPROP();
 
 
 %% Import data
@@ -507,7 +522,7 @@ for i = 1:length(filedataExp.Key)
                     % trans data
                     if ismissing(trans_data_name) == 0 % if trans data exists
                         % Trim according to time st and et
-                        trans_data_trim_aux = trans_data((trans_data.TimeStamp>=TimeStamp_st(l))&(trans_data.TimeStamp<=TimeStamp_et(l)),:);
+                        trans_data_trim_aux = trans_data((trans_data.TimeStamp_PT1>=TimeStamp_st(l))&(trans_data.TimeStamp_PT1<=TimeStamp_et(l)),:);
                         % Add specific subpart to full MFM_data_aux for that P and Q
                         trans_data_aux = [trans_data_aux; trans_data_trim_aux]; % all P and all Q
                     end
@@ -610,24 +625,32 @@ for i = 1:length(filedataExp.Key)
             'VariableNames',{'TimeStamp', 'rho_MFM','T_MFM','q_MFM','Ci_ref'});
         expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT = BTaux;
         % fitting parameters for rho corrected
-        % auxLinFit = fittingRhoResultsAll(fittingRhoResultsAll.Q == "QAll",:);
-        auxnLinFit = nlfittingRhoResultsAll(nlfittingRhoResultsAll.Q == "QAll",:);
-        rho_MFM_0 = auxnLinFit.rho_MFM_0;
+        % linear
+        auxLinFit = fittingRhoResultsAll(fittingRhoResultsAll.Q == "QAll",:);
+        rho_MFM_0 = auxLinFit.p1;
+        % % non linear
+        % auxnLinFit = nlfittingRhoResultsAll(nlfittingRhoResultsAll.Q == "QAll",:);
+        % rho_MFM_0 = auxnLinFit.rho_MFM_0;
         rho_MFM = expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_MFM;
-        % low densitites
-        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM);
-        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM-auxnLinFit.drho_corr_low);
-        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM+auxnLinFit.drho_corr_low);
-        % high densitites
-        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr(rho_MFM>rho_MFM_0) = ...
-            rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
-            rho_MFM(rho_MFM>rho_MFM_0));
-        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin(rho_MFM>rho_MFM_0) = ...
-            rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
-            rho_MFM(rho_MFM>rho_MFM_0)-auxnLinFit.drho_corr_high);
-        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax(rho_MFM>rho_MFM_0) = ...
-            rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
-            rho_MFM(rho_MFM>rho_MFM_0)+auxnLinFit.drho_corr_high);
+        % linear
+        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],rho_MFM);
+        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],rho_MFM-auxLinFit.RMSE);
+        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],rho_MFM+auxLinFit.RMSE);
+        % % non linear
+        % % low densities
+        % expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM);
+        % expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM-auxnLinFit.drho_corr_low);
+        % expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM+auxnLinFit.drho_corr_low);
+        % % high densities
+        % expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr(rho_MFM>rho_MFM_0) = ...
+        %     rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
+        %     rho_MFM(rho_MFM>rho_MFM_0));
+        % expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin(rho_MFM>rho_MFM_0) = ...
+        %     rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
+        %     rho_MFM(rho_MFM>rho_MFM_0)-auxnLinFit.drho_corr_high);
+        % expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax(rho_MFM>rho_MFM_0) = ...
+        %     rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
+        %     rho_MFM(rho_MFM>rho_MFM_0)+auxnLinFit.drho_corr_high);
     end
 end
 
@@ -639,7 +662,7 @@ P_unique = unique(vertcat(filedataExp.P_psig{:}));
 % P and Q name arrays for struct and plots
 P_unique_field = "P"+ string(P_unique);
 
-x1 = 0:0.01:1; % array for binary mixture
+x1 = 0:0.1:1; % array for binary mixture
 
 % all data for calibration
 Ci_ref_all = [];
@@ -651,25 +674,44 @@ for i = 1:length(filedataExp.Key)
         fluidPair = [filedataExp.Fluid1(i),filedataExp.Fluid2(i)];
         Tmin = floor(min(expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.T_MFM)*10)/10;
         Tmax = ceil(max(expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.T_MFM)*10)/10;
-        T_PR_aux = Tmin:0.1:Tmax;
+        T_REF_aux = Tmin:0.1:Tmax;
         P_psig = P_unique(j);
-        P_MPa = (P_psig + 14.7)*0.00689476;
-        PTXrho_PR_ref = table();
-        for m = 1:length(T_PR_aux)
-            [PR_input_T_PR_aux,PR_results_T_PR_aux] = densZ_PR(fluidPair,x1,P_MPa,T_PR_aux(m),filedataPure,filedataBIP);
-            % Compressibility factor from Peng Robinson at T_MFM and T_mean
-            Z_PR_T_PR_aux = PR_results_T_PR_aux.Z;
-            % density from Peng Robinson at T_MFM and T_mean
-            dens_PR_T_PR_aux = PR_results_T_PR_aux.rho;        
-            % PTXrho_PR_ref table aux
-            PTXrho_PR_ref_aux = table(repmat(join(fluidPair),length(x1),1), ...
-                repmat(P_psig,length(x1),1), repmat(T_PR_aux(m),length(x1),1), x1', ...
-                Z_PR_T_PR_aux, dens_PR_T_PR_aux, 'VariableNames',{'fluidPair', ...
-                'P_cal_psig','T_PR', 'x_PR','Z_PR_T_PR', 'rho_PR_T_PR'});
-            PTXrho_PR_ref = [PTXrho_PR_ref;PTXrho_PR_ref_aux];
+        P_REF_MPa = (P_psig + 14.7)*0.00689476;
+        PTXrho_REF = table();
+        for m = 1:length(T_REF_aux)
+
+            % % Using Peng Robinson EoS
+            % [PR_input_T_REF_aux,PR_results_T_REF_aux] = densZ_PR(fluidPair,x1,P_REF_MPa,T_REF_aux(m),filedataPure,filedataBIP);
+            % % Compressibility factor from Peng Robinson at T_MFM and T_mean
+            % Z_REF = PR_results_T_REF_aux.Z;
+            % % density from Peng Robinson at T_MFM and T_mean
+            % rho_REF = PR_results_T_REF_aux.rho;
+
+            % Using REFPROP
+            rho_REF = zeros(length(x1),1);
+            Z_REF   = zeros(length(x1),1);
+            for xi = 1:length(x1)        
+                z = [x1(xi) 1-x1(xi)];
+                Mix = getMixtureProps_REFPROP( ...
+                    RP,...
+                    {char(filedataExp.Fluid1(i)), ...
+                     char(filedataExp.Fluid2(i))},...
+                    z,...
+                    T_REF_aux(m)+273.15,...
+                    P_REF_MPa*1000);
+                rho_REF(xi) = Mix.rho;
+                Z_REF(xi) = Mix.Z;
+            end 
+
+            % PTXrho_REF_ref table aux
+            PTXrho_REF_aux = table(repmat(join(fluidPair),length(x1),1), ...
+                repmat(P_psig,length(x1),1), repmat(T_REF_aux(m),length(x1),1), x1', ...
+                Z_REF, rho_REF, 'VariableNames',{'fluidPair', ...
+                'P_cal_psig','T_REF', 'x_REF','Z_REF_T_REF', 'rho_REF_T_REF'});
+            PTXrho_REF = [PTXrho_REF;PTXrho_REF_aux];
         end   
-        scatInterp = scatteredInterpolant(PTXrho_PR_ref.T_PR, ...
-            PTXrho_PR_ref.rho_PR_T_PR, PTXrho_PR_ref.x_PR, 'linear', 'linear');
+        scatInterp = scatteredInterpolant(PTXrho_REF.T_REF, ...
+            PTXrho_REF.rho_REF_T_REF, PTXrho_REF.x_REF, 'linear', 'linear');
         % at rho corr value
         expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.Ci = ...
             100*scatInterp(expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.T_MFM, ...
