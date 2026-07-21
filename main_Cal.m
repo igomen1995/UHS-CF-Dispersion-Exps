@@ -456,37 +456,37 @@ for i = 1:length(filedataExp.Key)
                 rho_std = std(MFM_data_aux.dens_MFM2);
                 freq_MFM_std = std(MFM_data_aux.freq_MFM2);
 
-                % Reference density from Peng Robinson model  
-                    % at T mean values
-                [PR_input_T_mean,PR_results_T_mean] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean,filedataPure,filedataBIP);
-                [PR_input_T_max,PR_results_T_max] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean+T_std, filedataPure,filedataBIP); % at Tmax
-                [PR_input_T_min,PR_results_T_min] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean-T_std, filedataPure,filedataBIP); % at Tmin
-                    % Compressibility factor from Peng Robinson T_mean
-                Z_REF_T_mean = PR_results_T_mean.Z;
-                Z_REF_T_max = PR_results_T_max.Z;
-                Z_REF_T_min = PR_results_T_min.Z;
-                Z_REF_T_mean_std = abs(Z_REF_T_max-Z_REF_T_min); % error of Z depending on T
-                    % density from Peng Robinson at T_mean
-                rho_REF_T_mean = PR_results_T_mean.rho;
-                rho_REF_T_max = PR_results_T_max.rho;
-                rho_REF_T_min = PR_results_T_min.rho;
-                rho_REF_T_mean_std = abs(rho_REF_T_max-rho_REF_T_min); % error of rho depending on T
-
-                % % Reference density from REFPROP 
+                % % Reference density from Peng Robinson model  
                 %     % at T mean values
-                % fluidProp_REF_T_mean = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean+273.15,P_unique_MPa(j)*1000);
-                % fluidProp_REF_T_max = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean+T_std+273.15,P_unique_MPa(j)*1000);
-                % fluidProp_REF_T_min = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean+T_std+273.15,P_unique_MPa(j)*1000);
+                % [PR_input_T_mean,PR_results_T_mean] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean,filedataPure,filedataBIP);
+                % [PR_input_T_max,PR_results_T_max] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean+T_std, filedataPure,filedataBIP); % at Tmax
+                % [PR_input_T_min,PR_results_T_min] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean-T_std, filedataPure,filedataBIP); % at Tmin
                 %     % Compressibility factor from Peng Robinson T_mean
-                % Z_REF_T_mean = fluidProp_REF_T_mean.Z;
-                % Z_REF_T_max = fluidProp_REF_T_max.Z;
-                % Z_REF_T_min = fluidProp_REF_T_min.Z;
+                % Z_REF_T_mean = PR_results_T_mean.Z;
+                % Z_REF_T_max = PR_results_T_max.Z;
+                % Z_REF_T_min = PR_results_T_min.Z;
                 % Z_REF_T_mean_std = abs(Z_REF_T_max-Z_REF_T_min); % error of Z depending on T
                 %     % density from Peng Robinson at T_mean
-                % rho_REF_T_mean = fluidProp_REF_T_mean.rho;
-                % rho_REF_T_max = fluidProp_REF_T_max.rho;
-                % rho_REF_T_min = fluidProp_REF_T_min.rho;
+                % rho_REF_T_mean = PR_results_T_mean.rho;
+                % rho_REF_T_max = PR_results_T_max.rho;
+                % rho_REF_T_min = PR_results_T_min.rho;
                 % rho_REF_T_mean_std = abs(rho_REF_T_max-rho_REF_T_min); % error of rho depending on T
+
+                % Reference density from REFPROP 
+                    % at T mean values
+                fluidProp_REF_T_mean = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean+273.15,P_unique_MPa(j)*1000);
+                fluidProp_REF_T_max = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean+T_std+273.15,P_unique_MPa(j)*1000);
+                fluidProp_REF_T_min = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean+T_std+273.15,P_unique_MPa(j)*1000);
+                    % Compressibility factor from Peng Robinson T_mean
+                Z_REF_T_mean = fluidProp_REF_T_mean.Z;
+                Z_REF_T_max = fluidProp_REF_T_max.Z;
+                Z_REF_T_min = fluidProp_REF_T_min.Z;
+                Z_REF_T_mean_std = abs(Z_REF_T_max-Z_REF_T_min); % error of Z depending on T
+                    % density from Peng Robinson at T_mean
+                rho_REF_T_mean = fluidProp_REF_T_mean.rho;
+                rho_REF_T_max = fluidProp_REF_T_max.rho;
+                rho_REF_T_min = fluidProp_REF_T_min.rho;
+                rho_REF_T_mean_std = abs(rho_REF_T_max-rho_REF_T_min); % error of rho depending on T
               
                 % cal results gathers mean and std
                 calResults_temp = table(fluid_cal,T_cal,P_unique(j), Q_unique(k), ...
@@ -671,31 +671,23 @@ for i = 1:length(fields(calProcData)) % for each fluid
             Z_REF_T_REF = [];
             rho_REF_T_REF = [];
             for m = 1:length(T_REF_aux)
-                % Using Peng Robinson EoS
-                [PR_input_T_REF_aux,PR_results_T_REF_aux] = densZ_PR(string(fluid_unique{i}),x1,P_MPa,T_REF_aux(m),filedataPure,filedataBIP);
-                % Compressibility factor from Peng Robinson at T_MFM and T_mean
-                Z_REF_T_REF_aux = PR_results_T_REF_aux.Z;
-                % density from Peng Robinson at T_MFM and T_mean
-                rho_REF_T_REF_aux = PR_results_T_REF_aux.rho;        
+                % % Using Peng Robinson EoS
+                % [PR_input_T_REF_aux,PR_results_T_REF_aux] = densZ_PR(string(fluid_unique{i}),x1,P_MPa,T_REF_aux(m),filedataPure,filedataBIP);
+                % % Compressibility factor from Peng Robinson at T_MFM and T_mean
+                % Z_REF_T_REF_aux = PR_results_T_REF_aux.Z;
+                % % density from Peng Robinson at T_MFM and T_mean
+                % rho_REF_T_REF_aux = PR_results_T_REF_aux.rho;        
+
+                % Using REFPROP
+                fluidProp_REFPROP = getFluidProps_REFPROP( ...
+                    RP,upper(filedataExp.Fluid1(i)), ...
+                    T_REF_aux(m)+273.15,P_MPa*1000);
+                Z_REF_T_REF_aux = fluidProp_REFPROP.Z;
+                rho_REF_T_REF_aux = fluidProp_REFPROP.rho;
+
                 % Z and rho arrays for each fluid, P, Q and T
                 Z_REF_T_REF = [Z_REF_T_REF;Z_REF_T_REF_aux];
                 rho_REF_T_REF = [rho_REF_T_REF;rho_REF_T_REF_aux];
-
-                % % Using REFPROP
-                % rho_REF_T_REF = zeros(length(x1),1);
-                % Z_REF_T_REF   = zeros(length(x1),1);
-                % for xi = 1:length(x1)        
-                %     z = [x1(xi) 1-x1(xi)];
-                %     Mix = getMixtureProps_REFPROP( ...
-                %         RP,...
-                %         {char(filedataExp.Fluid1(i)), ...
-                %          char(filedataExp.Fluid2(i))},...
-                %         z,...
-                %         T_REF_aux(m)+273.15,...
-                %         P_MPa*1000);
-                %     rho_REF_T_REF(xi) = Mix.rho;
-                %     Z_REF_T_REF(xi) = Mix.Z;
-                % end 
             end
 
             PTXrho_REF = table(repmat(fluid_unique{i},length(T_REF_aux),1), ...
