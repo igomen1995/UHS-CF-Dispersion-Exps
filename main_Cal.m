@@ -1057,11 +1057,11 @@ Q_unique = unique(vertcat(filedataExp.Q_mlmin{:}));
 Q_unique_field = "Q"+ string(Q_unique);
 cal_curve_params = {};
 cal_curve_params_Qeach = {};
-fittingRhoResultsAll = table('Size',[0 4],'VariableTypes', ...
-    {'string','double','double','double'},'VariableNames',{'Q','p1','p2','RMSE'});
+fittingRhoResultsAll = table('Size',[0 5],'VariableTypes', ...
+    {'string','double','double','double','double'},'VariableNames',{'Q','p1','p2','RMSE','drho_corr'});
 % fitting for each Q
 % take only High Pressure Data
-calData_aux = calData(calData.P_cal_psig > 1000,:);
+calData_aux = calData(calData.P_cal_psig > 400,:);
 for k = 1:length(Q_unique)
     cal_curve_params_Qeach_aux = fitlm ...
         (calData_aux.rho_REF_T_MFM(calData_aux.Q_cal_mlmin == Q_unique(k)), ...
@@ -1071,7 +1071,8 @@ for k = 1:length(Q_unique)
     fittingRhoResultsAll(k,:) = {Q_unique_field{k}, ...
         cal_curve_params_Qeach_aux.Coefficients.Estimate(1), ...
         cal_curve_params_Qeach_aux.Coefficients.Estimate(2), ...
-        cal_curve_params_Qeach_aux.RMSE};
+        cal_curve_params_Qeach_aux.RMSE, ...
+        cal_curve_params_Qeach_aux.RMSE/cal_curve_params_Qeach_aux.Coefficients.Estimate(2)};
 end
 % Fitting for all Qs
 cal_curve_params_Qall = fitlm(calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM);
@@ -1080,7 +1081,8 @@ cal_curve_params = {cal_curve_params_Qeach;cal_curve_params_Qall};
 fittingRhoResultsAll(length(Q_unique)+1,:) = {"QAll", ...
         cal_curve_params_Qall.Coefficients.Estimate(1), ...
         cal_curve_params_Qall.Coefficients.Estimate(2), ...
-        cal_curve_params_Qall.RMSE};
+        cal_curve_params_Qall.RMSE, ...
+        cal_curve_params_Qall.RMSE/cal_curve_params_Qall.Coefficients.Estimate(2)};
 
 % save fittingRhoResultsAll
 writetable(fittingRhoResultsAll,pathExportAll + "fittingRhoResultsAll.xlsx");
@@ -1117,7 +1119,8 @@ for k = 1:length(Q_unique)
         -1*(cal_curve_params_Qeach_aux.Coefficients.Estimate(3))* cal_curve_params_Qeach_aux.Coefficients.Estimate(4)+cal_curve_params_Qeach_aux.Coefficients.Estimate(1),...
         cal_curve_params_Qeach_aux.RMSE, ...
         cal_curve_params_Qeach_aux.feval(cal_curve_params_Qeach_aux.Coefficients.Estimate(4)), ...
-        ((1/(cal_curve_params_Qeach_aux.Coefficients.Estimate(2)))*(cal_curve_params_Qeach_aux.RMSE^2))^(1/2), ((1/(cal_curve_params_Qeach_aux.Coefficients.Estimate(2)+cal_curve_params_Qeach_aux.Coefficients.Estimate(3)))*(cal_curve_params_Qeach_aux.RMSE^2))^(1/2)};
+        ((1/(cal_curve_params_Qeach_aux.Coefficients.Estimate(2)))*(cal_curve_params_Qeach_aux.RMSE^2))^(1/2), ...
+        ((1/(cal_curve_params_Qeach_aux.Coefficients.Estimate(2)+cal_curve_params_Qeach_aux.Coefficients.Estimate(3)))*(cal_curve_params_Qeach_aux.RMSE^2))^(1/2)};
 end
 % Fitting for all Qs
 nl_cal_curve_params_Qall = fitnlm(calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM,rho_MFM,pinit);
@@ -1147,12 +1150,12 @@ figure
 set(gcf, 'Position', [100, 100, 700, 550])
 ax1 = axes;
 rho_ref_0 = fittingRhoResultsAll.p1(fittingRhoResultsAll.Q == "QAll");
-drho_corr = fittingRhoResultsAll.RMSE(fittingRhoResultsAll.Q == "QAll");
+drho_MFM = fittingRhoResultsAll.RMSE(fittingRhoResultsAll.Q == "QAll");
 step = 1;
-errorbar(0:step:rho_ref_0,feval(cal_curve_params_Qall,0:step:rho_ref_0),drho_corr,'LineStyle', 'none', ...
+errorbar(0:step:rho_ref_0,feval(cal_curve_params_Qall,0:step:rho_ref_0),drho_MFM,'LineStyle', 'none', ...
     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
 hold on
-errorbar(rho_ref_0:step:800,feval(cal_curve_params_Qall,rho_ref_0:step:800),drho_corr,'LineStyle', 'none', ...
+errorbar(rho_ref_0:step:800,feval(cal_curve_params_Qall,rho_ref_0:step:800),drho_MFM,'LineStyle', 'none', ...
     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
 scatter(calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM,20,calData_aux.T_MFM,'filled','DisplayName','Measured density')
 plot(0:1:800,feval(cal_curve_params_Qall,0:1:800),"Color",'k','DisplayName','Linear calibration curve') % fitting responds to high pressure only
@@ -1184,14 +1187,15 @@ figure;
 set(gcf, 'Position', [100, 100, 700, 550])
 ax1 = axes;
 rho_ref_0 = nlfittingRhoResultsAll.p4(nlfittingRhoResultsAll.Q == "QAll");
+drho_MFM = nlfittingRhoResultsAll.RMSE(nlfittingRhoResultsAll.Q == "QAll");
 drho_corr_low = nlfittingRhoResultsAll.drho_corr_low(nlfittingRhoResultsAll.Q == "QAll");
 drho_corr_high = nlfittingRhoResultsAll.drho_corr_high(nlfittingRhoResultsAll.Q == "QAll");
 step = 1;
 %error bar low dens
-errorbar(0:step:rho_ref_0,feval(nl_cal_curve_params_Qall,0:step:rho_ref_0),drho_corr_low,'LineStyle', 'none', ...
+errorbar(0:step:rho_ref_0,feval(nl_cal_curve_params_Qall,0:step:rho_ref_0),drho_MFM,'LineStyle', 'none', ...
     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
 hold on 
-errorbar(rho_ref_0:step:800,feval(nl_cal_curve_params_Qall,rho_ref_0:step:800),drho_corr_high,'LineStyle', 'none', ...
+errorbar(rho_ref_0:step:800,feval(nl_cal_curve_params_Qall,rho_ref_0:step:800),drho_MFM,'LineStyle', 'none', ...
     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
 scatter(calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM,20,calData_aux.T_MFM,'filled')
 plot(0:1:800,feval(nl_cal_curve_params_Qall,0:1:800),"Color",'k','LineWidth',0.8) % fitting responds to high pressure only
@@ -1238,17 +1242,17 @@ xlim([0 900]);
 ylim([0 900]);
 % references
 rho_ref_0 = fittingRhoResultsAll.p1(fittingRhoResultsAll.Q == "QAll");
-drho_corr = fittingRhoResultsAll.RMSE(fittingRhoResultsAll.Q == "QAll");
+drho_MFM = fittingRhoResultsAll.RMSE(fittingRhoResultsAll.Q == "QAll");
 rho_MFM_0 = predict(cal_curve_params_Qall,rho_ref_0);
 step = 1;
 xNorm = axPos(1) + (rho_ref_0-ax1.XLim(1))/diff(ax1.XLim)*axPos(3);
 yNorm = axPos(2) + (rho_MFM_0-ax1.YLim(1))/diff(ax1.YLim)*axPos(4);
 % plots
 %error bar low dens
-errorbar(0:step:rho_ref_0,feval(cal_curve_params_Qall,0:step:rho_ref_0),drho_corr,'LineStyle', 'none', ...
+errorbar(0:step:rho_ref_0,feval(cal_curve_params_Qall,0:step:rho_ref_0),drho_MFM,'LineStyle', 'none', ...
     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
 hold on 
-errorbar(rho_ref_0:step:800,feval(cal_curve_params_Qall,rho_ref_0:step:800),drho_corr,'LineStyle', 'none', ...
+errorbar(rho_ref_0:step:800,feval(cal_curve_params_Qall,rho_ref_0:step:800),drho_MFM,'LineStyle', 'none', ...
     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
 scatter(calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM,20,calData_aux.T_MFM,'filled')
 hold on
@@ -1406,6 +1410,7 @@ xlim([0 900]);
 ylim([0 900]);
 % references
 rho_ref_0 = nlfittingRhoResultsAll.p4(nlfittingRhoResultsAll.Q == "QAll");
+drho_MFM = nlfittingRhoResultsAll.RMSE(nlfittingRhoResultsAll.Q == "QAll");
 drho_corr_low = nlfittingRhoResultsAll.drho_corr_low(nlfittingRhoResultsAll.Q == "QAll");
 drho_corr_high = nlfittingRhoResultsAll.drho_corr_high(nlfittingRhoResultsAll.Q == "QAll");
 rho_MFM_0 = predict(nl_cal_curve_params_Qall,rho_ref_0);
@@ -1414,10 +1419,10 @@ xNorm = axPos(1) + (rho_ref_0-ax1.XLim(1))/diff(ax1.XLim)*axPos(3);
 yNorm = axPos(2) + (rho_MFM_0-ax1.YLim(1))/diff(ax1.YLim)*axPos(4);
 % plots
 %error bar low dens
-errorbar(0:step:rho_ref_0,feval(nl_cal_curve_params_Qall,0:step:rho_ref_0),drho_corr_low,'LineStyle', 'none', ...
+errorbar(0:step:rho_ref_0,feval(nl_cal_curve_params_Qall,0:step:rho_ref_0),drho_MFM,'LineStyle', 'none', ...
     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
 hold on 
-errorbar(rho_ref_0:step:800,feval(nl_cal_curve_params_Qall,rho_ref_0:step:800),drho_corr_high,'LineStyle', 'none', ...
+errorbar(rho_ref_0:step:800,feval(nl_cal_curve_params_Qall,rho_ref_0:step:800),drho_MFM,'LineStyle', 'none', ...
     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
 scatter(calData_aux.rho_REF_T_MFM,calData_aux.rho_MFM,20,calData_aux.T_MFM,'filled')
 hold on
