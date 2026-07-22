@@ -519,11 +519,10 @@ for i = 1:length(filedataExp.Key)
     % linear
     auxLinFit = fittingRhoResultsAll(fittingRhoResultsAll.Q == "QAll",:);
     rho_MFM_0 = auxLinFit.p1;
-    rho_MFM = expProcData.(filedataExp.Key(i)).BT.rho_MFM;
     % % non linear
     % auxnLinFit = nlfittingRhoResultsAll(nlfittingRhoResultsAll.Q == "QAll",:);
     % rho_MFM_0 = auxnLinFit.rho_MFM_0;
-    % rho_MFM = expProcData.(filedataExp.Key(i)).BT.rho_MFM;
+    rho_MFM = expProcData.(filedataExp.Key(i)).BT.rho_MFM;
     % linear
     expProcData.(filedataExp.Key(i)).BT.rho_corr = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],rho_MFM);
     expProcData.(filedataExp.Key(i)).BT.rho_corrMin = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],rho_MFM-auxLinFit.RMSE);
@@ -768,6 +767,13 @@ for i = 1:length(filedataExp.Key)
 
     expProcData.(filedataExp.Key(i)).BT.CDiMin = ...
         (expProcData.(filedataExp.Key(i)).BT.CiMin - filedataExp.C1init(i))/(filedataExp.C1j(i)-filedataExp.C1init(i));
+    
+    % normalized density
+    expProcData.(filedataExp.Key(i)).BT.rho_norm = 1 - ((expProcData.(filedataExp.Key(i)).BT.rho_corr - expProcData.(filedataExp.Key(i)).exp_params.rho1_SI)/ ...
+        (expProcData.(filedataExp.Key(i)).exp_params.rho2_SI - expProcData.(filedataExp.Key(i)).exp_params.rho1_SI));
+
+    expProcData.(filedataExp.Key(i)).BT.drho_norm = (expProcData.(filedataExp.Key(i)).BT.rho_corr - expProcData.(filedataExp.Key(i)).BT.rho_corrMin)/ ...
+        (expProcData.(filedataExp.Key(i)).exp_params.rho2_SI - expProcData.(filedataExp.Key(i)).exp_params.rho2_SI);
 
 end
 
