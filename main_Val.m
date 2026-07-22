@@ -672,6 +672,7 @@ for i = 1:length(filedataExp.Key)
     BT_Key = table();
     for j = 1: length(P_unique)
         fluidPair = [filedataExp.Fluid1(i),filedataExp.Fluid2(i)];
+        T_K = filedataExp.T_C(i) + 273.15;
         Tmin = floor(min(expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.T_MFM)*10)/10;
         Tmax = ceil(max(expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.T_MFM)*10)/10;
         T_REF_aux = Tmin:0.1:Tmax;
@@ -728,6 +729,18 @@ for i = 1:length(filedataExp.Key)
         expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.dC = ...
             abs(expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.CiMax ...
             -expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.CiMin);
+        % normalized density
+        Fluid1props = getFluidProps_REFPROP(RP,upper(filedataExp.Fluid1(i)),T_K,P_REF_MPa*1000);
+        Fluid2props = getFluidProps_REFPROP(RP,upper(filedataExp.Fluid2(i)),T_K,P_REF_MPa*1000);
+        
+        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_norm = ...
+            1 - ((expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr - Fluid1props.rho)/ ...
+            (Fluid2props.rho - Fluid1props.rho));
+
+        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.drho_norm = ...
+            (expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr - ...
+            expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin)/ ...
+            (Fluid2props.rho - Fluid1props.rho);
 
         Ci_ref_all = [Ci_ref_all;expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.Ci_ref]; % mol fraction
         Ci_est_all = [Ci_est_all;expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.Ci]; % mol percent
@@ -800,6 +813,8 @@ for i = 1: length(filedataExp.Key)
     h1 = scatter(100*expProcData.(filedataExp.Key(i)).P1500.BT.Ci_ref, ...
         expProcData.(filedataExp.Key(i)).P1500.BT.Ci,20,expProcData.(filedataExp.Key(i)).P1500.BT.T_MFM,'filled');
 hold on
+    % scatter(100*expProcData.(filedataExp.Key(i)).P1500.BT.Ci_ref, ...
+    %     expProcData.(filedataExp.Key(i)).P1500.BT.rho_norm*100,20,expProcData.(filedataExp.Key(i)).P1500.BT.T_MFM,'filled');
 end
 h2 = plot(0:1:100,Cval_lin_params.feval(0:1:100),"Color",'k'); % fitting responds to high pressure only
 xlabel('C_{H_2}_{ ref} [mol %]','FontSize',16);
