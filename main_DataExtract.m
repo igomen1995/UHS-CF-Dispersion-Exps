@@ -772,8 +772,8 @@ for i = 1:length(filedataExp.Key)
     expProcData.(filedataExp.Key(i)).BT.rho_norm = 1 - ((expProcData.(filedataExp.Key(i)).BT.rho_corr - expProcData.(filedataExp.Key(i)).exp_params.rho1_SI)/ ...
         (expProcData.(filedataExp.Key(i)).exp_params.rho2_SI - expProcData.(filedataExp.Key(i)).exp_params.rho1_SI));
 
-    expProcData.(filedataExp.Key(i)).BT.drho_norm = (expProcData.(filedataExp.Key(i)).BT.rho_corr - expProcData.(filedataExp.Key(i)).BT.rho_corrMin)/ ...
-        (expProcData.(filedataExp.Key(i)).exp_params.rho2_SI - expProcData.(filedataExp.Key(i)).exp_params.rho2_SI);
+    expProcData.(filedataExp.Key(i)).BT.drho_norm = abs((expProcData.(filedataExp.Key(i)).BT.rho_corr - expProcData.(filedataExp.Key(i)).BT.rho_corrMin)/ ...
+        (expProcData.(filedataExp.Key(i)).exp_params.rho2_SI - expProcData.(filedataExp.Key(i)).exp_params.rho1_SI));
 
 end
 
@@ -917,9 +917,13 @@ for i = 1:length(filedataExp.Key)
         C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
         C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
         C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
+        rho_norm = expProcData.(filedataExp.Key(i)).BT.rho_norm*100;
+        drho_norm = expProcData.(filedataExp.Key(i)).BT.drho_norm*100;
         errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', 'Color', [255 193 183]/255,'HandleVisibility','off')
         hold on 
         h3 = scatter(t,C1,5,'filled','MarkerFaceColor','r','DisplayName','C_{MFM} \pm \DeltaC_{MFM}');
+        % errorbar(t, rho_norm, drho_norm/2, drho_norm/2, 'LineStyle', 'none', 'Color', [255 193 183]/255,'HandleVisibility','off')
+        % scatter(t,rho_norm,5,'filled','MarkerFaceColor','k','DisplayName','\rho* \pm \Delta\rho*');
     end
     if ismissing(PGD2_data_name) == 0
         h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,7,'filled','MarkerFaceColor',[0.9290 0.6940 0.1250],'DisplayName','C_{PGD2}');
