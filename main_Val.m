@@ -304,41 +304,55 @@
 
 addpath('functions/');
 
-%Cal Experimental data
-filenameExp = 'input/input_val_H2CO2_260303.xlsx';
+% Introduce name of input and desired output folder name
+inputFileConfigName = 'inputValConfig.xlsx';
+inputFileConfig = readtable(inputFileConfigName);
 
-% PR parameters
-% INTRODUCE THE INPUT HERE
-% file containing pure components NIST data: Tc, Pc and acentric factor w
-filenamePure = 'input/input_PR_pure.xlsx';
-% file containing mixture compoents A12 B12 factor to estimate BIP
-filenameBIP = 'input/input_PR_BIP.xlsx';
+filenameExp = inputFileConfig.inputFileName{:};
+eosMethod = inputFileConfig.eosMethod{:};
+diffMethod = inputFileConfig.diffMethod{:};
 
 % cal curve results input import
-pathImportCal = 'results/cal_250725_PR/';
+pathImportCal = inputFileConfig.importCalPath{:};
+pathExportAll = inputFileConfig.exportPath{:}; % Path for OUTPUT
+mkdir(pathExportAll); % Create directory for output
 
-mkdir('results/val_PR_H2CO2_260303'); % Create directory for output
-pathExportAll = 'results/val_PR_H2CO2_260303/'; % Path for OUTPUT
+% EoS model
+eosConfig = readtable('inputEOSConfig.xlsx');
+idxEOS = strcmp(eosConfig.Model,eosMethod);
+if ~any(idxEOS)
+    error('EOS model %s not found in inputEOSConfig.xlsx', eosMethod);
+end
+% EOS parameters
+% file containing pure components NIST data: Tc, Pc and acentric factor w in case of PR
+filenamePure = eosConfig.inputPureParams{idxEOS};
+% file containing mixture compoents A12 B12 factor to estimate BIP im case of PR
+filenameBIP = eosConfig.inputMixParams{idxEOS};
 
-%% Initialize Python for CProP or REFPROP
+% Diff model
+diffConfig = readtable('inputDiffConfig.xlsx');
+idxDiff = strcmp(diffConfig.Model,diffMethod);
+if ~any(idxDiff)
+    error('Diffusion model %s not found in inputDiffConfig.xlsx', diffMethod);
+end
+filenameDiff = diffConfig.inputDiffModel{idxDiff};
 
-% % Initialize CProp
-% initCoolProp()
+switch eosMethod
+
+    case "PR"
+        % import pure components NIST data: Tc, Pc and acentric factor w
+        filedataPure = import_inputPR_params_pure(filenamePure);
+        % import mixture components A12 and B12 factor to estimate BIP (kij)
+        filedataBIP = import_inputPR_params_BIP(filenameBIP);
+        
+end
 
 % Initialize REFPROP
 RP = initREFPROP();
 
-
 %% Import data
 
-addpath('functions/');
-
 filedataExp = import_inputCal(filenameExp); % import input to a local variable
-
-% import pure components NIST data: Tc, Pc and acentric factor w
-filedataPure = import_inputPR_params_pure(filenamePure);
-% import mixture components A12 and B12 factor to estimate BIP (kij)
-filedataBIP = import_inputPR_params_BIP(filenameBIP);
 
 for i = 1:length(filedataExp.Key)
 
@@ -624,33 +638,36 @@ for i = 1:length(filedataExp.Key)
             length(expProcData.(filedataExp.Key(i)).(P_unique_field(j)).MFMData.dens_MFM2),1), ...
             'VariableNames',{'TimeStamp', 'rho_MFM','T_MFM','q_MFM','Ci_ref'});
         expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT = BTaux;
-        % fitting parameters for rho corrected
-        % linear
-        auxLinFit = fittingRhoResultsAll(fittingRhoResultsAll.Q == "QAll",:);
-        rho_MFM_0 = auxLinFit.p1;
-        % % non linear
-        % auxnLinFit = nlfittingRhoResultsAll(nlfittingRhoResultsAll.Q == "QAll",:);
-        % rho_MFM_0 = auxnLinFit.rho_MFM_0;
         rho_MFM = expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_MFM;
-        % linear
-        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],rho_MFM);
-        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],rho_MFM-auxLinFit.RMSE);
-        expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],rho_MFM+auxLinFit.RMSE);
-        % % non linear
-        % % low densities
-        % expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM);
-        % expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM-auxnLinFit.drho_corr_low);
-        % expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM+auxnLinFit.drho_corr_low);
-        % % high densities
-        % expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr(rho_MFM>rho_MFM_0) = ...
-        %     rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
-        %     rho_MFM(rho_MFM>rho_MFM_0));
-        % expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin(rho_MFM>rho_MFM_0) = ...
-        %     rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
-        %     rho_MFM(rho_MFM>rho_MFM_0)-auxnLinFit.drho_corr_high);
-        % expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax(rho_MFM>rho_MFM_0) = ...
-        %     rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
-        %     rho_MFM(rho_MFM>rho_MFM_0)+auxnLinFit.drho_corr_high);
+        % fitting parameters for rho corrected
+        switch eosMethod
+            case "PR"
+                % non linear
+                auxnLinFit = nlfittingRhoResultsAll(nlfittingRhoResultsAll.Q == "QAll",:);
+                rho_MFM_0 = auxnLinFit.rho_MFM_0;
+                % low densities
+                expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM);
+                expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM-auxnLinFit.drho_corr_low);
+                expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax = rho_corr_lin([auxnLinFit.p1,auxnLinFit.p2],rho_MFM+auxnLinFit.drho_corr_low);
+                % high densities
+                expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr(rho_MFM>rho_MFM_0) = ...
+                    rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
+                    rho_MFM(rho_MFM>rho_MFM_0));
+                expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin(rho_MFM>rho_MFM_0) = ...
+                    rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
+                    rho_MFM(rho_MFM>rho_MFM_0)-auxnLinFit.drho_corr_high);
+                expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax(rho_MFM>rho_MFM_0) = ...
+                    rho_corr_nlin([auxnLinFit.p1,auxnLinFit.p2,auxnLinFit.p3,auxnLinFit.p4], ...
+                    rho_MFM(rho_MFM>rho_MFM_0)+auxnLinFit.drho_corr_high);
+
+            case "REFPROP"
+                % linear
+                auxLinFit = fittingRhoResultsAll(fittingRhoResultsAll.Q == "QAll",:);
+                rho_MFM_0 = auxLinFit.p1;
+                expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corr = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],rho_MFM);
+                expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMin = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],rho_MFM-auxLinFit.RMSE);
+                expProcData.(filedataExp.Key(i)).(P_unique_field(j)).BT.rho_corrMax = rho_corr_lin([auxLinFit.p1,auxLinFit.p2],rho_MFM+auxLinFit.RMSE);
+        end
     end
 end
 
@@ -681,28 +698,33 @@ for i = 1:length(filedataExp.Key)
         PTXrho_REF = table();
         for m = 1:length(T_REF_aux)
 
-            % % Using Peng Robinson EoS
-            % [PR_input_T_REF_aux,PR_results_T_REF_aux] = densZ_PR(fluidPair,x1,P_REF_MPa,T_REF_aux(m),filedataPure,filedataBIP);
-            % % Compressibility factor from Peng Robinson at T_MFM and T_mean
-            % Z_REF = PR_results_T_REF_aux.Z;
-            % % density from Peng Robinson at T_MFM and T_mean
-            % rho_REF = PR_results_T_REF_aux.rho;
+            switch eosMethod
+                
+                case "PR"
+                    % Using Peng Robinson EoS
+                    [PR_input_T_REF_aux,PR_results_T_REF_aux] = densZ_PR(fluidPair,x1,P_REF_MPa,T_REF_aux(m),filedataPure,filedataBIP);
+                    % Compressibility factor from Peng Robinson at T_MFM and T_mean
+                    Z_REF = PR_results_T_REF_aux.Z;
+                    % density from Peng Robinson at T_MFM and T_mean
+                    rho_REF = PR_results_T_REF_aux.rho;
 
-            % Using REFPROP
-            rho_REF = zeros(length(x1),1);
-            Z_REF   = zeros(length(x1),1);
-            for xi = 1:length(x1)        
-                z = [x1(xi) 1-x1(xi)];
-                Mix = getMixtureProps_REFPROP( ...
-                    RP,...
-                    {char(filedataExp.Fluid1(i)), ...
-                     char(filedataExp.Fluid2(i))},...
-                    z,...
-                    T_REF_aux(m)+273.15,...
-                    P_REF_MPa*1000);
-                rho_REF(xi) = Mix.rho;
-                Z_REF(xi) = Mix.Z;
-            end 
+                case "REFPROP"
+                    % Using REFPROP
+                    rho_REF = zeros(length(x1),1);
+                    Z_REF   = zeros(length(x1),1);
+                    for xi = 1:length(x1)        
+                        z = [x1(xi) 1-x1(xi)];
+                        Mix = getMixtureProps_REFPROP( ...
+                            RP,...
+                            {char(filedataExp.Fluid1(i)), ...
+                             char(filedataExp.Fluid2(i))},...
+                            z,...
+                            T_REF_aux(m)+273.15,...
+                            P_REF_MPa*1000);
+                        rho_REF(xi) = Mix.rho;
+                        Z_REF(xi) = Mix.Z;
+                    end 
+            end
 
             % PTXrho_REF_ref table aux
             PTXrho_REF_aux = table(repmat(join(fluidPair),length(x1),1), ...
@@ -835,5 +857,5 @@ ax = gca; % Get current axes
 ax.FontSize = 14;
 grid on
 legend([h1,h2],{'C_{H_2}_{ MFM}','C_{H_2}_{ MFM_{ fit}} \pm \DeltaC_{H_2}_{ MFM_{ fit}}'},'Location','southeast', 'FontSize',14)
-% title("Validation curve - H2CO2 (~32 °C, 10.4 MPa)")
+title("Validation curve using " + eosMethod + " calibration") % check that calibration config eos and validation config eos are the same
 saveas(gcf,pathExportAll + "Val-P1500",'png')
