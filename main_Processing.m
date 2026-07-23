@@ -329,6 +329,9 @@ inputFileConfigName = 'inputExpConfig.xlsx';
 inputFileConfig = readtable(inputFileConfigName);
 
 filenameExp = inputFileConfig.inputFileName{:};
+eosMethod = inputFileConfig.eosMethod{:};
+diffMethod = inputFileConfig.diffMethod{:};
+fitData = inputFileConfig.fitData{:};
 
 pathImportAll = inputFileConfig.exportPath{:}; % Path for INPUT
 pathExportAll = pathImportAll;
@@ -363,11 +366,15 @@ for i = 1:length(filedataExp.Key)
 
         % data
         t_vals = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed;
-        % C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci/100;
-        % dC_vals = expProcData.(filedataExp.Key(i)).BT.dC/100;
-        C1_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm;
-        dC_vals = expProcData.(filedataExp.Key(i)).BT.drho_norm;
-
+        
+        switch fitData
+            case "woEOS"
+                C1_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm;
+                dC_vals = expProcData.(filedataExp.Key(i)).BT.drho_norm;
+            otherwise
+                C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci/100;
+                dC_vals = expProcData.(filedataExp.Key(i)).BT.dC/100;    
+        end
         % experiment params (fixed for fitting)
         Ci = filedataExp.C1init(i)/100;
         Cj = filedataExp.C1j(i)/100;
@@ -413,10 +420,15 @@ for i = 1:length(filedataExp.Key)
 
         % data
         t_vals = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed;
-        % C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci/100;
-        % dC_vals = expProcData.(filedataExp.Key(i)).BT.dC/100;
-        C1_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm;
-        dC_vals = expProcData.(filedataExp.Key(i)).BT.drho_norm;
+
+        switch fitData            
+            case "woEOS"
+                C1_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm;
+                dC_vals = expProcData.(filedataExp.Key(i)).BT.drho_norm;
+            otherwise
+                C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci/100;
+                dC_vals = expProcData.(filedataExp.Key(i)).BT.dC/100;       
+        end
 
         Cmin = 0.16;
         Cmax = 0.84;
@@ -598,24 +610,27 @@ colors = parula(length(method_names));
 for i = 1:length(filedataExp.Key)
     figure
     t = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
-    C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci;
-    rhon_norm_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm*100;
-    scatter(t, C1_vals, ...
-        10,'filled', ...
-        'MarkerFaceColor','red','DisplayName','Experimental Data')
+    switch fitData
+        case "woEOS"
+            rhon_norm_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm*100;
+            scatter(t, rhon_norm_vals, ...
+                10,'filled', ...
+                'MarkerFaceColor','red','DisplayName','\rho* Experimental Data')
+        otherwise
+            C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci;
+            scatter(t, C1_vals, ...
+                10,'filled', ...
+                'MarkerFaceColor','red','DisplayName','Experimental Data')
+    end
     hold on
-    % Comment below to not show rho_norm
-    scatter(t, rhon_norm_vals, ...
-        10,'filled', ...
-        'MarkerFaceColor','yellow','DisplayName','\rho* Experimental Data')
-    for j = 1:length(method_names)
+    for j = 1:length(method_names) % model already according to fitData type
         method_results_table = method_results.(method_names{j});
         plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed, ...
             method_results_table.C_fit{i}*100,'LineWidth',1.5, ...
             'Color', colors(j,:), ...
             'DisplayName',method_names{j})
     end
-    % KL best
+    % KL best % model already according to fitData type
     plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed, ...
     expProcData.(filedataExp.Key(i)).BT.C_fit_best,'LineWidth',1.5, ...
     'Color', 'k', 'DisplayName',"BT model best fitting - " +  expProcData.(filedataExp.Key(i)).results.model)
@@ -623,28 +638,31 @@ for i = 1:length(filedataExp.Key)
     xtickformat('hh:mm:ss')
     ylabel('Molar concentration C_1 [mol %]');
     ylim([-0.1,100.1]);
-    title(filedataExp.Key(i) + " fitting", 'Interpreter', 'none')
+    title(filedataExp.Key(i) + " fitting - " + fitData, 'Interpreter', 'none')
     grid on;
     legend('Location','southeast','Interpreter','none');
-    saveas(gcf,pathExportAll + filedataExp.Key(i) + "_fittingAll",'png')
-    savefig(gcf,pathExportAll + filedataExp.Key(i) + "_fittingAll")
+    saveas(gcf,pathExportAll + filedataExp.Key(i) + "_fittingAll_" + fitData,'png')
+    savefig(gcf,pathExportAll + filedataExp.Key(i) + "_fittingAll_" + fitData)
 end
 
 % only best
 for i = 1:length(filedataExp.Key)
     figure
     t = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
-    C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci;
-    rhon_norm_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm*100;
-    scatter(t, C1_vals, ...
-        10,'filled', ...
-        'MarkerFaceColor','red','DisplayName','Experimental Data')
+    switch fitData
+        case "woEOS"
+            rhon_norm_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm*100;
+            scatter(t, rhon_norm_vals, ...
+                10,'filled', ...
+                'MarkerFaceColor','red','DisplayName','\rho* Experimental Data')
+        otherwise
+            C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci;
+            scatter(t, C1_vals, ...
+                10,'filled', ...
+                'MarkerFaceColor','red','DisplayName','Experimental Data')
+    end
     hold on
-    % Comment below to not show rho_norm
-    scatter(t, rhon_norm_vals, ...
-        10,'filled', ...
-        'MarkerFaceColor','yellow','DisplayName','\rho* Experimental Data')
-    % KL best
+    % KL best  % model already according to fitData type
     plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed, ...
     expProcData.(filedataExp.Key(i)).BT.C_fit_best,'LineWidth',1.5, ...
     'Color', 'k', 'DisplayName',"BT model best fitting - " +  expProcData.(filedataExp.Key(i)).results.model)
@@ -652,11 +670,11 @@ for i = 1:length(filedataExp.Key)
     xtickformat('hh:mm:ss')
     ylabel('Molar concentration C_1 [mol %]');
     ylim([-0.1,100.1]);
-    title(filedataExp.Key(i) + " fitting", 'Interpreter', 'none')
+    title(filedataExp.Key(i) + " fitting - " + fitData, 'Interpreter', 'none')
     grid on;
     legend('Location','southeast','Interpreter','none');
-    saveas(gcf,pathExportAll + filedataExp.Key(i) + "_fitting",'png')
-    savefig(gcf,pathExportAll + filedataExp.Key(i) + "_fitting")
+    saveas(gcf,pathExportAll + filedataExp.Key(i) + "_fitting_" + fitData,'png')
+    savefig(gcf,pathExportAll + filedataExp.Key(i) + "_fitting_" + fitData)
 end
 
 
@@ -665,16 +683,19 @@ end
 % Dimensionless only best
 for i = 1:length(filedataExp.Key)
     figure
-    tD = expProcData.(filedataExp.Key(i)).BT.tD;
-    CDi = expProcData.(filedataExp.Key(i)).BT.CDi;
-    rhon_norm_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm;
-    scatter(tD, CDi,10,'filled', ...
-        'MarkerFaceColor','red','DisplayName','Experimental Data')
+    tD = expProcData.(filedataExp.Key(i)).BT.tD;    
+    switch fitData
+        case "woEOS"
+            rhon_norm_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm;
+            scatter(tD, rhon_norm_vals,10,'filled', ...
+                'MarkerFaceColor','red','DisplayName','\rho* Experimental Data')
+        otherwise
+            CDi = expProcData.(filedataExp.Key(i)).BT.CDi;
+            scatter(tD, CDi,10,'filled', ...
+                'MarkerFaceColor','red','DisplayName','Experimental Data')
+    end
     hold on
-    % Comment below to not show rho_norm
-    scatter(tD, rhon_norm_vals,10,'filled', ...
-        'MarkerFaceColor','yellow','DisplayName','\rho* Experimental Data')
-    % KL best
+    % KL best % model already according to fitData type
     plot(expProcData.(filedataExp.Key(i)).BT.tD, ...
     expProcData.(filedataExp.Key(i)).BT.C_fit_best/100,'LineWidth',1.5, ...
     'Color', 'k', 'DisplayName',"BT model best fitting - " +  expProcData.(filedataExp.Key(i)).results.model)
@@ -682,11 +703,11 @@ for i = 1:length(filedataExp.Key)
     % xlim([0,2]);
     ylabel('C_{D}[-]');
     ylim([-0.001,1.001]);
-    title(filedataExp.Key(i) + " dimensionless fitting", 'Interpreter', 'none')
+    title(filedataExp.Key(i) + " dimensionless fitting - " + fitData, 'Interpreter', 'none')
     grid on;
     legend('Location','southeast');
-    saveas(gcf,pathExportAll + filedataExp.Key(i) + "_dimless_fitting",'png')
-    savefig(gcf,pathExportAll + filedataExp.Key(i) + "_dimless_fitting")
+    saveas(gcf,pathExportAll + filedataExp.Key(i) + "_dimless_fitting_" + fitData,'png')
+    savefig(gcf,pathExportAll + filedataExp.Key(i) + "_dimless_fitting_" + fitData)
 end
 
 
@@ -696,15 +717,18 @@ end
 for i = 1:length(filedataExp.Key)
     figure
     tDtotal = expProcData.(filedataExp.Key(i)).BT.tDtotal;
-    CDi = expProcData.(filedataExp.Key(i)).BT.CDi;
-    rhon_norm_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm;
-    scatter(tDtotal, CDi,10,'filled', ...
-        'MarkerFaceColor','red','DisplayName','Experimental Data')
+    switch fitData
+        case "woEOS"
+            rhon_norm_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm;
+            scatter(tDtotal, rhon_norm_vals,10,'filled', ...
+                'MarkerFaceColor','red','DisplayName','\rho* Experimental Data')
+        otherwise
+            CDi = expProcData.(filedataExp.Key(i)).BT.CDi;
+            scatter(tDtotal, CDi,10,'filled', ...
+                'MarkerFaceColor','red','DisplayName','Experimental Data')
+    end
     hold on
-    % Comment below to not show rho_norm
-    scatter(tDtotal, rhon_norm_vals,10,'filled', ...
-        'MarkerFaceColor','yellow','DisplayName','\rho* Experimental Data')
-    % KL best
+    % KL best % model already according to fitData type
     plot(expProcData.(filedataExp.Key(i)).BT.tDtotal, ...
     expProcData.(filedataExp.Key(i)).BT.C_fit_best/100,'LineWidth',1.5, ...
         'Color', 'k', 'DisplayName',"BT model best fitting - " +  expProcData.(filedataExp.Key(i)).results.model)
@@ -712,11 +736,11 @@ for i = 1:length(filedataExp.Key)
     % xlim([0,2]);
     ylabel('C_{D}[-]');
     ylim([-0.001,1.001]);
-    title(filedataExp.Key(i) + " dimensionless fitting", 'Interpreter', 'none')
+    title(filedataExp.Key(i) + " dimensionless fitting - " + fitData, 'Interpreter', 'none')
     grid on;
     legend(["Experimental data", "BT model fitting"],'Location','southeast');
-    saveas(gcf,pathExportAll + filedataExp.Key(i) + "_dimlessTotal_fitting",'png')
-    savefig(gcf,pathExportAll + filedataExp.Key(i) + "_dimlessTotal_fitting")
+    saveas(gcf,pathExportAll + filedataExp.Key(i) + "_dimlessTotal_fitting_" + fitData,'png')
+    savefig(gcf,pathExportAll + filedataExp.Key(i) + "_dimlessTotal_fitting_" + fitData)
 end
 
 %% Fitting and experimental data all CF plot
@@ -756,13 +780,17 @@ for j = 1:length(Fluid1_unique)
         
                         t = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
                         t_sec = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed;
-                        % C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
-                        % C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
-                        % C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
-                        %comment below to stop using rho norm
-                        C1 = expProcData.(filedataExp.Key(i)).BT.rho_norm*100;
-                        C1min = 100*(expProcData.(filedataExp.Key(i)).BT.rho_norm - expProcData.(filedataExp.Key(i)).BT.drho_norm);
-                        C1max = 100*(expProcData.(filedataExp.Key(i)).BT.rho_norm + expProcData.(filedataExp.Key(i)).BT.drho_norm);
+                        
+                        switch fitData
+                            case "woEOS"
+                                C1 = expProcData.(filedataExp.Key(i)).BT.rho_norm*100;
+                                C1min = 100*(expProcData.(filedataExp.Key(i)).BT.rho_norm - expProcData.(filedataExp.Key(i)).BT.drho_norm);
+                                C1max = 100*(expProcData.(filedataExp.Key(i)).BT.rho_norm + expProcData.(filedataExp.Key(i)).BT.drho_norm);
+                            otherwise
+                                C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
+                                C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
+                                C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
+                        end
                         % fitted vals C or rho norm
                         C_fit = expProcData.(filedataExp.Key(i)).BT.C_fit_best;
                         % plot vals with function dt fixed weighted
@@ -790,7 +818,7 @@ for j = 1:length(Fluid1_unique)
                         % h = [h; h1];
                         h = [h;h_titles(count);h1(count);h2(count)];
                         
-                        save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(i)+"_T"+filedataExp.T(i)+"_P"+filedataExp.P(i);
+                        save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(i)+"_T"+filedataExp.T(i)+"_P"+filedataExp.P(i)+"_"+fitData;
                         % add vertical or horizontal to tile (fix input excel (add orientation variable) for that)
                     end
                 end
@@ -883,13 +911,16 @@ for j = 1:length(Fluid1_unique)
                         count = count + 1;
 
                         tD = expProcData.(filedataExp.Key(i)).BT.tD;
-                        % CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
-                        % CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
-                        % CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
-                        %comment below to stop using rho norm
-                        CD1 = expProcData.(filedataExp.Key(i)).BT.rho_norm;
-                        CD1min = expProcData.(filedataExp.Key(i)).BT.rho_norm - expProcData.(filedataExp.Key(i)).BT.drho_norm;
-                        CD1max = expProcData.(filedataExp.Key(i)).BT.rho_norm + expProcData.(filedataExp.Key(i)).BT.drho_norm;
+                        switch fitData
+                            case "woEOS"
+                                CD1 = expProcData.(filedataExp.Key(i)).BT.rho_norm;
+                                CD1min = expProcData.(filedataExp.Key(i)).BT.rho_norm - expProcData.(filedataExp.Key(i)).BT.drho_norm;
+                                CD1max = expProcData.(filedataExp.Key(i)).BT.rho_norm + expProcData.(filedataExp.Key(i)).BT.drho_norm;
+                            otherwise
+                                CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
+                                CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
+                                CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
+                        end
                         % fitted vals C or rho norm
                         CD_fit = expProcData.(filedataExp.Key(i)).BT.C_fit_best/100;
                         % plot vals with function dt fixed weighted
@@ -912,7 +943,7 @@ for j = 1:length(Fluid1_unique)
                         % h = [h; h1];
                         h = [h;h_titles(count);h1(count);h2(count)];
                         
-                        save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(i)+"_T"+filedataExp.T(i)+"_P"+filedataExp.P(i);
+                        save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(i)+"_T"+filedataExp.T(i)+"_P"+filedataExp.P(i)+"_"+fitData;
                         % add vertical or horizontal to tile (fix input excel (add orientation variable) for that)
                     end
                 end
@@ -1004,13 +1035,17 @@ for j = 1:length(Fluid1_unique)
                         count = count + 1;
 
                         tDtotal = expProcData.(filedataExp.Key(i)).BT.tDtotal;
-                        % CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
-                        % CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
-                        % CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
-                        %comment below to stop using rho norm
-                        CD1 = expProcData.(filedataExp.Key(i)).BT.rho_norm;
-                        CD1min = expProcData.(filedataExp.Key(i)).BT.rho_norm - expProcData.(filedataExp.Key(i)).BT.drho_norm;
-                        CD1max = expProcData.(filedataExp.Key(i)).BT.rho_norm + expProcData.(filedataExp.Key(i)).BT.drho_norm;
+                        switch fitData
+                            case "woEOS"
+                                CD1 = expProcData.(filedataExp.Key(i)).BT.rho_norm;
+                                CD1min = expProcData.(filedataExp.Key(i)).BT.rho_norm - expProcData.(filedataExp.Key(i)).BT.drho_norm;
+                                CD1max = expProcData.(filedataExp.Key(i)).BT.rho_norm + expProcData.(filedataExp.Key(i)).BT.drho_norm;
+                            otherwise
+                                CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
+                                CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
+                                CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
+                        end
+
                         % fitted vals C or rho norm
                         CD_fit = expProcData.(filedataExp.Key(i)).BT.C_fit_best/100;
                         % plot vals with function dt fixed weighted
@@ -1033,7 +1068,7 @@ for j = 1:length(Fluid1_unique)
                         % h = [h; h1];
                         h = [h;h_titles(count);h1(count);h2(count)];
                         
-                        save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(i)+"_T"+filedataExp.T(i)+"_P"+filedataExp.P(i);
+                        save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(i)+"_T"+filedataExp.T(i)+"_P"+filedataExp.P(i)+"_"+fitData;
                         % add vertical or horizontal to tile (fix input excel (add orientation variable) for that)
                     end
                 end
@@ -1258,7 +1293,7 @@ disp(alpha_table)
 
 %% Save results
 
-alpha_table_name = pathExportAll + "alpha_results";
+alpha_table_name = pathExportAll + "alpha_results_" + fitData;
 
 % delete previous
 if exist(alpha_table_name + ".xlsx","file")
@@ -1276,7 +1311,7 @@ save(alpha_table_name + ".mat",'alpha_table')
 expProcFullData = expProcData;
 save(pathExportAll + "expProcFullData.mat",'expProcFullData')
 
-fitting_results_name = pathExportAll + "fitting_results.xlsx";
+fitting_results_name = pathExportAll + "fitting_results_" + fitData +".xlsx";
 
 % delete previous file
 if exist(fitting_results_name,"file")
@@ -1418,7 +1453,7 @@ for i = 1:length(Fluid1_unique)
             
                 grid on
             
-                save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(j)+"_T"+filedataExp.T(k)+"_P"+filedataExp.P(m);
+                save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(j)+"_T"+filedataExp.T(k)+"_P"+filedataExp.P(m)+"_"+fitData;
             
                 title(save_name, 'Interpreter','none')
             
@@ -1541,7 +1576,7 @@ for i = 1:length(Fluid1_unique)
                 set(gca, 'XScale','log','YScale','log')
                 grid on
             
-                save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(j)+"_T"+filedataExp.T(k)+"_P"+filedataExp.P(m);
+                save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(j)+"_T"+filedataExp.T(k)+"_P"+filedataExp.P(m)+"_"+fitData;
             
                 title(save_name, 'Interpreter','none')
             
