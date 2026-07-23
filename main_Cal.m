@@ -317,7 +317,7 @@ switch eosMethod
         filedataPure = import_inputPR_params_pure(filenamePure);
         % import mixture components A12 and B12 factor to estimate BIP (kij)
         filedataBIP = import_inputPR_params_BIP(filenameBIP);
-        
+
 end
 
 %% Initialize Python for CProP or REFPROP
@@ -1203,7 +1203,7 @@ cTicks = cTicks(mod(cTicks,1) == 0);
 c.Ticks = cTicks;
 grid on
 legend({'\rho_{MFM}','\rho_{MFM_{fit}} \pm \Delta\rho_{MFM_{fit}}'},'Location','southeast')
-title("Calibration curve - HP cal fluids P and T - linear")
+title("Calibration curve - HP cal fluids P and T - linear - using " + eosMethod + " EOS")
 saveas(gcf,pathExportAll + "Cal-all-HP400+-l",'png')
 
 %% Density cal plot all densitites (all fluids, temperatures and pressures)
@@ -1243,7 +1243,7 @@ cTicks = cTicks(mod(cTicks,1) == 0);
 c.Ticks = cTicks;
 grid on
 legend({'\rho_{MFM}','\rho_{MFM_{fit}} \pm \Delta\rho_{MFM_{fit}}'},'Location','southeast')
-title("Calibration curve - HP cal fluids P and T - non linear")
+title("Calibration curve - HP cal fluids P and T - non linear - using " + eosMethod + " EOS")
 % cal curve formula annotation
 coeffs = nlfittingRhoResultsAll(nlfittingRhoResultsAll.Q == 'QAll',:);
 % annotText = sprintf(['$\\rho_{MFM_{fit}} = \\left\\{ \\begin{array}{ll}',...
@@ -1273,6 +1273,7 @@ rho_MFM_0 = predict(cal_curve_params_Qall,rho_ref_0);
 step = 1;
 xNorm = axPos(1) + (rho_ref_0-ax1.XLim(1))/diff(ax1.XLim)*axPos(3);
 yNorm = axPos(2) + (rho_MFM_0-ax1.YLim(1))/diff(ax1.YLim)*axPos(4);
+title("Calibration curve - HP cal fluids P and T - linear - using " + eosMethod + " EOS")
 % plots
 %error bar low dens
 errorbar(0:step:rho_ref_0,feval(cal_curve_params_Qall,0:step:rho_ref_0),drho_MFM,'LineStyle', 'none', ...
@@ -1443,6 +1444,7 @@ rho_MFM_0 = predict(nl_cal_curve_params_Qall,rho_ref_0);
 step = 1;
 xNorm = axPos(1) + (rho_ref_0-ax1.XLim(1))/diff(ax1.XLim)*axPos(3);
 yNorm = axPos(2) + (rho_MFM_0-ax1.YLim(1))/diff(ax1.YLim)*axPos(4);
+title("Calibration curve - HP cal fluids P and T - non linear - using " + eosMethod + " EOS")
 % plots
 %error bar low dens
 errorbar(0:step:rho_ref_0,feval(nl_cal_curve_params_Qall,0:step:rho_ref_0),drho_MFM,'LineStyle', 'none', ...
