@@ -363,8 +363,10 @@ for i = 1:length(filedataExp.Key)
 
         % data
         t_vals = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed;
-        C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci/100;
-        dC_vals = expProcData.(filedataExp.Key(i)).BT.dC/100;
+        % C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci/100;
+        % dC_vals = expProcData.(filedataExp.Key(i)).BT.dC/100;
+        C1_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm;
+        dC_vals = expProcData.(filedataExp.Key(i)).BT.drho_norm;
 
         % experiment params (fixed for fitting)
         Ci = filedataExp.C1init(i)/100;
@@ -411,8 +413,10 @@ for i = 1:length(filedataExp.Key)
 
         % data
         t_vals = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed;
-        C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci/100;
-        dC_vals = expProcData.(filedataExp.Key(i)).BT.dC/100;
+        % C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci/100;
+        % dC_vals = expProcData.(filedataExp.Key(i)).BT.dC/100;
+        C1_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm;
+        dC_vals = expProcData.(filedataExp.Key(i)).BT.drho_norm;
 
         Cmin = 0.16;
         Cmax = 0.84;
@@ -593,10 +597,17 @@ colors = parula(length(method_names));
 
 for i = 1:length(filedataExp.Key)
     figure
-    scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed, ...
-        expProcData.(filedataExp.Key(i)).BT.Ci,10,'filled', ...
+    t = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
+    C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci;
+    rhon_norm_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm*100;
+    scatter(t, C1_vals, ...
+        10,'filled', ...
         'MarkerFaceColor','red','DisplayName','Experimental Data')
     hold on
+    % Comment below to not show rho_norm
+    scatter(t, rhon_norm_vals, ...
+        10,'filled', ...
+        'MarkerFaceColor','yellow','DisplayName','\rho* Experimental Data')
     for j = 1:length(method_names)
         method_results_table = method_results.(method_names{j});
         plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed, ...
@@ -622,10 +633,17 @@ end
 % only best
 for i = 1:length(filedataExp.Key)
     figure
-    scatter(expProcData.(filedataExp.Key(i)).BT.TimeElapsed, ...
-        expProcData.(filedataExp.Key(i)).BT.Ci,10,'filled', ...
+    t = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
+    C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci;
+    rhon_norm_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm*100;
+    scatter(t, C1_vals, ...
+        10,'filled', ...
         'MarkerFaceColor','red','DisplayName','Experimental Data')
     hold on
+    % Comment below to not show rho_norm
+    scatter(t, rhon_norm_vals, ...
+        10,'filled', ...
+        'MarkerFaceColor','yellow','DisplayName','\rho* Experimental Data')
     % KL best
     plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed, ...
     expProcData.(filedataExp.Key(i)).BT.C_fit_best,'LineWidth',1.5, ...
@@ -647,10 +665,15 @@ end
 % Dimensionless only best
 for i = 1:length(filedataExp.Key)
     figure
-    scatter(expProcData.(filedataExp.Key(i)).BT.tD, ...
-        expProcData.(filedataExp.Key(i)).BT.CDi,10,'filled', ...
+    tD = expProcData.(filedataExp.Key(i)).BT.tD;
+    CDi = expProcData.(filedataExp.Key(i)).BT.CDi;
+    rhon_norm_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm;
+    scatter(tD, CDi,10,'filled', ...
         'MarkerFaceColor','red','DisplayName','Experimental Data')
     hold on
+    % Comment below to not show rho_norm
+    scatter(tD, rhon_norm_vals,10,'filled', ...
+        'MarkerFaceColor','yellow','DisplayName','\rho* Experimental Data')
     % KL best
     plot(expProcData.(filedataExp.Key(i)).BT.tD, ...
     expProcData.(filedataExp.Key(i)).BT.C_fit_best/100,'LineWidth',1.5, ...
@@ -672,14 +695,19 @@ end
 % Dimensionless only best
 for i = 1:length(filedataExp.Key)
     figure
-    scatter(expProcData.(filedataExp.Key(i)).BT.tDtotal, ...
-        expProcData.(filedataExp.Key(i)).BT.CDi,10,'filled', ...
+    tDtotal = expProcData.(filedataExp.Key(i)).BT.tDtotal;
+    CDi = expProcData.(filedataExp.Key(i)).BT.CDi;
+    rhon_norm_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm;
+    scatter(tDtotal, CDi,10,'filled', ...
         'MarkerFaceColor','red','DisplayName','Experimental Data')
     hold on
+    % Comment below to not show rho_norm
+    scatter(tDtotal, rhon_norm_vals,10,'filled', ...
+        'MarkerFaceColor','yellow','DisplayName','\rho* Experimental Data')
     % KL best
     plot(expProcData.(filedataExp.Key(i)).BT.tDtotal, ...
     expProcData.(filedataExp.Key(i)).BT.C_fit_best/100,'LineWidth',1.5, ...
-    'Color', 'k', 'DisplayName',"BT model best fitting - " +  expProcData.(filedataExp.Key(i)).results.model)
+        'Color', 'k', 'DisplayName',"BT model best fitting - " +  expProcData.(filedataExp.Key(i)).results.model)
     xlabel('Dimensionless Time [-]');
     % xlim([0,2]);
     ylabel('C_{D}[-]');
@@ -728,9 +756,14 @@ for j = 1:length(Fluid1_unique)
         
                         t = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
                         t_sec = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed;
-                        C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
-                        C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
-                        C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
+                        % C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
+                        % C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
+                        % C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
+                        %comment below to stop using rho norm
+                        C1 = expProcData.(filedataExp.Key(i)).BT.rho_norm*100;
+                        C1min = 100*(expProcData.(filedataExp.Key(i)).BT.rho_norm - expProcData.(filedataExp.Key(i)).BT.drho_norm);
+                        C1max = 100*(expProcData.(filedataExp.Key(i)).BT.rho_norm + expProcData.(filedataExp.Key(i)).BT.drho_norm);
+                        % fitted vals C or rho norm
                         C_fit = expProcData.(filedataExp.Key(i)).BT.C_fit_best;
                         % plot vals with function dt fixed weighted
                         cond = (C_fit>=16)&(C_fit<=84);
@@ -738,8 +771,8 @@ for j = 1:length(Fluid1_unique)
                         t_sec_cond.Format = 'hh:mm:ss';
                         C_fit_cond = C_fit(cond);
                         % Uncomment below line to show error bar
-                        % errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', ...
-                        %     'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
+                        errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', ...
+                            'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
                         hold on
                         h1(count) = scatter(t,C1,5,'filled','MarkerFaceColor',colors(count,:), ...
                             'DisplayName',"C_{MFM} \pm \DeltaC_{MFM}");
@@ -850,10 +883,14 @@ for j = 1:length(Fluid1_unique)
                         count = count + 1;
 
                         tD = expProcData.(filedataExp.Key(i)).BT.tD;
-                        CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
-                        CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
-                        CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
-        
+                        % CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
+                        % CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
+                        % CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
+                        %comment below to stop using rho norm
+                        CD1 = expProcData.(filedataExp.Key(i)).BT.rho_norm;
+                        CD1min = expProcData.(filedataExp.Key(i)).BT.rho_norm - expProcData.(filedataExp.Key(i)).BT.drho_norm;
+                        CD1max = expProcData.(filedataExp.Key(i)).BT.rho_norm + expProcData.(filedataExp.Key(i)).BT.drho_norm;
+                        % fitted vals C or rho norm
                         CD_fit = expProcData.(filedataExp.Key(i)).BT.C_fit_best/100;
                         % plot vals with function dt fixed weighted
                         cond = (CD_fit>=0.16)&(CD_fit<=0.84);
@@ -967,10 +1004,14 @@ for j = 1:length(Fluid1_unique)
                         count = count + 1;
 
                         tDtotal = expProcData.(filedataExp.Key(i)).BT.tDtotal;
-                        CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
-                        CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
-                        CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
-        
+                        % CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
+                        % CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
+                        % CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
+                        %comment below to stop using rho norm
+                        CD1 = expProcData.(filedataExp.Key(i)).BT.rho_norm;
+                        CD1min = expProcData.(filedataExp.Key(i)).BT.rho_norm - expProcData.(filedataExp.Key(i)).BT.drho_norm;
+                        CD1max = expProcData.(filedataExp.Key(i)).BT.rho_norm + expProcData.(filedataExp.Key(i)).BT.drho_norm;
+                        % fitted vals C or rho norm
                         CD_fit = expProcData.(filedataExp.Key(i)).BT.C_fit_best/100;
                         % plot vals with function dt fixed weighted
                         cond = (CD_fit>=0.16)&(CD_fit<=0.84);
