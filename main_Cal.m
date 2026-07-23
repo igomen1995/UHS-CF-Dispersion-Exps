@@ -310,6 +310,16 @@ filenamePure = eosConfig.inputPureParams{idxEOS};
 % file containing mixture compoents A12 B12 factor to estimate BIP im case of PR
 filenameBIP = eosConfig.inputMixParams{idxEOS};
 
+switch eosMethod
+
+    case "PR"
+        % import pure components NIST data: Tc, Pc and acentric factor w
+        filedataPure = import_inputPR_params_pure(filenamePure);
+        % import mixture components A12 and B12 factor to estimate BIP (kij)
+        filedataBIP = import_inputPR_params_BIP(filenameBIP);
+        
+end
+
 %% Initialize Python for CProP or REFPROP
 
 % % Initialize CProp
