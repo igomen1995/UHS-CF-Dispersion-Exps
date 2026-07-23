@@ -283,38 +283,32 @@
 %   - Generated calibration parameters are subsequently used in
 %     breakthrough and CT-processing workflows.
 
-%% INPUT
+%% INPUT input
+
+addpath('functions/');
 
 % INTRODUCE HERE INPUT AND OUTPUT PATH
-
 inputFileConfigName = 'inputCalConfig.xlsx';
-
 inputFileConfig = readtable(inputFileConfigName);
 
 %Cal Experimental data
 filenameExp = inputFileConfig.inputFileName{:};
-
-% PR parameters
-% INTRODUCE THE INPUT HERE
-% file containing pure components NIST data: Tc, Pc and acentric factor w
-filenamePure = inputFileConfig.inputPureParams{:};
-% file containing mixture compoents A12 B12 factor to estimate BIP
-filenameBIP = inputFileConfig.inputMixParams{:};
+eosMethod = inputFileConfig.eosMethod{:};
 
 pathExportAll = inputFileConfig.exportPath{:}; % Path for OUTPUT
 mkdir(pathExportAll); % Create directory for output
 
-
-%% Import input
-
-addpath('functions/');
-
-filedataExp = import_inputCal(filenameExp); % import input to a local variable
-
-% import pure components NIST data: Tc, Pc and acentric factor w
-filedataPure = import_inputPR_params_pure(filenamePure);
-% import mixture components A12 and B12 factor to estimate BIP (kij)
-filedataBIP = import_inputPR_params_BIP(filenameBIP);
+% EoS model
+eosConfig = readtable('inputEOSConfig.xlsx');
+idxEOS = strcmp(eosConfig.Model,eosMethod);
+if ~any(idxEOS)
+    error('EOS model %s not found in inputEOSConfig.xlsx', eosMethod);
+end
+% EOS parameters
+% file containing pure components NIST data: Tc, Pc and acentric factor w in case of PR
+filenamePure = eosConfig.inputPureParams{idxEOS};
+% file containing mixture compoents A12 B12 factor to estimate BIP im case of PR
+filenameBIP = eosConfig.inputMixParams{idxEOS};
 
 %% Initialize Python for CProP or REFPROP
 
@@ -322,9 +316,13 @@ filedataBIP = import_inputPR_params_BIP(filenameBIP);
 % initCoolProp()
 
 % Initialize REFPROP
-RP = initREFPROP();
+if eosMethod == "REFPROP"
+    RP = initREFPROP();
+end
 
 %% Import data
+
+filedataExp = import_inputCal(filenameExp); % import input to a local variable
 
 for i = 1:length(filedataExp.Key)
 
@@ -566,37 +564,46 @@ for i = 1:length(filedataExp.Key)
                 rho_std = std(MFM_data_aux.dens_MFM2);
                 freq_MFM_std = std(MFM_data_aux.freq_MFM2);
 
-                % % Reference density from Peng Robinson model  
-                %     % at T mean values
-                % [PR_input_T_mean,PR_results_T_mean] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean,filedataPure,filedataBIP);
-                % [PR_input_T_max,PR_results_T_max] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean+T_std, filedataPure,filedataBIP); % at Tmax
-                % [PR_input_T_min,PR_results_T_min] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean-T_std, filedataPure,filedataBIP); % at Tmin
-                %     % Compressibility factor from Peng Robinson T_mean
-                % Z_REF_T_mean = PR_results_T_mean.Z;
-                % Z_REF_T_max = PR_results_T_max.Z;
-                % Z_REF_T_min = PR_results_T_min.Z;
-                % Z_REF_T_mean_std = abs(Z_REF_T_max-Z_REF_T_min); % error of Z depending on T
-                %     % density from Peng Robinson at T_mean
-                % rho_REF_T_mean = PR_results_T_mean.rho;
-                % rho_REF_T_max = PR_results_T_max.rho;
-                % rho_REF_T_min = PR_results_T_min.rho;
-                % rho_REF_T_mean_std = abs(rho_REF_T_max-rho_REF_T_min); % error of rho depending on T
+                switch eosMethod
 
-                % Reference density from REFPROP 
-                    % at T mean values
-                fluidProp_REF_T_mean = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean+273.15,P_unique_MPa(j)*1000);
-                fluidProp_REF_T_max = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean+T_std+273.15,P_unique_MPa(j)*1000);
-                fluidProp_REF_T_min = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean-T_std+273.15,P_unique_MPa(j)*1000);
-                    % Compressibility factor from Peng Robinson T_mean
-                Z_REF_T_mean = fluidProp_REF_T_mean.Z;
-                Z_REF_T_max = fluidProp_REF_T_max.Z;
-                Z_REF_T_min = fluidProp_REF_T_min.Z;
-                Z_REF_T_mean_std = abs(Z_REF_T_max-Z_REF_T_min); % error of Z depending on T
-                    % density from Peng Robinson at T_mean
-                rho_REF_T_mean = fluidProp_REF_T_mean.rho;
-                rho_REF_T_max = fluidProp_REF_T_max.rho;
-                rho_REF_T_min = fluidProp_REF_T_min.rho;
-                rho_REF_T_mean_std = abs(rho_REF_T_max-rho_REF_T_min); % error of rho depending on T
+                    case "PR"
+                        % Reference density from Peng Robinson model  
+                            % at T mean values
+                        [PR_input_T_mean,PR_results_T_mean] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean,filedataPure,filedataBIP);
+                        [PR_input_T_max,PR_results_T_max] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean+T_std, filedataPure,filedataBIP); % at Tmax
+                        [PR_input_T_min,PR_results_T_min] = densZ_PR(fluid_cal,1,P_unique_MPa(j),T_mean-T_std, filedataPure,filedataBIP); % at Tmin
+                            % Compressibility factor from Peng Robinson T_mean
+                        Z_REF_T_mean = PR_results_T_mean.Z;
+                        Z_REF_T_max = PR_results_T_max.Z;
+                        Z_REF_T_min = PR_results_T_min.Z;
+                        Z_REF_T_mean_std = abs(Z_REF_T_max-Z_REF_T_min); % error of Z depending on T
+                            % density from Peng Robinson at T_mean
+                        rho_REF_T_mean = PR_results_T_mean.rho;
+                        rho_REF_T_max = PR_results_T_max.rho;
+                        rho_REF_T_min = PR_results_T_min.rho;
+                        rho_REF_T_mean_std = abs(rho_REF_T_max-rho_REF_T_min); % error of rho depending on T
+
+                    case "REFPROP"
+                        % Reference density from REFPROP 
+                            % at T mean values
+                        fluidProp_REF_T_mean = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean+273.15,P_unique_MPa(j)*1000);
+                        fluidProp_REF_T_max = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean+T_std+273.15,P_unique_MPa(j)*1000);
+                        fluidProp_REF_T_min = getFluidProps_REFPROP(RP,upper(fluid_cal),T_mean-T_std+273.15,P_unique_MPa(j)*1000);
+                            % Compressibility factor from Peng Robinson T_mean
+                        Z_REF_T_mean = fluidProp_REF_T_mean.Z;
+                        Z_REF_T_max = fluidProp_REF_T_max.Z;
+                        Z_REF_T_min = fluidProp_REF_T_min.Z;
+                        Z_REF_T_mean_std = abs(Z_REF_T_max-Z_REF_T_min); % error of Z depending on T
+                            % density from Peng Robinson at T_mean
+                        rho_REF_T_mean = fluidProp_REF_T_mean.rho;
+                        rho_REF_T_max = fluidProp_REF_T_max.rho;
+                        rho_REF_T_min = fluidProp_REF_T_min.rho;
+                        rho_REF_T_mean_std = abs(rho_REF_T_max-rho_REF_T_min); % error of rho depending on T
+
+                    otherwise
+                        error('Unsupported EOS method: %s', eosMethod);
+
+                end
               
                 % cal results gathers mean and std
                 calResults_temp = table(fluid_cal,T_cal,P_unique(j), Q_unique(k), ...
@@ -781,19 +788,28 @@ for i = 1:length(fields(calProcData)) % for each fluid
             Z_REF_T_REF = [];
             rho_REF_T_REF = [];
             for m = 1:length(T_REF_aux)
-                % % Using Peng Robinson EoS
-                % [PR_input_T_REF_aux,PR_results_T_REF_aux] = densZ_PR(string(fluid_unique{i}),x1,P_MPa,T_REF_aux(m),filedataPure,filedataBIP);
-                % % Compressibility factor from Peng Robinson at T_MFM and T_mean
-                % Z_REF_T_REF_aux = PR_results_T_REF_aux.Z;
-                % % density from Peng Robinson at T_MFM and T_mean
-                % rho_REF_T_REF_aux = PR_results_T_REF_aux.rho;        
 
-                % Using REFPROP
-                fluidProp_REFPROP = getFluidProps_REFPROP( ...
-                    RP,upper(fluid_unique{i}), ...
-                    T_REF_aux(m)+273.15,P_MPa*1000);
-                Z_REF_T_REF_aux = fluidProp_REFPROP.Z;
-                rho_REF_T_REF_aux = fluidProp_REFPROP.rho;
+                switch eosMethod
+                    
+                    case "PR"
+                        % Using Peng Robinson EoS
+                        [PR_input_T_REF_aux,PR_results_T_REF_aux] = densZ_PR(string(fluid_unique{i}),x1,P_MPa,T_REF_aux(m),filedataPure,filedataBIP);
+                        % Compressibility factor from Peng Robinson at T_MFM and T_mean
+                        Z_REF_T_REF_aux = PR_results_T_REF_aux.Z;
+                        % density from Peng Robinson at T_MFM and T_mean
+                        rho_REF_T_REF_aux = PR_results_T_REF_aux.rho;   
+
+                    case "REFPROP"
+                        % Using REFPROP
+                        fluidProp_REFPROP = getFluidProps_REFPROP( ...
+                            RP,upper(fluid_unique{i}), ...
+                            T_REF_aux(m)+273.15,P_MPa*1000);
+                        Z_REF_T_REF_aux = fluidProp_REFPROP.Z;
+                        rho_REF_T_REF_aux = fluidProp_REFPROP.rho;
+                    
+                    otherwise
+                        error('Unsupported EOS method: %s', eosMethod);
+                end
 
                 % Z and rho arrays for each fluid, P, Q and T
                 Z_REF_T_REF = [Z_REF_T_REF;Z_REF_T_REF_aux];

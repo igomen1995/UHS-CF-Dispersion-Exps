@@ -10,6 +10,9 @@ main_PlotsIntegration.m
 inputCalConfig.xlsx
 inputPRConfig.xlsx
 inputExpConfig.xlsx
+inputEOSConfig.xlsx
+inputDiffConfig.xlsx
+inputValConfig.xlsx
 
 # desktop init
 desktop.ini
