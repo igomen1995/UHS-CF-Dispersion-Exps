@@ -443,45 +443,16 @@ for i = 1:length(filedataExp.Key)
     % KL_lines = KL_lines_taylor_aris(v, r, Dm)
     KL_lines =  KL_lines_taylor_aris(v_lines, filedataExp.IDlines_cm(i)/100, D12/(60*(10^4)));
 
-    T_K = filedataExp.T(i)+273.15;
-    P_Pa = (filedataExp.P(i)+ 14.7)*6894.76;
-    P_kPa = (filedataExp.P(i)+ 14.7)*6.89476;
-
-    % % fluid properties from CoolProp
-    % Fluid1props = getFluidProps_CProp(filedataExp.Fluid1(i),T_K,P_Pa); % T in K and P in Pa all in SI
-    % Fluid2props = getFluidProps_CProp(filedataExp.Fluid2(i),T_K,P_Pa); % T in K and P in Pa all in SI
-    
-    % fluid properties from REFPROP
-    Fluid1props = getFluidProps_REFPROP(RP,upper(filedataExp.Fluid1(i)),T_K,P_kPa);
-    Fluid2props = getFluidProps_REFPROP(RP,upper(filedataExp.Fluid2(i)),T_K,P_kPa);
-
-    % Fluid 1 is injected and displacing fluid 2
-    rho1 = Fluid1props.rho;
-    rho2 = Fluid2props.rho;
-    mu1 = Fluid1props.mu;
-    mu2 = Fluid2props.mu;
-    thetha = deg2rad(filedataExp.Angle(i));
-
-    % Dimensionless numbers (before processing or estimating KL)
-    M = mu2/mu1; % viscosity ratio = displaced / displacing
-    Nrho = (rho1-rho2)/rho2; % density number
-    Ng_upump = (filedataExp.K(i)*9.869*(10^-16))*(rho1-rho2)*9.8*sin(thetha)/(mu2*u); % Ng = K*(drho)*g*cos(angle)/(vel_interstitial*mu2)
-    Pe_upump_L_D0 = u*L/(D12/(60*(10^4)));
-
     exp_params = table(filedataExp.Key(i), filedataExp.Date(i), filedataExp.Type(i), filedataExp.Fluid1(i), filedataExp.Fluid2(i), ...
-        D12, dD12,...
+        D12, dD12, D12/(60*(10^4)), dD12/(60*(10^4)), ...
         filedataExp.T(i), filedataExp.P(i), filedataExp.Q(i), ...
-        mu1, mu2, rho1, rho2, ...
-        M, Nrho, Ng_upump, Pe_upump_L_D0, ...
         filedataExp.C1init(i), filedataExp.C1j(i), filedataExp.Run(i), ...
         filedataExp.D(i), filedataExp.L(i), filedataExp.phi(i), filedataExp.K(i), filedataExp.Vcore(i), ...
         filedataExp.setupVersion(i), filedataExp.IDlines_cm(i), filedataExp.Vlinesbefore(i), filedataExp.Vlinesafter(i), ... 
         L_linesbefore, L_linesafter, filedataExp.Vtotal(i), L_total, ...
         A,L,q,v,u, A_lines, v_lines, KL_lines,KL_lines*60*(10^4), 'VariableNames', {'Key', 'Date', 'Type','Fluid1', 'Fluid2', ...
-        'D12_cm2min', 'dD12_cm2min',...
+        'D12_cm2min', 'dD12_cm2min', 'D12_SI', 'dD12_SI',...
         'T_C', 'P_psig', 'Q_mlmin', ...
-        'mu1_SI', 'mu2_SI','rho1_SI','rho2_SI',...
-        'M', 'Nrho', 'Ng_upump', 'Pe_upump_L_D0', ...
         'C1init_pcmol', 'C1j_pcmol', 'Run', 'D_in', 'L_in', 'phi', 'K_mD', 'Vcore_cc', ...
         'setupVersion', 'ID_lines_cm', 'Vlinesbefore_cc', 'Vlinesafter_cc', ...
         'L_linesbefore_SI', 'L_linesafter_SI', 'Vtotal_cc', 'L_linestotal_SI', ...
@@ -507,6 +478,8 @@ rho_corr_lin = @(p,y) (y-p(1))/p(2);
 % rho_corr_nl function second part
 rho_corr_nlin = @(p,rho_MFM) (rho_MFM-p(1)+p(3)*p(4))/(p(3)+p(2));
 
+all_exp_params = table();
+
 for i = 1:length(filedataExp.Key)
     trans_data_name = filedataExp.path(i) + filedataExp.trans_data_name(i);
     % Extrat measured density vs time
@@ -523,7 +496,58 @@ for i = 1:length(filedataExp.Key)
     BTaux.v_MFM_cmmin = BTaux.v_MFM_SI*60*100; % v darcy
     BTaux.u_MFM_SI = BTaux.v_MFM_SI/expProcData.(filedataExp.Key(i)).exp_params.phi; % vint
     BTaux.u_MFM_cmmin = BTaux.u_MFM_SI*60*100; % vint
+
     % store more experimental parameters
+    % Temperature to get fluid properties
+    T_MFM_avg = mean(BTaux.T_MFM);
+    T_MFM_std = std(BTaux.T_MFM);
+    T_MFM_min = T_MFM_avg - T_MFM_std;
+    T_MFM_max = T_MFM_avg + T_MFM_std;
+    T_K_avg = T_MFM_avg+273.15;
+    T_K_min = T_MFM_min+273.15;
+    T_K_max = T_MFM_max+273.15;
+    T_C = filedataExp.T(i); % not used if T = T avg from MFM
+    T_K = T_C + 273.15;
+
+    if ismissing(trans_data_name) == 0
+        BTaux_timetable = table2timetable(BTaux);
+        PT_timetable = table2timetable(expProcData.(filedataExp.Key(i)).transData);
+        BTaux_interp = retime(PT_timetable, BTaux_timetable.TimeStamp, 'linear');
+        BTaux.PT1 = BTaux_interp.PT1; % psi
+        BTaux.PT2 = BTaux_interp.PT2; % psi
+        BTaux.dP = abs(BTaux.PT2 - BTaux.PT1); % psi
+        BTaux.Pavg = (BTaux.PT1 + BTaux.PT2)/2;
+        expProcData.(filedataExp.Key(i)).exp_params.dP_avg = mean(BTaux.dP);
+        expProcData.(filedataExp.Key(i)).exp_params.dP_std = std(BTaux.dP);
+        expProcData.(filedataExp.Key(i)).exp_params.Pavg_avg = mean(BTaux.Pavg);
+        expProcData.(filedataExp.Key(i)).exp_params.Pavg_std = std(BTaux.Pavg);
+        expProcData.(filedataExp.Key(i)).exp_params.Psens = expProcData.(filedataExp.Key(i)).exp_params.dP_avg/expProcData.(filedataExp.Key(i)).exp_params.Pavg_avg;
+        
+        % Pressure to get fluid properties
+
+        P_Pa = (expProcData.(filedataExp.Key(i)).exp_params.Pavg_avg+ 14.7)*6894.76;
+        dP_Pa = (expProcData.(filedataExp.Key(i)).exp_params.Pavg_std + 14.7)*6894.76;
+        P_Pa_min = P_Pa - dP_Pa;
+        P_Pa_max = P_Pa + dP_Pa;
+        P_kPa = (expProcData.(filedataExp.Key(i)).exp_params.Pavg_avg+ 14.7)*6.89476;
+        dP_kPa = (expProcData.(filedataExp.Key(i)).exp_params.Pavg_std + 14.7)*6.89476;
+        P_kPa_min = P_kPa - dP_kPa;
+        P_kPa_max = P_kPa + dP_kPa;
+
+    else
+    dP_psi = 2; % approximate error if no trans data available
+    P_Pa = (filedataExp.P(i)+ 14.7)*6894.76;
+    dP_Pa = (dP_psi + 14.7)*6894.76;
+    P_Pa_min = P_Pa - dP_Pa;
+    P_Pa_max = P_Pa + dP_Pa;
+    P_kPa = (filedataExp.P(i)+ 14.7)*6.89476;
+    dP_kPa = (dP_psi + 14.7)*6.89476;
+    P_kPa_min = P_kPa - dP_kPa;
+    P_kPa_max = P_kPa + dP_kPa;
+
+    end
+    expProcData.(filedataExp.Key(i)).BT = BTaux;
+
     expProcData.(filedataExp.Key(i)).exp_params.Qavg_MFM_mlmin = mean(BTaux.q_MFM);
     expProcData.(filedataExp.Key(i)).exp_params.Qstd_MFM_mlmin = std(BTaux.q_MFM);
     expProcData.(filedataExp.Key(i)).exp_params.Qavg_MFM_SI = mean(BTaux.q_MFM)*(10^-6)/60;
@@ -538,25 +562,122 @@ for i = 1:length(filedataExp.Key)
     expProcData.(filedataExp.Key(i)).exp_params.ustd_MFM_SI = std(BTaux.u_MFM_SI);
     expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_cmmin = mean(BTaux.u_MFM_cmmin);
     expProcData.(filedataExp.Key(i)).exp_params.ustd_MFM_cmmin = std(BTaux.u_MFM_cmmin);
-    Ng_uavgMFM = (filedataExp.K(i)*9.869*(10^-16))*(rho1-rho2)*9.8*sin(thetha)/(mu2*expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI); % Ng = K*(drho)*g*cos(angle)/(vel_interstitial*mu2)
-    Pe_uavgMFM_L_D0 = expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI*expProcData.(filedataExp.Key(i)).exp_params.L_SI/(expProcData.(filedataExp.Key(i)).exp_params.D12_cm2min/(60*(10^4)));
-    expProcData.(filedataExp.Key(i)).exp_params.Ng_uavgMFM = Ng_uavgMFM;
-    expProcData.(filedataExp.Key(i)).exp_params.Pe_uavgMFM_L_D0 = Pe_uavgMFM_L_D0;
-    if ismissing(trans_data_name) == 0
-        BTaux_timetable = table2timetable(BTaux);
-        PT_timetable = table2timetable(expProcData.(filedataExp.Key(i)).transData);
-        BTaux_interp = retime(PT_timetable, BTaux_timetable.TimeStamp, 'linear');
-        BTaux.PT1 = BTaux_interp.PT1; % psi
-        BTaux.PT2 = BTaux_interp.PT2; % psi
-        BTaux.dP = abs(BTaux.PT2 - BTaux.PT1); % psi
-        BTaux.Pavg = (BTaux.PT1 + BTaux.PT2)/2;
-        expProcData.(filedataExp.Key(i)).exp_params.dP_avg = mean(BTaux.dP);
-        expProcData.(filedataExp.Key(i)).exp_params.dP_std = std(BTaux.dP);
-        expProcData.(filedataExp.Key(i)).exp_params.Pavg_avg = mean(BTaux.Pavg);
-        expProcData.(filedataExp.Key(i)).exp_params.Pavg_std = std(BTaux.Pavg);
-        expProcData.(filedataExp.Key(i)).exp_params.Psens = expProcData.(filedataExp.Key(i)).exp_params.dP_avg/expProcData.(filedataExp.Key(i)).exp_params.Pavg_avg;
-    end
-    expProcData.(filedataExp.Key(i)).BT = BTaux;
+
+    % Fluid 1 is injected and displacing fluid 2
+
+    % % fluid properties from CoolProp
+    % Fluid1props = getFluidProps_CProp(filedataExp.Fluid1(i),T_K_avg,P_Pa); % T in K and P in Pa all in SI
+    % Fluid2props = getFluidProps_CProp(filedataExp.Fluid2(i),T_K_avg,P_Pa); % T in K and P in Pa all in SI
+    % % properties for uncertainties
+    % Fluid1props_Tmin = getFluidProps_CProp(filedataExp.Fluid1(i),T_K_min,P_Pa);
+    % Fluid1props_Tmax = getFluidProps_CProp(filedataExp.Fluid1(i),T_K_max,P_Pa);
+    % Fluid1props_Pmin = getFluidProps_CProp(filedataExp.Fluid1(i),T_K_avg,P_Pa_min);
+    % Fluid1props_Pmax = getFluidProps_CProp(filedataExp.Fluid1(i),T_K_avg,P_Pa_max);
+    % 
+    % Fluid2props_Tmin = getFluidProps_CProp(filedataExp.Fluid1(i),T_K_min,P_Pa);
+    % Fluid2props_Tmax = getFluidProps_CProp(filedataExp.Fluid1(i),T_K_max,P_Pa);
+    % Fluid2props_Pmin = getFluidProps_CProp(filedataExp.Fluid1(i),T_K_avg,P_Pa_min);
+    % Fluid2props_Pmax = getFluidProps_CProp(filedataExp.Fluid1(i),T_K_avg,P_Pa_max);
+    
+    % fluid properties from REFPROP
+    Fluid1props = getFluidProps_REFPROP(RP,upper(filedataExp.Fluid1(i)),T_K_avg,P_kPa);
+    Fluid2props = getFluidProps_REFPROP(RP,upper(filedataExp.Fluid2(i)),T_K_avg,P_kPa);
+
+    % properties for uncertainties
+    Fluid1props_Tmin = getFluidProps_REFPROP(RP,upper(filedataExp.Fluid1(i)),T_K_min,P_kPa);
+    Fluid1props_Tmax = getFluidProps_REFPROP(RP,upper(filedataExp.Fluid1(i)),T_K_max,P_kPa);
+    Fluid1props_Pmin = getFluidProps_REFPROP(RP,upper(filedataExp.Fluid1(i)),T_K_avg,P_kPa_min);
+    Fluid1props_Pmax = getFluidProps_REFPROP(RP,upper(filedataExp.Fluid1(i)),T_K_avg,P_kPa_max);
+
+    Fluid2props_Tmin = getFluidProps_REFPROP(RP,upper(filedataExp.Fluid2(i)),T_K_min,P_kPa);
+    Fluid2props_Tmax = getFluidProps_REFPROP(RP,upper(filedataExp.Fluid2(i)),T_K_max,P_kPa);
+    Fluid2props_Pmin = getFluidProps_REFPROP(RP,upper(filedataExp.Fluid2(i)),T_K_avg,P_kPa_min);
+    Fluid2props_Pmax = getFluidProps_REFPROP(RP,upper(filedataExp.Fluid2(i)),T_K_avg,P_kPa_max);
+
+    % avergae properties
+    rho1 = Fluid1props.rho;
+    rho2 = Fluid2props.rho;
+    mu1 = Fluid1props.mu;
+    mu2 = Fluid2props.mu;
+    Z1 = Fluid1props.Z;
+    Z2 = Fluid2props.Z;
+
+    % uncertainties
+    dmu1_dT = (Fluid1props_Tmax.mu - Fluid1props_Tmin.mu)/2;
+    drho1_dT = (Fluid1props_Tmax.rho - Fluid1props_Tmin.rho)/2;
+    dZ1_dT = (Fluid1props_Tmax.Z - Fluid1props_Tmin.Z)/2;
+    dmu1_dP = (Fluid1props_Pmax.mu - Fluid1props_Pmin.mu)/2;
+    drho1_dP = (Fluid1props_Pmax.rho - Fluid1props_Pmin.rho)/2;
+    dZ1_dP = (Fluid1props_Pmax.Z - Fluid1props_Pmin.Z)/2;
+    dmu1 = (dmu1_dT^2 + dmu1_dP^2)^(1/2);
+    drho1 = (drho1_dT^2 + drho1_dP^2)^(1/2);
+    dZ1 = (dZ1_dT^2 + dZ1_dP^2)^(1/2);
+
+    dmu2_dT = (Fluid2props_Tmax.mu - Fluid2props_Tmin.mu)/2;
+    drho2_dT = (Fluid2props_Tmax.rho - Fluid2props_Tmin.rho)/2;
+    dZ2_dT = (Fluid2props_Tmax.Z - Fluid2props_Tmin.Z)/2;
+    dmu2_dP = (Fluid2props_Pmax.mu - Fluid2props_Pmin.mu)/2;
+    drho2_dP = (Fluid2props_Pmax.rho - Fluid2props_Pmin.rho)/2;
+    dZ2_dP = (Fluid2props_Pmax.Z - Fluid2props_Pmin.Z)/2;
+    dmu2 = (dmu2_dT^2 + dmu2_dP^2)^(1/2);
+    drho2 = (drho2_dT^2 + drho2_dP^2)^(1/2);
+    dZ2 = (dZ2_dT^2 + dZ2_dP^2)^(1/2);
+
+    thetha = deg2rad(filedataExp.Angle(i));
+    L = expProcData.(filedataExp.Key(i)).exp_params.L_SI;
+
+    uMFM = expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI;
+    duMFM = expProcData.(filedataExp.Key(i)).exp_params.ustd_MFM_SI;
+    upump = expProcData.(filedataExp.Key(i)).exp_params.u_SI;
+    dupump = 0.1*upump;
+    D12_SI = expProcData.(filedataExp.Key(i)).exp_params.D12_SI;
+    dD12_SI = expProcData.(filedataExp.Key(i)).exp_params.dD12_SI;
+
+    % Dimensionless numbers (before processing or estimating KL)
+    M = mu2/mu1; % viscosity ratio = displaced / displacing
+    Nrho = (rho1-rho2)/rho2; % density number
+    Ng_upump = (filedataExp.K(i)*9.869*(10^-16))*(rho1-rho2)*9.8*sin(thetha)/(mu2*upump); % Ng = K*(drho)*g*cos(angle)/(vel_interstitial*mu2)
+    Ng_uMFM = (filedataExp.K(i)*9.869*(10^-16))*(rho1-rho2)*9.8*sin(thetha)/(mu2*uMFM); % Ng = K*(drho)*g*cos(angle)/(vel_interstitial*mu2)
+    Pe_upump_L_D0 = upump*L/(D12_SI);
+    Pe_uMFM_L_D0 = uMFM*L/(D12_SI);
+
+    % uncertainties dimless numbers
+    dM = ((-mu2*dmu1/(mu1^2))^2+(dmu2/mu1)^2)^(1/2);
+    dNrho = ((drho1/rho2)^2+(-rho1*drho2/(rho2^2))^2)^(1/2);
+    dNg_upump = Ng_upump*(((drho1/(rho1-rho2))^2+(drho2/(rho1-rho2))^2+(dmu2/mu2)^2+(dupump/upump)^2)^(1/2));
+    dNg_uMFM = Ng_uMFM*(((drho1/(rho1-rho2))^2+(drho2/(rho1-rho2))^2+(dmu2/mu2)^2+(duMFM/uMFM)^2)^(1/2));
+    dPe_upump_L_D0 = Pe_upump_L_D0*(((dupump/upump)^2+(dD12_SI/D12_SI)^2)^(1/2));
+    dPe_uMFM_L_D0 = Pe_uMFM_L_D0*(((duMFM/uMFM)^2+(dD12_SI/D12_SI)^2)^(1/2));
+
+    % store fluid props and dim less
+    expProcData.(filedataExp.Key(i)).exp_params.rho1 = rho1;
+    expProcData.(filedataExp.Key(i)).exp_params.drho1 = drho1;
+    expProcData.(filedataExp.Key(i)).exp_params.rho2 = rho2;
+    expProcData.(filedataExp.Key(i)).exp_params.drho2 = drho2;
+    expProcData.(filedataExp.Key(i)).exp_params.mu1 = mu1;
+    expProcData.(filedataExp.Key(i)).exp_params.dmu1 = dmu1;
+    expProcData.(filedataExp.Key(i)).exp_params.mu2 = mu2;
+    expProcData.(filedataExp.Key(i)).exp_params.dmu2 = dmu2;
+    expProcData.(filedataExp.Key(i)).exp_params.Z1 = Z1;
+    expProcData.(filedataExp.Key(i)).exp_params.dZ1 = dZ1;
+    expProcData.(filedataExp.Key(i)).exp_params.Z2 = Z2;
+    expProcData.(filedataExp.Key(i)).exp_params.dZ2 = dZ2;
+    expProcData.(filedataExp.Key(i)).exp_params.M = M;
+    expProcData.(filedataExp.Key(i)).exp_params.dM = dM;
+    expProcData.(filedataExp.Key(i)).exp_params.Nrho = Nrho;
+    expProcData.(filedataExp.Key(i)).exp_params.dNrho = dNrho;
+    expProcData.(filedataExp.Key(i)).exp_params.Ng_upump = Ng_upump;
+    expProcData.(filedataExp.Key(i)).exp_params.dNg_upump = dNg_upump;
+    expProcData.(filedataExp.Key(i)).exp_params.Ng_uMFM = Ng_uMFM;
+    expProcData.(filedataExp.Key(i)).exp_params.dNg_uMFM = dNg_uMFM;
+    expProcData.(filedataExp.Key(i)).exp_params.Pe_upump_L_D0 = Pe_upump_L_D0;
+    expProcData.(filedataExp.Key(i)).exp_params.dPe_upump_L_D0 = dPe_upump_L_D0;
+    expProcData.(filedataExp.Key(i)).exp_params.Pe_uMFM_L_D0 = Pe_uMFM_L_D0;
+    expProcData.(filedataExp.Key(i)).exp_params.dPe_uMFM_L_D0 = dPe_uMFM_L_D0;
+
+    % build table to save later
+    all_exp_params = [all_exp_params; expProcData.(filedataExp.Key(i)).exp_params];
+
     rho_MFM = expProcData.(filedataExp.Key(i)).BT.rho_MFM;
     % fitting parameters for rho corrected
     switch eosMethod
@@ -819,11 +940,11 @@ for i = 1:length(filedataExp.Key)
         (expProcData.(filedataExp.Key(i)).BT.CiMin - filedataExp.C1init(i))/(filedataExp.C1j(i)-filedataExp.C1init(i));
     
     % normalized density
-    expProcData.(filedataExp.Key(i)).BT.rho_norm = 1 - ((expProcData.(filedataExp.Key(i)).BT.rho_corr - expProcData.(filedataExp.Key(i)).exp_params.rho1_SI)/ ...
-        (expProcData.(filedataExp.Key(i)).exp_params.rho2_SI - expProcData.(filedataExp.Key(i)).exp_params.rho1_SI));
+    expProcData.(filedataExp.Key(i)).BT.rho_norm = 1 - ((expProcData.(filedataExp.Key(i)).BT.rho_corr - expProcData.(filedataExp.Key(i)).exp_params.rho1)/ ...
+        (expProcData.(filedataExp.Key(i)).exp_params.rho2 - expProcData.(filedataExp.Key(i)).exp_params.rho1));
 
     expProcData.(filedataExp.Key(i)).BT.drho_norm = abs((expProcData.(filedataExp.Key(i)).BT.rho_corr - expProcData.(filedataExp.Key(i)).BT.rho_corrMin)/ ...
-        (expProcData.(filedataExp.Key(i)).exp_params.rho2_SI - expProcData.(filedataExp.Key(i)).exp_params.rho1_SI));
+        (expProcData.(filedataExp.Key(i)).exp_params.rho2 - expProcData.(filedataExp.Key(i)).exp_params.rho1));
 
 end
 
