@@ -393,8 +393,9 @@ for i = 1:length(filedataExp.Key)
 
         % exp params for table
         row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
+        row.model = "dt_free_wfit";
 
-        method_results.dt_free_wfit = [method_results.dt_free_wfit; row];
+        method_results.(row.model) = [method_results.dt_free_wfit; row];
 
         expProcData.(filedataExp.Key(i)).BT.C_fit_dt_free = 100*KL_out.C_fit;
 
@@ -404,8 +405,9 @@ for i = 1:length(filedataExp.Key)
 
         % exp params for table
         row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
+        row.model = "dt_free_nwfit";
 
-        method_results.dt_free_nwfit = [method_results.dt_free_nwfit; row];
+        method_results.(row.model) = [method_results.dt_free_nwfit; row];
 
         expProcData.(filedataExp.Key(i)).BT.C_nw_fit_dt_free = 100*KL_out.C_fit;
 
@@ -459,8 +461,9 @@ for i = 1:length(filedataExp.Key)
 
             % exp params for table
             row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
+            row.model = "dt_fixed_wdt_wfit_lim";
     
-            method_results.dt_fixed_wdt_wfit_lim = [method_results.dt_fixed_wdt_wfit_lim; row];
+            method_results.(row.model) = [method_results.dt_fixed_wdt_wfit_lim; row];
 
             expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wdt_wfit_lim = 100*KL_out.C_fit;
 
@@ -471,8 +474,9 @@ for i = 1:length(filedataExp.Key)
 
             % exp params for table
             row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
+            row.model = "dt_fixed_wdt_nwfit_lim";
     
-            method_results.dt_fixed_wdt_nwfit_lim = [method_results.dt_fixed_wdt_nwfit_lim; row];
+            method_results.(row.model) = [method_results.dt_fixed_wdt_nwfit_lim; row];
 
             expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wdt_nwfit_lim = 100*KL_out.C_fit;
 
@@ -482,8 +486,9 @@ for i = 1:length(filedataExp.Key)
 
             % exp params for table
             row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
+            row.model = "dt_fixed_wdt_wfit_full";
     
-            method_results.dt_fixed_wdt_wfit_full = [method_results.dt_fixed_wdt_wfit_full; row];
+            method_results.(row.model) = [method_results.dt_fixed_wdt_wfit_full; row];
 
             expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wdt_wfit_full = 100*KL_out.C_fit;
 
@@ -493,8 +498,9 @@ for i = 1:length(filedataExp.Key)
 
             % exp params for table
             row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
+            row.model = "dt_fixed_wdt_nwfit_full";
     
-            method_results.dt_fixed_wdt_nwfit_full = [method_results.dt_fixed_wdt_nwfit_full; row];
+            method_results.(row.model) = [method_results.dt_fixed_wdt_nwfit_full; row];
 
             expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wdt_nwfit_full = 100*KL_out.C_fit;
         end
@@ -516,8 +522,9 @@ for i = 1:length(filedataExp.Key)
 
             % exp params for table
             row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
+            row.model = "dt_fixed_nwdt_wfit_lim";
     
-            method_results.dt_fixed_nwdt_wfit_lim = [method_results.dt_fixed_nwdt_wfit_lim; row];
+            method_results.(row.model) = [method_results.dt_fixed_nwdt_wfit_lim; row];
 
             expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwdt_wfit_lim = 100*KL_out.C_fit;
 
@@ -528,8 +535,9 @@ for i = 1:length(filedataExp.Key)
 
             % exp params for table
             row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
+            row.model = "dt_fixed_nwdt_nwfit_lim";
     
-            method_results.dt_fixed_nwdt_nwfit_lim = [method_results.dt_fixed_nwdt_nwfit_lim; row];
+            method_results.(row.model) = [method_results.dt_fixed_nwdt_nwfit_lim; row];
 
             expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwdt_nwfit_lim = 100*KL_out.C_fit;
 
@@ -539,8 +547,9 @@ for i = 1:length(filedataExp.Key)
 
             % exp params for table
             row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
+            row.model = "dt_fixed_nwdt_wfit_full";
 
-            method_results.dt_fixed_nwdt_wfit_full = [method_results.dt_fixed_nwdt_wfit_full; row];
+            method_results.(row.model) = [method_results.dt_fixed_nwdt_wfit_full; row];
 
             expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwdt_wfit_full = 100*KL_out.C_fit;
 
@@ -550,8 +559,9 @@ for i = 1:length(filedataExp.Key)
 
             % exp params for table
             row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
+            row.model = "dt_fixed_nwdt_nwfit_full";
     
-            method_results.dt_fixed_nwdt_nwfit_full = [method_results.dt_fixed_nwdt_nwfit_full; row];
+            method_results.(row.model) = [method_results.dt_fixed_nwdt_nwfit_full; row];
 
             expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wdt_nwfit_full = 100*KL_out.C_fit;
         end
@@ -590,14 +600,9 @@ disp("Best method: " + best_method)
 % Store best fit in expProcData
 best_method_table = method_results.(best_method);
 for i = 1:length(filedataExp.Key)
-
     key = filedataExp.Key(i);
-
     row_best = best_method_table(i,:);
-
     expProcData.(key).results = row_best;
-    expProcData.(key).results.model = best_method;
-
     expProcData.(key).BT.C_fit_best = ...
         100 * best_method_table.C_fit{i};
 end
@@ -774,7 +779,7 @@ for j = 1:length(Fluid1_unique)
                 for i = 1:length(filedataExp.Key)
         
                     if filedataExp.Fluid1(i) == Fluid1_unique(j) && filedataExp.Fluid2(i) == Fluid2_unique(jj) ...
-                            && filedataExp.T(k) == T_unique(k) && filedataExp.P(l) == P_unique(j)
+                            && filedataExp.T(i) == T_unique(k) && filedataExp.P(i) == P_unique(j)
         
                         count = count + 1;
         
@@ -906,7 +911,7 @@ for j = 1:length(Fluid1_unique)
                 for i = 1:length(filedataExp.Key)
         
                     if filedataExp.Fluid1(i) == Fluid1_unique(j) && filedataExp.Fluid2(i) == Fluid2_unique(jj) ...
-                            && filedataExp.T(k) == T_unique(k) && filedataExp.P(l) == P_unique(j)
+                            && filedataExp.T(i) == T_unique(k) && filedataExp.P(i) == P_unique(j)
         
                         count = count + 1;
 
@@ -1030,7 +1035,7 @@ for j = 1:length(Fluid1_unique)
                 for i = 1:length(filedataExp.Key)
         
                     if filedataExp.Fluid1(i) == Fluid1_unique(j) && filedataExp.Fluid2(i) == Fluid2_unique(jj) ...
-                            && filedataExp.T(k) == T_unique(k) && filedataExp.P(l) == P_unique(j)
+                            && filedataExp.T(i) == T_unique(k) && filedataExp.P(i) == P_unique(j)
         
                         count = count + 1;
 
@@ -1143,7 +1148,7 @@ for i = 1:length(filedataExp.Key)
 
         BTC_Metrics = getBTCMetrics(t_unique,tD_unique,C1_unique);
 
-        expProcData.key.BTC_Metrics = BTC_Metrics;
+        expProcData.(key).BTC_Metrics = BTC_Metrics;
 
         BTC_Row = struct2table(BTC_Metrics);
         BTC_Row.Key = key;
@@ -1154,142 +1159,265 @@ for i = 1:length(filedataExp.Key)
     end
 end
 
-%% alpha estimation with best method only 
+%% Alpha estimation for ALL methods
+
+method_names = fieldnames(method_results);
+
+Fluid1_unique = unique(filedataExp.Fluid1);
+Fluid2_unique = unique(filedataExp.Fluid2);
+T_unique = unique(filedataExp.T);
+P_unique = unique(filedataExp.P);
+L_unique = unique(filedataExp.L); % inches
+theta_unique = unique(filedataExp.Angle);
 
 min_points_alpha = 2;
 min_points_alpha_tau = 3;
 
-Fluid1_unique = unique(filedataExp.Fluid1);
-Fluid2_unique = unique(filedataExp.Fluid2);
-T_unique      = unique(filedataExp.T);
-P_unique      = unique(filedataExp.P);
-
-alpha_results = struct();
-count_row = 0;
-
-% Initial guesses
-p_guess_alpha     = 1;
+p_guess_alpha = 1;
 p_guess_alpha_tau = [1,1];
 
-for i = 1:length(Fluid1_unique)
-    for j = 1:length(Fluid2_unique)
-        for k = 1:length(T_unique)
-            for m = 1:length(P_unique)
-            
-                KL = [];
-                dKL = [];
-                Pe_D0 = [];
-                D0_group = [];
-                dD0_group = [];
-                Dp_group = [];
-            
-                for l = 1:length(filedataExp.Key)
-            
-                    if filedataExp.Fluid1(l) == Fluid1_unique(i) && ...
-                       filedataExp.Fluid2(l) == Fluid2_unique(j) && ...
-                       filedataExp.T(l) == T_unique(k) && ...
-                       filedataExp.P(l) == P_unique(m)
-            
-                        key = filedataExp.Key(l);
-                        res = expProcData.(key).results;
-            
-                        if isfinite(res.KL_SI)
-            
-                            KL = [KL; res.KL_SI];
-                            dKL = [dKL; res.dKL_SI];
-                            Pe_D0 = [Pe_D0; res.Pe_D0];
-            
-                            D0_group = [D0_group; res.D0_SI];
-                            dD0_group = [dD0_group; res.dD0_SI];
-                            Dp_group = [Dp_group; res.L_SI];
-            
-                        end
-                    end
-                end
-            
-                n_points = length(KL);
-            
-                % D0 unique if fluid , fluid 2, T and P are unique
-                D0_val = unique(D0_group);
-                Dp_val = unique(Dp_group);
-            
-                % store goup info
-                count_row = count_row + 1;
-            
-                alpha_results(count_row).Fluid1 = Fluid1_unique(i);
-                alpha_results(count_row).Fluid2 = Fluid2_unique(j);
-                alpha_results(count_row).T = T_unique(k);
-                alpha_results(count_row).P = P_unique(m);
-                alpha_results(count_row).n_points = n_points;
-            
-                % Initialize outputs
-                % alpha only fitting
-                alpha_results(count_row).alpha_SI   = NaN;
-                alpha_results(count_row).d_alpha_SI = NaN;
-                alpha_results(count_row).alpha_cm   = NaN;
-                alpha_results(count_row).d_alpha_cm = NaN;
-            
-                % alpha + tau fitting
-                alpha_results(count_row).alpha_tau_SI   = NaN;
-                alpha_results(count_row).d_alpha_tau_SI = NaN;
-                alpha_results(count_row).alpha_tau_cm   = NaN;
-                alpha_results(count_row).d_alpha_tau_cm = NaN;
-                alpha_results(count_row).tau   = NaN;
-                alpha_results(count_row).d_tau = NaN;
-            
-                % alpha only fitting
-                if n_points >= min_points_alpha
-            
-                    try
-                        out_alpha = fit_dispersion_params_alpha( ...
-                            KL, Pe_D0, D0_val, Dp_val, p_guess_alpha, dKL);
-            
-                        alpha_results(count_row).alpha_SI   = out_alpha.alpha_SI;
-                        alpha_results(count_row).d_alpha_SI = out_alpha.d_alpha_SI;
-                        alpha_results(count_row).alpha_cm   = out_alpha.alpha_cm;
-                        alpha_results(count_row).d_alpha_cm = out_alpha.d_alpha_cm;
-            
-                    catch
-                        % leave NaNs
-                    end
-            
-                end
-            
-                % alpha + tau if possible
-                if n_points >= min_points_alpha_tau
-            
-                    try
-                        out_tau = fit_dispersion_params_alpha_tau( ...
-                            KL, Pe_D0, D0_val, Dp_val, p_guess_alpha_tau, dKL);
-            
-                        if isfinite(out_tau.tau) 
+alpha_results = struct();
 
-                            alpha_results(count_row).alpha_tau_SI   = out_tau.alpha_SI;
-                            alpha_results(count_row).d_alpha_tau_SI = out_tau.d_alpha_SI;
-                            alpha_results(count_row).alpha_tau_cm   = out_tau.alpha_cm;
-                            alpha_results(count_row).d_alpha_tau_cm = out_tau.d_alpha_cm;
-            
-                            alpha_results(count_row).tau   = out_tau.tau;
-                            alpha_results(count_row).d_tau = out_tau.d_tau;
-            
+for mm = 1:length(method_names)
+
+    current_method = method_names{mm};
+    Tmethod = method_results.(current_method);
+    nRows = height(Tmethod);
+
+    % Add columns if they do not exist
+    nRows = height(Tmethod);
+    Tmethod.alpha_SI = nan(nRows,1);
+    Tmethod.d_alpha_SI = nan(nRows,1);
+    Tmethod.alpha_cm = nan(nRows,1);
+    Tmethod.d_alpha_cm = nan(nRows,1);
+    Tmethod.alpha_tau_SI = nan(nRows,1);
+    Tmethod.d_alpha_tau_SI = nan(nRows,1);
+    Tmethod.alpha_tau_cm = nan(nRows,1);
+    Tmethod.d_alpha_tau_cm = nan(nRows,1);
+    Tmethod.tau = nan(nRows,1);
+    Tmethod.d_tau = nan(nRows,1);
+    Tmethod.Pe_upump_alpha_D0 = nan(nRows,1);
+    Tmethod.dPe_upump_alpha_D0 = nan(nRows,1);
+    Tmethod.Pe_upump_alpha_tau_D0 = nan(nRows,1);
+    Tmethod.dPe_upump_alpha_tau_D0 = nan(nRows,1);
+    Tmethod.Pe_uMFM_alpha_D0 = nan(nRows,1);
+    Tmethod.dPe_uMFM_alpha_D0 = nan(nRows,1);
+    Tmethod.Pe_uMFM_alpha_tau_D0 = nan(nRows,1);
+    Tmethod.dPe_uMFM_alpha_tau_D0 = nan(nRows,1);
+
+    alpha_struct = struct();
+    count_row = 0;
+
+    % Group by Fluid1, Fluid2, T, P and L
+    for i = 1:length(Fluid1_unique)
+        for j = 1:length(Fluid2_unique)
+            for k = 1:length(T_unique)
+                for m = 1:length(P_unique)
+                    for n = 1:length(L_unique)
+                        for theta = 1:length(theta_unique)
+                            KL = [];
+                            dKL = [];
+                            Pe_upump_L_D0 = [];
+                            Pe_uMFM_L_D0 = [];
+                            D0_group = [];
+                            dD0_group = [];
+                            match_idx = [];
+                            
+                            % collect matching experiments
+                            for l = 1:height(Tmethod)
+                                if filedataExp.Fluid1(l) == Fluid1_unique(i) && ...
+                                   filedataExp.Fluid2(l) == Fluid2_unique(j) && ...
+                                   filedataExp.T(l) == T_unique(k) && ...
+                                   filedataExp.P(l) == P_unique(m) && ...
+                                   filedataExp.L(l) == L_unique(n) && ...
+                                   filedataExp.Angle(l) == theta_unique(theta)
+        
+                                    if isfinite(Tmethod.KL_SI(l))
+                                        KL = [KL;  Tmethod.KL_SI(l)];
+                                        dKL = [dKL; Tmethod.dKL_SI(l)];
+                                        Pe_upump_L_D0 = [Pe_upump_L_D0; Tmethod.Pe_upump_L_D0(l)];
+                                        Pe_uMFM_L_D0 = [Pe_uMFM_L_D0; Tmethod.Pe_uMFM_L_D0(l)];
+                                        D0_group = [D0_group; Tmethod.D12_SI(l)];
+                                        dD0_group = [dD0_group; Tmethod.dD12_SI(l)];
+                                        match_idx = [match_idx; l];
+                                    end
+                                end
+                            end
+        
+                            n_points = length(KL);
+        
+                            if n_points == 0
+                                continue
+                            end
+                            % D0 should be unique for each group
+                            D0_val = D0_group(1);
+                            dD0_val = dD0_group(1);
+                            Dp_val = L_unique(n)*0.0254;
+    
+                            % group ID
+                            groupID = string(Fluid1_unique(i)) + "_" + string(Fluid2_unique(j)) + ...
+                                "_T" + string(T_unique(k)) + "_P" + string(P_unique(m)) + "_L" + ...
+                                string(L_unique(n)) + "_THETA" + string(theta_unique(theta));
+                            
+                            % Summary row
+                            count_row = count_row + 1;
+        
+                            alpha_struct(count_row).method = string(current_method);
+                            alpha_struct(count_row).GroupID = groupID;
+                            alpha_struct(count_row).Fluid1 = Fluid1_unique(i);
+                            alpha_struct(count_row).Fluid2 = Fluid2_unique(j);
+                            alpha_struct(count_row).T_C = T_unique(k);
+                            alpha_struct(count_row).P_psig = P_unique(m);
+                            alpha_struct(count_row).L_in = L_unique(n);
+                            alpha_struct(count_row).Angle = theta_unique(theta);
+                            alpha_struct(count_row).n_points = n_points;
+        
+                            alpha_struct(count_row).alpha_SI = NaN;
+                            alpha_struct(count_row).d_alpha_SI = NaN;
+                            alpha_struct(count_row).alpha_cm = NaN;
+                            alpha_struct(count_row).d_alpha_cm = NaN;
+        
+                            alpha_struct(count_row).alpha_tau_SI = NaN;
+                            alpha_struct(count_row).d_alpha_tau_SI = NaN;
+                            alpha_struct(count_row).alpha_tau_cm = NaN;
+                            alpha_struct(count_row).d_alpha_tau_cm = NaN;
+        
+                            alpha_struct(count_row).tau = NaN;
+                            alpha_struct(count_row).d_tau = NaN;
+        
+                            % Alpha fit
+        
+                            if n_points >= min_points_alpha
+        
+                                try
+        
+                                    out_alpha = fit_dispersion_params_alpha( ...
+                                        KL, Pe_upump_L_D0, D0_val, Dp_val, ...
+                                        p_guess_alpha, dKL);
+        
+                                    alpha_struct(count_row).alpha_SI = out_alpha.alpha_SI;
+                                    alpha_struct(count_row).d_alpha_SI = out_alpha.d_alpha_SI;
+                                    alpha_struct(count_row).alpha_cm = out_alpha.alpha_cm;
+                                    alpha_struct(count_row).d_alpha_cm = out_alpha.d_alpha_cm;
+        
+                                    for idx = match_idx'
+        
+                                        Tmethod.alpha_SI(idx) = out_alpha.alpha_SI;
+                                        Tmethod.d_alpha_SI(idx) = out_alpha.d_alpha_SI;
+                                        Tmethod.alpha_cm(idx) = out_alpha.alpha_cm;
+                                        Tmethod.d_alpha_cm(idx) = out_alpha.d_alpha_cm;
+                                        Tmethod.GroupID(idx) = groupID;
+        
+                                        upump  = Tmethod.u_SI(idx);
+                                        dupump  = 0.1 *Tmethod.u_SI(idx);
+                                        uMFM = Tmethod.uavg_MFM_SI(idx);
+                                        duMFM = Tmethod.ustd_MFM_SI(idx);
+        
+                                        Tmethod.Pe_upump_alpha_D0(idx) = ...
+                                            upump*out_alpha.alpha_SI/D0_val;
+    
+                                        Tmethod.Pe_uMFM_alpha_D0(idx) = ...
+                                            uMFM*out_alpha.alpha_SI/D0_val;
+        
+                                        Tmethod.dPe_upump_alpha_D0(idx) = Tmethod.Pe_upump_alpha_D0(idx)* ...
+                                            (((dupump/upump)^2+(out_alpha.d_alpha_SI/out_alpha.alpha_SI)^2+(dD0_val/D0_val)^2)^(1/2));
+    
+                                        Tmethod.dPe_uMFM_alpha_D0(idx) = Tmethod.Pe_uMFM_alpha_D0(idx)* ...
+                                            (((duMFM/uMFM)^2+(out_alpha.d_alpha_SI/out_alpha.alpha_SI)^2+(dD0_val/D0_val)^2)^(1/2));
+                                    end
+        
+                                catch 
+                                end
+        
+                            end
+        
+                            % Alpha + Tau fit
+        
+                            if n_points >= min_points_alpha_tau
+        
+                                try
+        
+                                    out_tau = fit_dispersion_params_alpha_tau( ...
+                                        KL, Pe_upump_L_D0, D0_val, Dp_val, ...
+                                        p_guess_alpha_tau, dKL);
+        
+                                    if isfinite(out_tau.tau)
+        
+                                        alpha_struct(count_row).alpha_tau_SI = out_tau.alpha_SI;
+                                        alpha_struct(count_row).d_alpha_tau_SI = out_tau.d_alpha_SI;
+                                        alpha_struct(count_row).alpha_tau_cm = out_tau.alpha_cm;
+                                        alpha_struct(count_row).d_alpha_tau_cm = out_tau.d_alpha_cm;
+                                        alpha_struct(count_row).tau = out_tau.tau;
+                                        alpha_struct(count_row).d_tau = out_tau.d_tau;
+        
+                                        for idx = match_idx'
+                                            Tmethod.alpha_tau_SI(idx) = out_tau.alpha_SI;
+                                            Tmethod.d_alpha_tau_SI(idx) = out_tau.d_alpha_SI;
+                                            Tmethod.alpha_tau_cm(idx) = out_tau.alpha_cm;
+                                            Tmethod.d_alpha_tau_cm(idx) = out_tau.d_alpha_cm;
+                                            Tmethod.tau(idx) = out_tau.tau;
+                                            Tmethod.d_tau(idx) = out_tau.d_tau;
+                                            Tmethod.GroupID(idx) = groupID;
+    
+                                        upump  = Tmethod.u_SI(idx);
+                                        dupump  = 0.1 *Tmethod.u_SI(idx);
+                                        uMFM = Tmethod.uavg_MFM_SI(idx);
+                                        duMFM = Tmethod.ustd_MFM_SI(idx);
+        
+                                        Tmethod.Pe_upump_alpha_tau_D0(idx) = ...
+                                            upump*out_tau.alpha_SI/D0_val;
+    
+                                        Tmethod.Pe_uMFM_alpha_tau_D0(idx) = ...
+                                            uMFM*out_tau.alpha_SI/D0_val;
+        
+                                        Tmethod.dPe_upump_alpha_tau_D0(idx) = Tmethod.Pe_upump_alpha_tau_D0(idx)* ...
+                                            (((dupump/upump)^2+(out_tau.d_alpha_SI/out_tau.alpha_SI)^2+(dD0_val/D0_val)^2)^(1/2));
+    
+                                        Tmethod.dPe_uMFM_alpha_tau_D0(idx) = Tmethod.Pe_uMFM_alpha_tau_D0(idx)* ...
+                                            (((duMFM/uMFM)^2+(out_tau.d_alpha_SI/out_tau.alpha_SI)^2+(dD0_val/D0_val)^2)^(1/2));
+        
+                                        end
+        
+                                    end
+        
+                                catch
+                                end
+        
+                            end
                         end
-            
-                    catch
-                        % leave NaN
                     end
-            
                 end
-            
             end
         end
     end
+
+    % Store updated method table
+    method_results.(current_method) = Tmethod;
+
+    % Store alpha summary table
+    alpha_results.(current_method) = struct2table(alpha_struct);
+
 end
 
-% convert to table
-
-alpha_table = struct2table(alpha_results);
-
-disp(alpha_table)
+% alpha table corresponding to best fitting method
+if isfield(alpha_results,char(best_method))
+    alpha_table = alpha_results.(char(best_method));
+    expProcData.alpha_table_best = alpha_table;
+    expProcData.alpha_results = alpha_results;
+    best_method_table = method_results.(char(best_method));
+        for i = 1:length(filedataExp.Key)
+            key = filedataExp.Key(i);
+            expProcData.(key).results = best_method_table(i,:);
+            expProcData.(key).alphaGroupID = best_method_table.GroupID(i);
+            for m = 1:length(method_names)
+                method_name = method_names{m};
+                expProcData.(key).method_results.(method_name) = ...
+                    method_results.(method_name)(i,:);
+            end
+        end
+else
+    error("Best method %s not found in alpha_results",best_method)
+end
 
 %% Save results
 
@@ -1303,9 +1431,22 @@ if exist(alpha_table_name + ".mat","file")
     delete(alpha_table_name + ".mat")
 end
 
-% save alpha table
-writetable(alpha_table, alpha_table_name + ".xlsx")
-save(alpha_table_name + ".mat",'alpha_table')
+% save alpha results
+
+% first sheet = BEST METHOD
+writetable(alpha_results.(char(best_method)), alpha_table_name + ".xlsx", ...
+    'Sheet', 'best_method');
+% save all methods afterwards
+for mm = 1:length(method_names)
+    current_method = method_names{mm};
+    Talpha = alpha_results.(current_method);
+    sheet_name = current_method;
+    if strlength(sheet_name) > 31
+        sheet_name = extractBefore(sheet_name,32);
+    end
+    writetable(Talpha, alpha_table_name + ".xlsx", ...
+        'Sheet', sheet_name);
+end
 
 % save processed data
 expProcFullData = expProcData;
@@ -1335,16 +1476,13 @@ method_names = fieldnames(method_results);
 for j = 1:length(method_names)
 
     T = method_results.(method_names{j});
-
     % remove Cfit col
     T(:, vars_to_remove) = [];
-
     % limit sheet name
     sheet_name = method_names{j};
     if strlength(sheet_name) > 31
         sheet_name = extractBefore(sheet_name,32);
     end
-
     writetable(T, fitting_results_name, 'Sheet', sheet_name)
 
 end
@@ -1355,6 +1493,8 @@ Fluid1_unique = unique(best_method_table.Fluid1);
 Fluid2_unique = unique(best_method_table.Fluid2);
 T_unique      = unique(best_method_table.T_C);
 P_unique      = unique(best_method_table.P_psig);
+L_unique      = unique(best_method_table.L_in);
+thetha_unique = unique(best_method_table.Angle);
 
 colors = orderedcolors("glow");
 
@@ -1362,115 +1502,103 @@ for i = 1:length(Fluid1_unique)
     for j = 1:length(Fluid2_unique)
         for k = 1:length(T_unique)
             for m = 1:length(P_unique)
-            
-                % filter rows for this group
-                idx = best_method_table.Fluid1 == Fluid1_unique(i) & ...
-                      best_method_table.Fluid2 == Fluid2_unique(j) & ...
-                      best_method_table.T_C == T_unique(k) & ...
-                      best_method_table.P_psig == P_unique(m);
-            
-                % extract data
-                u_array_cmmin = best_method_table.u_cmmin(idx);
-                KL_array      = best_method_table.KL_cm2min(idx);
-                dKL_array     = best_method_table.dKL_cm2min(idx);
-                Pe_D0_array   = best_method_table.Pe_D0(idx);
-            
-                D0 = unique(best_method_table.D0_SI(idx));
-                Dp_SI = unique(best_method_table.L_SI(idx));
-            
-                % get alpha for this group
-                idx_alpha = alpha_table.Fluid1 == Fluid1_unique(i) & ...
+                for n = 1:length(L_unique)
+                    for theta = 1:length(thetha_unique)
+                        % filter rows for this group
+                        idx = best_method_table.Fluid1 == Fluid1_unique(i) & ...
+                            best_method_table.Fluid2 == Fluid2_unique(j) & ...
+                            best_method_table.T_C == T_unique(k) & ...
+                            best_method_table.P_psig == P_unique(m) & ...
+                            best_method_table.L_in == L_unique(n) & ...
+                            best_method_table.Angle == theta_unique(m);
+                    
+                        % extract data
+                        u_array_cmmin = best_method_table.u_cmmin(idx);
+                        KL_array = best_method_table.KL_cm2min(idx);
+                        dKL_array = best_method_table.dKL_cm2min(idx);
+                        Pe_D0_array = best_method_table.Pe_upump_L_D0(idx);
+                        D0 = unique(best_method_table.D12_SI(idx));
+                        Dp_SI = unique(best_method_table.L_SI(idx));
+                    
+                        % get alpha for this group
+                        idx_alpha = alpha_table.Fluid1 == Fluid1_unique(i) & ...
                             alpha_table.Fluid2 == Fluid2_unique(j) & ...
-                            alpha_table.T      == T_unique(k) & ...
-                            alpha_table.P      == P_unique(m);
-            
-                alpha_SI = alpha_table.alpha_SI(idx_alpha);
-                dalpha_SI = alpha_table.d_alpha_SI(idx_alpha);
-            
-                alpha_cm = alpha_SI * 100;
-                dalpha_cm = dalpha_SI * 100;
+                            alpha_table.T_C == T_unique(k) & ...
+                            alpha_table.P_psig == P_unique(m) & ...
+                            alpha_table.L_in == L_unique(n) & ...
+                            alpha_table.Angle == theta_unique(m);
+                    
+                        alpha_SI = alpha_table.alpha_SI(idx_alpha);
+                        dalpha_SI = alpha_table.d_alpha_SI(idx_alpha);
+                        alpha_cm = alpha_SI * 100;
+                        dalpha_cm = dalpha_SI * 100;
+                        alpha_tau_SI = alpha_table.alpha_tau_SI(idx_alpha);
+                        dalpha_tau_SI = alpha_table.d_alpha_tau_SI(idx_alpha);
+                        alpha_tau_cm = alpha_tau_SI * 100;
+                        dalpha_tau_cm = dalpha_tau_SI * 100;
+                        tau = alpha_table.tau;
+                        d_tau = alpha_table.tau;
+                    
+                        % % model (KL = alpha * u)
+                        % u_model = linspace(0, max(u_array_cmmin)/(60*100), 100);
+                        % KL_model = alpha_SI * u_model;
+                        % u_model_cm = u_model * (60*100);
+                        % KL_model_cm = KL_model * (60*10^4);
+        
+                        % model based on Pe numbers (Pe with D0 denominator)
+                        Pe_D0_array_plot = 0:1:ceil(max(Pe_D0_array));
+                        % KL_Pe_alpha_only_model(Pe_fromD0,D0,p) % alpha = p * Dp; % Alpha (dispersivity) Dp is L
+                        KL_array_alpha_SI_plot = KL_Pe_alpha_only_model(Pe_D0_array_plot,D0,alpha_SI/Dp_SI);
+                        KL_array_tau_SI_plot = KL_Pe_alpha_tau_model(Pe_D0_array_plot,D0,[alpha_tau_SI/Dp_SI;tau]);
+                        KL_array_alpha_cm2min_plot = KL_array_alpha_SI_plot*(60*10^4);
+                        KL_array_tau_cm2min_plot = KL_array_tau_SI_plot*(60*10^4);
+                        u_array_cmmin_plot = (Pe_D0_array_plot*D0/Dp_SI)*(60*10^2);
+                    
+                        % plot
+                        figure
+                        hold on
+                        % model line
+                        % plot(u_model_cm, KL_model_cm, ...
+                        %     'k','LineWidth',2,...
+                        %     'DisplayName','K_L = \alpha u_x')
+                        plot(u_array_cmmin_plot, KL_array_alpha_cm2min_plot, ...
+                            'k','LineWidth',2,...
+                            'DisplayName','K_L = \alpha u_x')
+                        hold on
+                        plot(u_array_cmmin_plot, KL_array_tau_cm2min_plot, ...
+                            'k','LineWidth',2,'LineStyle','--',...
+                            'DisplayName','K_L = D_0/\tau + \alpha u_x')
+                        % data
+                        for ii = 1:length(u_array_cmmin)
+                            errorbar(u_array_cmmin(ii), KL_array(ii), ...
+                                dKL_array(ii), dKL_array(ii), ...
+                                'Color','k','HandleVisibility','off')
+                            scatter(u_array_cmmin(ii), KL_array(ii), ...
+                                'filled', ...
+                                'Color',colors(ii,:), ...
+                                'DisplayName',"Q = " + best_method_table.Q_mlmin(ii) + " ml/min")
+                        end
+                        xlabel('Interstitial velocity (u_x) [cm/min]')
+                        ylabel('K_L [cm^2/min]')
+                        xlim([0,1.1*max(u_array_cmmin)])
+                        ylim([0,1.1*max(KL_array)])
+                        grid on
+                        save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(j)+ ...
+                            "_T"+filedataExp.T(k)+"_P"+filedataExp.P(m)+"_L"+filedataExp.L(n)+"_THETA"+filedataExp.Angle(theta)+"_"+fitData;
+                        title(save_name, 'Interpreter','none')
+                        annotation('textbox',[0.25 0.2 0.5 0.05],...
+                            'String',sprintf('\\alpha_1 = %.2f ± %.2f cm', alpha_cm, dalpha_cm),...
+                            'EdgeColor','none')
+                        annotation('textbox',[0.25 0.15 0.5 0.05],...
+                            'String',sprintf('\\alpha_2 = %.2f ± %.2f cm', alpha_tau_cm, dalpha_tau_cm),...
+                            'EdgeColor','none')
+                        legend('Location','northwest')
+                        % save figure
+                        saveas(gcf, pathExportAll + "KLvsVel_" + save_name, 'png')
+                        savefig(gcf, pathExportAll + "KLvsVel_" + save_name)
 
-                alpha_tau_SI = alpha_table.alpha_tau_SI(idx_alpha);
-                dalpha_tau_SI = alpha_table.d_alpha_tau_SI(idx_alpha);
-            
-                alpha_tau_cm = alpha_tau_SI * 100;
-                dalpha_tau_cm = dalpha_tau_SI * 100;
-
-                tau = alpha_table.tau;
-                d_tau = alpha_table.tau;
-            
-                % % model (KL = alpha * u)
-                % u_model = linspace(0, max(u_array_cmmin)/(60*100), 100);
-                % KL_model = alpha_SI * u_model;
-                % 
-                % u_model_cm = u_model * (60*100);
-                % KL_model_cm = KL_model * (60*10^4);
-
-                % model based on Pe numbers (Pe with D0 denominator)
-                Pe_D0_array_plot = 0:1:ceil(max(Pe_D0_array));
-                % KL_Pe_alpha_only_model(Pe_fromD0,D0,p) % alpha = p * Dp; % Alpha (dispersivity) Dp is L
-                KL_array_alpha_SI_plot = KL_Pe_alpha_only_model(Pe_D0_array_plot,D0,alpha_SI/Dp_SI);
-                KL_array_tau_SI_plot = KL_Pe_alpha_tau_model(Pe_D0_array_plot,D0,[alpha_tau_SI/Dp_SI;tau]);
-                KL_array_alpha_cm2min_plot = KL_array_alpha_SI_plot*(60*10^4);
-                KL_array_tau_cm2min_plot = KL_array_tau_SI_plot*(60*10^4);
-                u_array_cmmin_plot = (Pe_D0_array_plot*D0/Dp_SI)*(60*10^2);
-            
-                % plot
-                figure
-                hold on
-            
-                % model line
-                % plot(u_model_cm, KL_model_cm, ...
-                %     'k','LineWidth',2,...
-                %     'DisplayName','K_L = \alpha u_x')
-                plot(u_array_cmmin_plot, KL_array_alpha_cm2min_plot, ...
-                    'k','LineWidth',2,...
-                    'DisplayName','K_L = \alpha u_x')
-                hold on
-                plot(u_array_cmmin_plot, KL_array_tau_cm2min_plot, ...
-                    'k','LineWidth',2,'LineStyle','--',...
-                    'DisplayName','K_L = D_0/\tau + \alpha u_x')
-            
-                % data
-                for ii = 1:length(u_array_cmmin)
-            
-                    errorbar(u_array_cmmin(ii), KL_array(ii), ...
-                        dKL_array(ii), dKL_array(ii), ...
-                        'Color','k','HandleVisibility','off')
-            
-                    scatter(u_array_cmmin(ii), KL_array(ii), ...
-                        'filled', ...
-                        'Color',colors(ii,:), ...
-                        'DisplayName',"Q = " + best_method_table.Q_mlmin(ii) + " ml/min")
-            
-                end
-            
-                xlabel('Interstitial velocity (u_x) [cm/min]')
-                ylabel('K_L [cm^2/min]')
-            
-                xlim([0,1.1*max(u_array_cmmin)])
-                ylim([0,1.1*max(KL_array)])
-            
-                grid on
-            
-                save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(j)+"_T"+filedataExp.T(k)+"_P"+filedataExp.P(m)+"_"+fitData;
-            
-                title(save_name, 'Interpreter','none')
-            
-                annotation('textbox',[0.25 0.2 0.5 0.05],...
-                    'String',sprintf('\\alpha_1 = %.2f ± %.2f cm', alpha_cm, dalpha_cm),...
-                    'EdgeColor','none')
-
-                annotation('textbox',[0.25 0.15 0.5 0.05],...
-                    'String',sprintf('\\alpha_2 = %.2f ± %.2f cm', alpha_tau_cm, dalpha_tau_cm),...
-                    'EdgeColor','none')
-            
-                legend('Location','northwest')
-            
-                % save figure
-                saveas(gcf, pathExportAll + "KLvsVel_" + save_name, 'png')
-                savefig(gcf, pathExportAll + "KLvsVel_" + save_name)
-            
+                    end
+                end            
             end
         end
     end
@@ -1482,6 +1610,8 @@ Fluid1_unique = unique(best_method_table.Fluid1);
 Fluid2_unique = unique(best_method_table.Fluid2);
 T_unique      = unique(best_method_table.T_C);
 P_unique      = unique(best_method_table.P_psig);
+L_unique      = unique(best_method_table.L_in);
+thetha_unique = unique(best_method_table.Angle);
 
 colors = orderedcolors("glow");
 
@@ -1489,107 +1619,93 @@ for i = 1:length(Fluid1_unique)
     for j = 1:length(Fluid2_unique)
         for k = 1:length(T_unique)
             for m = 1:length(P_unique)
-            
-                % filter rows for this group
-                idx = best_method_table.Fluid1 == Fluid1_unique(i) & ...
-                      best_method_table.Fluid2 == Fluid2_unique(j) & ...
-                      best_method_table.T_C == T_unique(k) & ...
-                      best_method_table.P_psig == P_unique(m);
-            
-                % extract data
-                u_array_cmmin = best_method_table.u_cmmin(idx);
-                u_array_SI = best_method_table.u_SI(idx);
-                KL_array      = best_method_table.KL_cm2min(idx);
-                dKL_array     = best_method_table.dKL_cm2min(idx);
-                Pe_D0_array   = best_method_table.Pe_D0(idx);
-            
-                D0 = unique(best_method_table.D0_SI(idx));
-                dD0 = unique(best_method_table.dD0_SI(idx));
-                Dp_SI = unique(best_method_table.L_SI(idx));
-
-                KL_vs_D0_array = best_method_table.KL_SI(idx)/D0;
-                dKL_vs_D0_array = best_method_table.dKL_SI(idx)/D0+best_method_table.KL_SI(idx)*dD0/(D0^2);
-            
-                % get alpha for this group
-                idx_alpha = alpha_table.Fluid1 == Fluid1_unique(i) & ...
-                            alpha_table.Fluid2 == Fluid2_unique(j) & ...
-                            alpha_table.T      == T_unique(k) & ...
-                            alpha_table.P      == P_unique(m);
-            
-                alpha_SI = alpha_table.alpha_SI(idx_alpha);
-                dalpha_SI = alpha_table.d_alpha_SI(idx_alpha);
-            
-                alpha_cm = alpha_SI * 100;
-                dalpha_cm = dalpha_SI * 100;
-
-                alpha_tau_SI = alpha_table.alpha_tau_SI(idx_alpha);
-                dalpha_tau_SI = alpha_table.d_alpha_tau_SI(idx_alpha);
-            
-                alpha_tau_cm = alpha_tau_SI * 100;
-                dalpha_tau_cm = dalpha_tau_SI * 100;
-
-                tau = alpha_table.tau;
-                d_tau = alpha_table.tau;
-
-                Pe_D0_alpha = u_array_SI*alpha_SI/D0;
-            
-                % model based on Pe numbers (Pe with D0 denominator)
-                Pe_D0_array_plot = 0.1:0.1:6;
-                % KL_Pe_alpha_only_model(Pe_fromD0,D0,p) % alpha = p * Dp; % Alpha (dispersivity) Dp is L
-                KL_array_alpha_SI_plot = KL_Pe_alpha_only_model(Pe_D0_array_plot,D0,1);
-                KL_array_tau_SI_plot = KL_Pe_alpha_tau_model(Pe_D0_array_plot,D0,[alpha_tau_SI/Dp_SI;tau]);
-                KL_array_alpha_cm2min_plot = KL_array_alpha_SI_plot*(60*10^4);
-                KL_array_tau_cm2min_plot = KL_array_tau_SI_plot*(60*10^4);
-                u_array_cmmin_plot = (Pe_D0_array_plot*D0/Dp_SI)*(60*10^2);
-            
-                % plot
-                figure
-                hold on
-            
-                plot(Pe_D0_array_plot, KL_array_alpha_SI_plot/D0, ...
-                    'k','LineWidth',2,...
-                    'DisplayName','K_L/D_0 \approx \alpha_Lu_x/D_0')
-                hold on
-                plot(Pe_D0_array_plot, KL_array_tau_SI_plot/D0, ...
-                    'k','LineWidth',2,'LineStyle', '--',...
-                    'DisplayName','K_L/D_0 \approx 1/\tau + \alpha_Lu_x/D_0') 
-            
-                % data
-                for ii = 1:length(Pe_D0_alpha)
-            
-                    errorbar(Pe_D0_alpha(ii), KL_vs_D0_array(ii), ...
-                        dKL_vs_D0_array(ii), dKL_vs_D0_array(ii), ...
-                        'Color','k','HandleVisibility','off')
-            
-                    scatter(Pe_D0_alpha(ii), KL_vs_D0_array(ii), ...
-                        'filled', ...
-                        'Color',colors(ii,:), ...
-                        'DisplayName',"Q = " + best_method_table.Q_mlmin(ii) + " ml/min")            
-                end
-            
-                xlabel('Pe = u_x\alpha/D_0')
-                ylabel('K_L/D_0');
-             
-                xlim([0,10])
-                ylim([0,10])
+                for n = 1:length(L_unique)
+                    % filter rows for this group
+                    idx = best_method_table.Fluid1 == Fluid1_unique(i) & ... 
+                        best_method_table.Fluid2 == Fluid2_unique(j) & ...
+                        best_method_table.T_C == T_unique(k) & ...
+                        best_method_table.P_psig == P_unique(m) & ...
+                        best_method_table.L_in == L_unique(n) & ...
+                        best_method_table.Angle == theta_unique(m);
                 
-                set(gca, 'XScale','log','YScale','log')
-                grid on
-            
-                save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(j)+"_T"+filedataExp.T(k)+"_P"+filedataExp.P(m)+"_"+fitData;
-            
-                title(save_name, 'Interpreter','none')
-            
-                annotation('textbox',[0.25 0.2 0.5 0.05],...
-                    'String',sprintf('\\alpha = %.2f ± %.2f cm', alpha_cm, dalpha_cm),...
-                    'EdgeColor','none')
-            
-                legend('Location','northwest')
-            
-                % save figure
-                saveas(gcf, pathExportAll + "KLD0vsPe_all_" + save_name, 'png')
-                savefig(gcf, pathExportAll + "KLD0vsPe_all_" + save_name)
-            
+                    % extract data
+                    u_array_cmmin = best_method_table.u_cmmin(idx);
+                    u_array_SI = best_method_table.u_SI(idx);
+                    KL_array = best_method_table.KL_cm2min(idx);
+                    dKL_array = best_method_table.dKL_cm2min(idx);
+                    Pe_D0_array = best_method_table.Pe_upump_L_D0(idx);
+                    D0 = unique(best_method_table.D12_SI(idx));
+                    dD0 = unique(best_method_table.dD12_SI(idx));
+                    Dp_SI = unique(best_method_table.L_SI(idx));
+                    KL_vs_D0_array = best_method_table.KL_SI(idx)/D0;
+                    dKL_vs_D0_array = best_method_table.dKL_SI(idx)/D0+best_method_table.KL_SI(idx)*dD0/(D0^2);
+                
+                    % get alpha for this group
+                    idx_alpha = alpha_table.Fluid1 == Fluid1_unique(i) & ...
+                        alpha_table.Fluid2 == Fluid2_unique(j) & ...
+                        alpha_table.T_C == T_unique(k) & ...
+                        alpha_table.P_psig == P_unique(m) & ...
+                        alpha_table.L_in == L_unique(n) & ...
+                        alpha_table.Angle == theta_unique(m);
+                
+                    alpha_SI = alpha_table.alpha_SI(idx_alpha);
+                    dalpha_SI = alpha_table.d_alpha_SI(idx_alpha);
+                    alpha_cm = alpha_SI * 100;
+                    dalpha_cm = dalpha_SI * 100;
+                    alpha_tau_SI = alpha_table.alpha_tau_SI(idx_alpha);
+                    dalpha_tau_SI = alpha_table.d_alpha_tau_SI(idx_alpha);
+                    alpha_tau_cm = alpha_tau_SI * 100;
+                    dalpha_tau_cm = dalpha_tau_SI * 100;
+                    tau = alpha_table.tau;
+                    d_tau = alpha_table.tau;
+                    Pe_D0_alpha = u_array_SI*alpha_SI/D0;
+                
+                    % model based on Pe numbers (Pe with D0 denominator)
+                    Pe_D0_array_plot = 0.1:0.1:6;
+                    % KL_Pe_alpha_only_model(Pe_fromD0,D0,p) % alpha = p * Dp; % Alpha (dispersivity) Dp is L
+                    KL_array_alpha_SI_plot = KL_Pe_alpha_only_model(Pe_D0_array_plot,D0,1);
+                    KL_array_tau_SI_plot = KL_Pe_alpha_tau_model(Pe_D0_array_plot,D0,[alpha_tau_SI/Dp_SI;tau]);
+                    KL_array_alpha_cm2min_plot = KL_array_alpha_SI_plot*(60*10^4);
+                    KL_array_tau_cm2min_plot = KL_array_tau_SI_plot*(60*10^4);
+                    u_array_cmmin_plot = (Pe_D0_array_plot*D0/Dp_SI)*(60*10^2);
+                
+                    % plot
+                    figure
+                    hold on
+                    plot(Pe_D0_array_plot, KL_array_alpha_SI_plot/D0, ...
+                        'k','LineWidth',2,...
+                        'DisplayName','K_L/D_0 \approx \alpha_Lu_x/D_0')
+                    hold on
+                    plot(Pe_D0_array_plot, KL_array_tau_SI_plot/D0, ...
+                        'k','LineWidth',2,'LineStyle', '--',...
+                        'DisplayName','K_L/D_0 \approx 1/\tau + \alpha_Lu_x/D_0') 
+                    % data
+                    for ii = 1:length(Pe_D0_alpha)
+                        errorbar(Pe_D0_alpha(ii), KL_vs_D0_array(ii), ...
+                            dKL_vs_D0_array(ii), dKL_vs_D0_array(ii), ...
+                            'Color','k','HandleVisibility','off')
+                        scatter(Pe_D0_alpha(ii), KL_vs_D0_array(ii), ...
+                            'filled', ...
+                            'Color',colors(ii,:), ...
+                            'DisplayName',"Q = " + best_method_table.Q_mlmin(ii) + " ml/min")            
+                    end
+                    xlabel('Pe = u_x\alpha/D_0')
+                    ylabel('K_L/D_0');
+                    xlim([0,10])
+                    ylim([0,10])
+                    set(gca, 'XScale','log','YScale','log')
+                    grid on
+                    save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(j)+ ...
+                            "_T"+filedataExp.T(k)+"_P"+filedataExp.P(m)+"_L"+filedataExp.L(n)+"_THETA"+filedataExp.Angle(theta)+"_"+fitData;
+                    title(save_name, 'Interpreter','none')
+                    annotation('textbox',[0.25 0.2 0.5 0.05],...
+                        'String',sprintf('\\alpha = %.2f ± %.2f cm', alpha_cm, dalpha_cm),...
+                        'EdgeColor','none')
+                    legend('Location','northwest')
+                    % save figure
+                    saveas(gcf, pathExportAll + "KLD0vsPe_all_" + save_name, 'png')
+                    savefig(gcf, pathExportAll + "KLD0vsPe_all_" + save_name)
+                end            
             end
         end
     end

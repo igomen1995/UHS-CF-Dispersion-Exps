@@ -36,7 +36,8 @@ function row = buildRow_procResults(filedataExp, expProcData, KL_out, i)
     %
     %   OUTPUT
     %       row         : Single-row table containing:
-    %                       - Experimental metadata
+    %                       - Experimental metadata in exp_params (which
+    %                       includes metadata of filedataExp)
     %                       - Core properties
     %                       - Flow conditions
     %                       - Diffusion coefficients
@@ -50,8 +51,10 @@ function row = buildRow_procResults(filedataExp, expProcData, KL_out, i)
     %   DERIVED PARAMETERS
     %       The function computes several transport quantities including:
     %
-    %           Pe         = u*L/KL
-    %           Pe_D0      = u*L/D0
+    %           Pe_upump_L_KL   = upump*L/KL
+    %           Pe_uMFM_L_KL   = uMFM*L/KL
+    %           Pe_upump_L_D0  = upump*L/D0
+    %           Pe_uMFM_L_D0   = uMFM*L/D0
     %           dtD        = u*dt/L
     %           L_lines    = v_lines*dt
     %           V_lines    = Q*dt
@@ -74,39 +77,15 @@ function row = buildRow_procResults(filedataExp, expProcData, KL_out, i)
     %
     %   See also TABLE, STRUCT, VERTCAT.
 
-    u = expProcData.(filedataExp.Key(i)).exp_params.u_SI;
-    L = expProcData.(filedataExp.Key(i)).exp_params.L_SI;
+    row = expProcData.(filedataExp.Key(i)).exp_params;
 
-    % exp params for table
-    row = table();
-    row.Key = filedataExp.Key(i);
-    row.Fluid1 = filedataExp.Fluid1(i);
-    row.Fluid2 = filedataExp.Fluid2(i);
-    row.T_C = filedataExp.T(i);
-    row.P_psig = filedataExp.P(i);
-    row.Q_mlmin = filedataExp.Q(i);
-    row.Run = filedataExp.Run(i);
-    row.C1init_molpc = filedataExp.C1init(i);
-    row.C1j_molpc = filedataExp.C1j(i);
-    row.D_in = filedataExp.D(i);
-    row.L_in = filedataExp.L(i);
-    row.phi = filedataExp.phi(i);
-    row.K_mD = filedataExp.K(i);
-    % exp params for table
-    row.T_mean = mean(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-    row.T_std = std(expProcData.(filedataExp.Key(i)).BT.T_MFM);
-    row.u_cmmin = u*60*(10^2);
-    row.L_cm = L*100;
-    row.u_SI = u;
-    row.L_SI = L;
-    row.D0_SI = expProcData.(filedataExp.Key(i)).exp_params.D12_cm2min/(60*10^4);
-    row.dD0_SI = expProcData.(filedataExp.Key(i)).exp_params.dD12_cm2min/(60*10^4); % error
-    row.D0_cm2min = row.D0_SI*60*10^4;
-    row.dD0_cm2min = row.dD0_SI*60*10^4;
-    row.Pe_D0 = u*L/row.D0_SI;
-    row.dPe_D0 = (((-u*L/(row.D0_SI^2))^2)*(row.dD0_SI^2))^(1/2); % error
-    row.v_lines = expProcData.(filedataExp.Key(i)).exp_params.v_lines_SI;
-    row.KL_lines = expProcData.(filedataExp.Key(i)).exp_params.KL_lines_SI;
+    L = expProcData.(filedataExp.Key(i)).exp_params.L_SI;
+    uMFM = expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI;
+    duMFM = expProcData.(filedataExp.Key(i)).exp_params.ustd_MFM_SI;
+    upump = expProcData.(filedataExp.Key(i)).exp_params.u_SI;
+    dupump = 0.1*upump;
+    D12_SI = expProcData.(filedataExp.Key(i)).exp_params.D12_SI;
+    dD12_SI = expProcData.(filedataExp.Key(i)).exp_params.dD12_SI;
 
     % results 
     row.KL_SI = KL_out.KL;
@@ -119,12 +98,12 @@ function row = buildRow_procResults(filedataExp, expProcData, KL_out, i)
     row.dKL_cm2min = (row.dKL_SI)*60*10^4;
     row.dt_min = row.dt_SI/60;
     row.d_dt_min = row.d_dt_SI/60;
-    row.Pe = u*L/row.KL_SI; 
-    row.dPe = (((-u*L*((row.KL_SI)^-2))^2)*(row.dKL_SI^2))^(1/2); 
-    row.dtD = u*row.dt_SI/L;  % respect to Vcore
-    row.d_dtD = (((u/L)^2)*(row.d_dt_SI^2))^(1/2); 
-    row.L_lines = row.v_lines*row.dt_SI; 
-    row.dL_lines = ((row.v_lines^2)*(row.d_dt_SI^2))^(1/2); 
+    row.Pe_upump_L_KL = upump*L/row.KL_SI;
+    row.dPe_upump_L_KL = row.Pe_upump_L_KL*(((dupump/upump)^2+(dD12_SI/D12_SI)^2)^(1/2));
+    row.dtD = upump*row.dt_SI/L;  % respect to Vcore
+    row.d_dtD = (((upump/L)^2)*(row.d_dt_SI^2))^(1/2); 
+    row.L_lines = row.v_lines_SI*row.dt_SI; 
+    row.dL_lines = ((row.v_lines_SI^2)*(row.d_dt_SI^2))^(1/2); 
     row.L_lines_cm = row.L_lines*100;
     row.d_L_lines_cm = row.dL_lines*100;
     row.V_lines_cc = row.Q_mlmin*row.dt_SI/60; 
@@ -132,6 +111,8 @@ function row = buildRow_procResults(filedataExp, expProcData, KL_out, i)
     row.V_lines_SI = row.V_lines_cc*(10^-6);
     row.d_V_lines_SI = row.dV_lines_cc*(10^-6);
     row.C_fit = {KL_out.C_fit}; 
+    row.Pe_uMFM_L_KL = uMFM*L/row.KL_SI;
+    row.dPe_uMFM_L_KL = row.Pe_uMFM_L_KL*(((duMFM/uMFM)^2+(dD12_SI/D12_SI)^2)^(1/2));
     
 end
 
