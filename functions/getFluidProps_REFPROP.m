@@ -42,6 +42,8 @@ function props = getFluidProps_REFPROP(RP,fluid,T,P)
 %   He = getFluidProps(RP,'HELIUM',293.15,5100);
 %
 
+fluid = char(fluidNameREFPROP(fluid));
+
 props = struct();
 
 % Pure-fluid mole fraction vect
