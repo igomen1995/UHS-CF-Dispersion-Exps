@@ -13,6 +13,8 @@ function props = getMixtureProps_REFPROP(RP,fluids,z,T,P)
 props = struct();
 
 % REFPROP mixture string
+fluids{1} = char(fluidNameREFPROP(fluids{1}));
+fluids{2} = char(fluidNameREFPROP(fluids{2}));
 fluidString = strjoin(fluids,'*');
 
 % REFPROP composition vector
@@ -31,6 +33,7 @@ out = RP.REFPROPdll( ...
     T,...
     P,...
     zREF);
+
 
 D_molL = double(out.Output(1));
 
