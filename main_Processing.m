@@ -592,8 +592,8 @@ end
 
 % Select best method
 [~, idx_best] = max(mean_R2./mean_RMSE);
-% best_method = valid_methods(idx_best);
-best_method = "dt_fixed_wdt_wfit_lim";
+best_method = valid_methods(idx_best);
+% best_method = "dt_fixed_wdt_wfit_lim";
 
 disp("Best method: " + best_method)
 
@@ -779,7 +779,7 @@ for j = 1:length(Fluid1_unique)
                 for i = 1:length(filedataExp.Key)
         
                     if filedataExp.Fluid1(i) == Fluid1_unique(j) && filedataExp.Fluid2(i) == Fluid2_unique(jj) ...
-                            && filedataExp.T(i) == T_unique(k) && filedataExp.P(i) == P_unique(j)
+                            && filedataExp.T(i) == T_unique(k) && filedataExp.P(i) == P_unique(l)
         
                         count = count + 1;
         
@@ -911,7 +911,7 @@ for j = 1:length(Fluid1_unique)
                 for i = 1:length(filedataExp.Key)
         
                     if filedataExp.Fluid1(i) == Fluid1_unique(j) && filedataExp.Fluid2(i) == Fluid2_unique(jj) ...
-                            && filedataExp.T(i) == T_unique(k) && filedataExp.P(i) == P_unique(j)
+                            && filedataExp.T(i) == T_unique(k) && filedataExp.P(i) == P_unique(l)
         
                         count = count + 1;
 
@@ -1035,7 +1035,7 @@ for j = 1:length(Fluid1_unique)
                 for i = 1:length(filedataExp.Key)
         
                     if filedataExp.Fluid1(i) == Fluid1_unique(j) && filedataExp.Fluid2(i) == Fluid2_unique(jj) ...
-                            && filedataExp.T(i) == T_unique(k) && filedataExp.P(i) == P_unique(j)
+                            && filedataExp.T(i) == T_unique(k) && filedataExp.P(i) == P_unique(l)
         
                         count = count + 1;
 
@@ -1510,7 +1510,7 @@ for i = 1:length(Fluid1_unique)
                             best_method_table.T_C == T_unique(k) & ...
                             best_method_table.P_psig == P_unique(m) & ...
                             best_method_table.L_in == L_unique(n) & ...
-                            best_method_table.Angle == theta_unique(m);
+                            best_method_table.Angle == theta_unique(theta);
                     
                         % extract data
                         u_array_cmmin = best_method_table.u_cmmin(idx);
@@ -1526,7 +1526,7 @@ for i = 1:length(Fluid1_unique)
                             alpha_table.T_C == T_unique(k) & ...
                             alpha_table.P_psig == P_unique(m) & ...
                             alpha_table.L_in == L_unique(n) & ...
-                            alpha_table.Angle == theta_unique(m);
+                            alpha_table.Angle == theta_unique(theta);
                     
                         alpha_SI = alpha_table.alpha_SI(idx_alpha);
                         dalpha_SI = alpha_table.d_alpha_SI(idx_alpha);
@@ -1626,7 +1626,7 @@ for i = 1:length(Fluid1_unique)
                         best_method_table.T_C == T_unique(k) & ...
                         best_method_table.P_psig == P_unique(m) & ...
                         best_method_table.L_in == L_unique(n) & ...
-                        best_method_table.Angle == theta_unique(m);
+                        best_method_table.Angle == theta_unique(theta);
                 
                     % extract data
                     u_array_cmmin = best_method_table.u_cmmin(idx);
@@ -1646,7 +1646,7 @@ for i = 1:length(Fluid1_unique)
                         alpha_table.T_C == T_unique(k) & ...
                         alpha_table.P_psig == P_unique(m) & ...
                         alpha_table.L_in == L_unique(n) & ...
-                        alpha_table.Angle == theta_unique(m);
+                        alpha_table.Angle == theta_unique(theta);
                 
                     alpha_SI = alpha_table.alpha_SI(idx_alpha);
                     dalpha_SI = alpha_table.d_alpha_SI(idx_alpha);

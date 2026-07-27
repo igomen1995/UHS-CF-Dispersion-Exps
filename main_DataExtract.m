@@ -718,10 +718,11 @@ end
 
 x1 = 0:0.1:1; % array for binary mixture
 for i = 1:length(filedataExp.Key)
+    i
     fluidPair = [filedataExp.Fluid1(i),filedataExp.Fluid2(i)];
     Tmin = floor(min(expProcData.(filedataExp.Key(i)).BT.T_MFM)*10)/10;
     Tmax = ceil(max(expProcData.(filedataExp.Key(i)).BT.T_MFM)*10)/10;
-    T_REF_aux = Tmin:0.1:Tmax;
+    T_REF_aux = Tmin:1:Tmax;
     if ismissing(trans_data_name) == 0
         Pmin = floor(min(expProcData.(filedataExp.Key(i)).BT.Pavg)*10)/10;
         Pmax = ceil(max(expProcData.(filedataExp.Key(i)).BT.Pavg)*10)/10;
