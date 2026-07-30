@@ -592,8 +592,8 @@ end
 
 % Select best method
 [~, idx_best] = max(mean_R2./mean_RMSE);
-best_method = valid_methods(idx_best);
-% best_method = "dt_fixed_wdt_wfit_lim";
+% best_method = valid_methods(idx_best);
+best_method = "dt_fixed_wdt_wfit_lim";
 
 disp("Best method: " + best_method)
 
@@ -870,7 +870,7 @@ for j = 1:length(Fluid1_unique)
                         'Color','k', 'LineWidth',0.8);
                 end
                 
-                title(save_name,'Interpreter','none')
+                % title(save_name,'Interpreter','none')
                 saveas(gcf,pathExportAll + save_name + "_BTfitting",'png')
                 savefig(gcf,pathExportAll + save_name + "_BTfitting")
 

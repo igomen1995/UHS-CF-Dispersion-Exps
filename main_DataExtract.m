@@ -1098,9 +1098,9 @@ for i = 1:length(filedataExp.Key)
         errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', 'Color', [255 193 183]/255,'HandleVisibility','off')
         hold on 
         h3 = scatter(t,C1,5,'filled','MarkerFaceColor','r','DisplayName','C_{MFM} \pm \DeltaC_{MFM}');
-        % Uncomment to plot density norm too
-        errorbar(t, rho_norm, drho_norm/2, drho_norm/2, 'LineStyle', 'none', 'Color', [0.88 0.88 0.88] ,'HandleVisibility','off')
-        scatter(t,rho_norm,5,'filled','MarkerFaceColor','k','DisplayName','\rho* \pm \Delta\rho*');
+        % % Uncomment to plot density norm too
+        % errorbar(t, rho_norm, drho_norm/2, drho_norm/2, 'LineStyle', 'none', 'Color', [0.88 0.88 0.88] ,'HandleVisibility','off')
+        % scatter(t,rho_norm,5,'filled','MarkerFaceColor','k','DisplayName','\rho* \pm \Delta\rho*');
     end
     if ismissing(PGD2_data_name) == 0
         h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,7,'filled','MarkerFaceColor',[0.9290 0.6940 0.1250],'DisplayName','C_{PGD2}');
@@ -1119,6 +1119,6 @@ for i = 1:length(filedataExp.Key)
     grid on;
     ax = gca; % Get current axes
     ax.FontSize = 14;
-    title("Breakthrough curve using " + eosMethod + " EOS") % check that calibration config eos and validation config eos are the same
+    % title("Breakthrough curve using " + eosMethod + " EOS") % check that calibration config eos and validation config eos are the same
     saveas(gcf,pathExportAll + filedataExp.Key(i) + "_dens_conc",'png')
 end

@@ -1273,7 +1273,7 @@ rho_MFM_0 = predict(cal_curve_params_Qall,rho_ref_0);
 step = 1;
 xNorm = axPos(1) + (rho_ref_0-ax1.XLim(1))/diff(ax1.XLim)*axPos(3);
 yNorm = axPos(2) + (rho_MFM_0-ax1.YLim(1))/diff(ax1.YLim)*axPos(4);
-title("Calibration curve - HP cal fluids P and T - linear - using " + eosMethod + " EOS")
+%title("Calibration curve - HP cal fluids P and T - linear - using " + eosMethod + " EOS")
 % plots
 %error bar low dens
 errorbar(0:step:rho_ref_0,feval(cal_curve_params_Qall,0:step:rho_ref_0),drho_MFM,'LineStyle', 'none', ...

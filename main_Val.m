@@ -857,5 +857,5 @@ ax = gca; % Get current axes
 ax.FontSize = 14;
 grid on
 legend([h1,h2],{'C_{H_2}_{ MFM}','C_{H_2}_{ MFM_{ fit}} \pm \DeltaC_{H_2}_{ MFM_{ fit}}'},'Location','southeast', 'FontSize',14)
-title("Validation curve using " + eosMethod + " calibration") % check that calibration config eos and validation config eos are the same
+% title("Validation curve using " + eosMethod + " calibration") % check that calibration config eos and validation config eos are the same
 saveas(gcf,pathExportAll + "Val-P1500",'png')
