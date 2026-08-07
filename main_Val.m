@@ -839,8 +839,8 @@ hold on
     %     expProcData.(filedataExp.Key(i)).P1500.BT.rho_norm*100,20,expProcData.(filedataExp.Key(i)).P1500.BT.T_MFM,'filled');
 end
 h2 = plot(0:1:100,Cval_lin_params.feval(0:1:100),"Color",'k'); % fitting responds to high pressure only
-xlabel('C_{H_2}_{ ref} [mol %]','FontSize',16);
-ylabel('C_{H_2}_{ MFM} [mol %]','FontSize',16);
+xlabel('C_{H2,ref} [mol %]','FontSize',16);
+ylabel('C_{H2,MFM,REFPROP} [mol %]','FontSize',16);
 xlim([0 100]);
 ylim([0 100]);
 c=colorbar;
@@ -856,6 +856,7 @@ c.FontSize = 14;
 ax = gca; % Get current axes
 ax.FontSize = 14;
 grid on
-legend([h1,h2],{'C_{H_2}_{ MFM}','C_{H_2}_{ MFM_{ fit}} \pm \DeltaC_{H_2}_{ MFM_{ fit}}'},'Location','southeast', 'FontSize',14)
+legend([h1,h2],{'C_{H2,MFM}','C_{H2,MFM,fit} \pm \DeltaC_{H2,MFM,fit}'},'Location','southeast', 'FontSize',14)
 % title("Validation curve using " + eosMethod + " calibration") % check that calibration config eos and validation config eos are the same
+saveas(gcf,pathExportAll + "Val-P1500",'png')
 saveas(gcf,pathExportAll + "Val-P1500",'png')
