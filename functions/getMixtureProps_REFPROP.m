@@ -66,4 +66,7 @@ out = RP.REFPROPdll( ...
 props.Z = double(out.Output(1));
 props.MW = MW;
 
+% heat capacity
+props.Cp = double(out.Output(1)); % J/mol-K
+
 end
