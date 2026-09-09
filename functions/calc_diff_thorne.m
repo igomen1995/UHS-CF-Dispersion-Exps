@@ -72,6 +72,9 @@ RP = initREFPROP();
 NA = 6.02214076e23; % molecules/mol % avogadro number
 T = T_C + 273.15; % K
 P = (P_psig + 14.7)/145; % MPa
+P_atm = (P_psig + 14.7)/14.7; % atm
+z1 = z_vector(1);
+z2 = z_vector(2);
 
 fluid1Prop = getMixtureProps_REFPROP(RP,...
     {char(fluid1),char(fluid2)},...
@@ -89,12 +92,8 @@ MW1 = fluid1Prop.MW*1000; % g/mol
 MW2 = fluid2Prop.MW*1000; % g/mol
 MWmix = mix.MW*1000; % g/mol
 
-rho1 = fluid1Prop.rho/1000; % g/cm3
-rho2 = fluid2Prop.rho/1000; % g/cm3
 rhomix = mix.rho/1000; % g/cm3
 
-rhoN1 = rho1*NA/MW1; % number density [molecules/cm3]
-rhoN2 = rho2*NA/MW2;
 rhoNmix = rhomix*NA/MWmix;
 
 sigma12 = (sigma1 + sigma2)/2;
@@ -105,8 +104,19 @@ omegaD = 1.06036/(Tr^0.15610) ...
     + 1.03587/exp(1.52996*Tr) ...
     + 1.76474/exp(3.89411*Tr);
 
-D12CE = (2.2646*(10^-5)*((T*((1/MW1)+(1/MW2)))^(1/2)))/(rhoNmix*(sigma12^2)*omegaD/NA); % Chapman-Enskog cm2/s
+% if including rhoNmix or rhomix the Z is included because the densitites
+% are run at high pressure
+% D12CE = (2.2646*(10^-5)*((T*((1/MW1)+(1/MW2)))^(1/2)))/(rhomix*(sigma12^2)*omegaD/MWmix); % Chapman-Enskog cm2/s % using c (number molecule in mol/cm3) = number density *NA or c = rhomix/MWmix
+% D12CE_cm2min = D12CE*60; %cm2/min
+
+% D12CE = (2.2646*(10^-5)*((T*((1/MW1)+(1/MW2)))^(1/2)))/(rhoNmix*(sigma12^2)*omegaD/NA); % Chapman-Enskog cm2/s % using number densitu (rhonNmix)
+% D12CE_cm2min = D12CE*60; %cm2/min
+
+D12CE = (0.0018583*(((T^3)*((1/MW1)+(1/MW2)))^(1/2)))/(P_atm*(sigma12^2)*omegaD); % Chapman-Enskog cm2/s % considering ideal gas law (low densities)
 D12CE_cm2min = D12CE*60; %cm2/min
+
+rhoN1 = z1*rhoNmix;
+rhoN2 = z2*rhoNmix;
 
 sigma1_cm = sigma1*(10^-8);
 sigma2_cm = sigma2*(10^-8);
