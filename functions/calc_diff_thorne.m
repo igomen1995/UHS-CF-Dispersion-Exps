@@ -128,6 +128,10 @@ D12CE_cm2min = D12CE*60; %cm2/min
 D12TE = (rhoNmix_0*D12CE_0)/(rhoNmix*chi); % Thorne-Enskog cm2/s
 D12TE_cm2min = D12TE*60; %cm2/min
 
+% this is equal to
+% D12TE = (mix.Z*D12CE)/chi; % Thorne-Enskog cm2/s
+% D12TE_cm2min = D12TE*60; %cm2/min
+
 % % comment from here to D12TE if willing to test D thorne from D chapman (at
 % % pressure using rhoNmix) divided by X
 % % if including rhoNmix or rhomix the Z is included because the densitites
