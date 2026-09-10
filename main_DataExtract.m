@@ -318,6 +318,10 @@ switch diffMethod
     case "Marrero"
         % import file diffusion params Marrero
         filedataDiff = import_params_diffusion_marrero(filenameDiff);
+
+    case "Thorne"
+        % import file diffusion Lennard Jones potential params
+        filedataDiff = import_params_diffusion_LJ(filenameDiff);
 end
 
 %% Initialize Python for CProP or REFPROP
@@ -430,15 +434,27 @@ for i = 1:length(filedataExp.Key)
     L_linesafter = Vafter/A_lines; %m
     L_total = L_linesbefore + L_linesafter;
 
-    % Assumes only one row is output, unique parasm for fluid 1 and 2
-    filedataDiffaux = filedataDiff((filedataDiff.Fluid1 == filedataExp.Fluid1{i} & filedataDiff.Fluid2 == filedataExp.Fluid2{i}),:);
+    switch diffMethod
+        case "Marrero"
+            % Assumes only one row is output, unique parasm for fluid 1 and 2
+            filedataDiffaux = filedataDiff((filedataDiff.Fluid1 == filedataExp.Fluid1{i} & filedataDiff.Fluid2 == filedataExp.Fluid2{i}),:);
+            %[D12, dD12] = calc_diff_marrero(T_C,P_REF_psig, A, B, C, D, E, group, dev_pc)
+            [D12,dD12] = calc_diff_marrero(filedataExp.T(i), ...
+                filedataExp.P(i), filedataDiffaux.A, filedataDiffaux.B, ...
+                filedataDiffaux.C, filedataDiffaux.D, filedataDiffaux.E, ...
+                filedataDiffaux.group, filedataDiffaux.dev_pc); %cm2min
+        case "Thorne"
+            filedataDiffaux1 = filedataDiff(filedataDiff.Fluid == filedataExp.Fluid1{i},:);
+            filedataDiffaux2 = filedataDiff(filedataDiff.Fluid == filedataExp.Fluid2{i},:);
+            %[D12,dD12] = calc_diff_thorne(fluid1,fluid2,z_vector,T_C,P_psig,sigma1,sigma2,eps1,eps2,dsigma1,dsigma2,deps1,deps2)
+            [D12,dD12] = calc_diff_thorne(filedataExp.Fluid1{i},filedataExp.Fluid2{i}, ...
+                [0.5 0.5],filedataExp.T(i),filedataExp.P(i), ...
+                filedataDiffaux1.sigma,filedataDiffaux2.sigma, ...
+                filedataDiffaux1.eps,filedataDiffaux2.eps, ...
+                filedataDiffaux1.dsigma,filedataDiffaux2.dsigma, ...
+                filedataDiffaux1.deps,filedataDiffaux2.deps);
+    end
     
-    %[D12, dD12] = calc_diff_marrero(T_C,P_REF_psig, A, B, C, D, E, group, dev_pc)
-    [D12,dD12] = calc_diff_marrero(filedataExp.T(i), ...
-        filedataExp.P(i), filedataDiffaux.A, filedataDiffaux.B, ...
-        filedataDiffaux.C, filedataDiffaux.D, filedataDiffaux.E, ...
-        filedataDiffaux.group, filedataDiffaux.dev_pc); %cm2min
-
     % KL lines Aris Dispersion
     % KL_lines = KL_lines_taylor_aris(v, r, Dm)
     KL_lines =  KL_lines_taylor_aris(v_lines, filedataExp.IDlines_cm(i)/100, D12/(60*(10^4)));
