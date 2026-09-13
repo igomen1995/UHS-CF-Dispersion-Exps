@@ -344,8 +344,8 @@
 addpath('functions/');
 
 filenameExp = 'input/input_exp_H2-CO2-T32-P1500.xlsx';
-pathImportAll = 'results/exp_H2-CO2-T32-P1500-H/';
-pathExportAll = 'results/exp_H2-CO2-T32-P1500-H/';
+pathImportAll = 'results/exp_H2-CO2-T32-P1500-H_REFPROP/';
+pathExportAll = 'results/exp_H2-CO2-T32-P1500-H_REFPROP/';
 
 
 %% IMPORT variables
@@ -378,24 +378,31 @@ fitting_mixinglines_results = table();
 
 for i = 1:length(filedataExp.Key)
     exp_params = expProcFullData.(filedataExp.Key(i)).exp_params;
-    % r_before = 0.145/100;
-    % r_after = 0.08/100;
-    r_before = exp_params.ID_lines_cm/(2*100);
-    r_after = exp_params.ID_lines_cm/(2*100);
+    V_before = exp_params.Vlinesbefore_cc*1e-6;
+    V_after  = exp_params.Vlinesafter_cc*1e-6;
+    D0_SI = exp_params.D12_cm2min/(60*10000); % SI
+    dD0_SI = exp_params.dD12_cm2min/(60*10000); % SI
+    
+    % guessing params
+    Dc_fit = 1e-6;
+    r_before = 0.134/100; % average lines only (not valve orifice)
+    r_after = 0.121/100;
+    % r_before = exp_params.ID_lines_cm/(2*100);
+    % r_after = exp_params.ID_lines_cm/(2*100);
     A_before = pi*(r_before^2);
     A_after = pi*(r_after^2);
-
+    L_line_before = V_before/A_before;
+    L_line_after = V_after/A_after;
     v_lines_before = exp_params.q_SI/A_before;
     v_lines_after = exp_params.q_SI/A_after;
-    KL_lines_before = KL_lines_taylor_aris(v_lines_before, r_before, exp_params.D0_SI);
-    KL_lines_after = KL_lines_taylor_aris(v_lines_after, r_after, exp_params.D0_SI);
 
-    % V_lines_total_cc = exp_params.Vlinesbefore_cc + exp_params.Vlinesafter_cc;
-    % L_line_before = (exp_params.Vlinesbefore_cc/V_lines_total_cc)*exp_params.L_lines_mean_SI;
-    % L_line_after = (exp_params.Vlinesafter_cc/V_lines_total_cc)*exp_params.L_lines_mean_SI;
+    KL_lines_before = KL_lines_taylor_aris(v_lines_before, r_before, D0_SI);
+    KL_lines_after = KL_lines_taylor_aris(v_lines_after, r_after, D0_SI);
 
-    L_line_before = exp_params.L_linesbefore_SI;
-    L_line_after = exp_params.L_linesafter_SI;
+    % L_line_before = 547.62/100;
+    % L_line_after = 253.2/100;
+    % % L_line_before = exp_params.L_linesbefore_SI;
+    % % L_line_after = exp_params.L_linesafter_SI;
 
     exp_params.v_lines_before_SI = v_lines_before;
     exp_params.v_lines_before_cmmin = v_lines_before*60*100;
@@ -430,8 +437,8 @@ for i = 1:length(filedataExp.Key)
     ub = 1e-3;                  % upper bound
 
     Dc_fit = lsqcurvefit(model, Dc0, t_vals, C1_vals, lb, ub);
-    expProcFullData.(filedataExp.Key(i)).exp_params.Dcore_fit_SI = Dc_fit;
-    expProcFullData.(filedataExp.Key(i)).exp_params.Dcore_fit_cm2min = Dc_fit*(60*10^4);
+    exp_params.Dcore_fit_SI = Dc_fit;
+    exp_params.Dcore_fit_cm2min = Dc_fit*(60*10^4);
 
     C1_eval = model(Dc_fit,t_vals);
 
@@ -465,24 +472,24 @@ for i = 1:length(filedataExp.Key)
 
     Dc_fit_ups_core = lsqcurvefit(model2, Dc0, t_vals, C1_vals, lb, ub);
 
-    expProcFullData.(filedataExp.Key(i)).exp_params.Dcore_fit_upscore_SI = Dc_fit_ups_core;
-    expProcFullData.(filedataExp.Key(i)).exp_params.Dcore_fit_upscore_cm2min = Dc_fit_ups_core*(60*10^4);
+    exp_params.Dcore_fit_upscore_SI = Dc_fit_ups_core;
+    exp_params.Dcore_fit_upscore_cm2min = Dc_fit_ups_core*(60*10^4);
 
     C1_eval_upscore = model2(Dc_fit_ups_core,t_vals);
 
-    expProcFullData.(filedataExp.Key(i)).BT_fit = table();
-    expProcFullData.(filedataExp.Key(i)).BT_fit.SecondsElapsed = t_vals;
-    expProcFullData.(filedataExp.Key(i)).BT_fit.Ci_corr_mean = C1_eval*100;
-    expProcFullData.(filedataExp.Key(i)).BT_fit.Ci_upscore = C1_eval_upscore*100;
+    BT_fit = table();
+    BT_fit.SecondsElapsed = t_vals;
+    BT_fit.Ci_corr_mean = C1_eval*100;
+    BT_fit.Ci_upscore = C1_eval_upscore*100;
 
     C1_ob = ob_step(t_vals,exp_params.L_SI,exp_params.u_SI,Dc_fit,1);
-    expProcFullData.(filedataExp.Key(i)).BT_fit.Ci_ob = C1_ob*100;
+    BT_fit.Ci_ob = C1_ob*100;
 
-    C1_ob_linesbefore = ob_step(t_vals,L_line_before,exp_params.v_lines_SI,exp_params.KL_lines_SI,1);
-    expProcFullData.(filedataExp.Key(i)).BT_fit.C1_ob_linesbefore = C1_ob_linesbefore*100;
+    C1_ob_linesbefore = ob_step(t_vals,L_line_before,v_lines_before,KL_lines_before,1);
+    BT_fit.C1_ob_linesbefore = C1_ob_linesbefore*100;
 
-    C1_ob_linesafter = ob_step(t_vals,L_line_after,exp_params.v_lines_SI,exp_params.KL_lines_SI,1);
-    expProcFullData.(filedataExp.Key(i)).BT_fit.C1_ob_linesafter = C1_ob_linesafter*100;
+    C1_ob_linesafter = ob_step(t_vals,L_line_after,v_lines_after,KL_lines_after,1);
+    BT_fit.C1_ob_linesafter = C1_ob_linesafter*100;
 
     % variances
     % Upstream RTD
@@ -537,6 +544,13 @@ for i = 1:length(filedataExp.Key)
     
     % saving mixing params
     fitting_mixinglines_results = [fitting_mixinglines_results;exp_params];
+    if isfile(pathExportAll + "fitting_mixinglines_results.xlsx")
+        delete(pathExportAll + "fitting_mixinglines_results.xlsx")
+    end
+    writetable(fitting_mixinglines_results, pathExportAll + "fitting_mixinglines_results.xlsx");
+
+    expProcFullData.(filedataExp.Key(i)).exp_params = exp_params;
+    expProcFullData.(filedataExp.Key(i)).BT_fit = BT_fit;
 
 end
 
@@ -560,7 +574,7 @@ for i = 1:length(filedataExp.Key)
             expProcFullData.(filedataExp.Key(i)).BT_fit.Ci_corr_mean, ...
             'LineWidth',1.2,'Color',[78 167 46]./255,'DisplayName','C_{x = L_{total}}')
         plot(expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed, ...
-            expProcFullData.(filedataExp.Key(i)).BT.C_fit_dt_fixed, ...
+            expProcFullData.(filedataExp.Key(i)).BT.C_fit_best, ...
             'LineWidth',1.0,'Color','k','DisplayName','C_{fit \Deltat_{shift}}')
         % plot(expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed,expProcFullData.(filedataExp.Key(i)).BT.C_mean_fit_dt_fixed,'LineStyle','--', 'LineWidth',1.0,'Color','blue','DisplayName','C model mean t shift')
         % plot(expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed, ...
