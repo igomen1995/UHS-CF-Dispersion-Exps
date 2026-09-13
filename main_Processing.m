@@ -1448,10 +1448,6 @@ for mm = 1:length(method_names)
         'Sheet', sheet_name);
 end
 
-% save processed data
-expProcFullData = expProcData;
-save(pathExportAll + "expProcFullData.mat",'expProcFullData')
-
 fitting_results_name = pathExportAll + "fitting_results_" + fitData +".xlsx";
 
 % delete previous file
@@ -1486,6 +1482,10 @@ for j = 1:length(method_names)
     writetable(T, fitting_results_name, 'Sheet', sheet_name)
 
 end
+
+% save processed data
+expProcFullData = expProcData;
+save(pathExportAll + "expProcFullData.mat",'expProcFullData')
 
 %% Plot Kl_vs_vel
 
