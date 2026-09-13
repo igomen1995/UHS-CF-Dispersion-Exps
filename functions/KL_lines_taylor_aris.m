@@ -83,8 +83,14 @@ function KL_lines = KL_lines_taylor_aris(v, r, Dm)
 %       Dm = 1e-7;     % m^2/s
 %
 %       KL_lines = KL_lines_taylor_aris(v,r,Dm);
-%
-%   See also CALC_DIFF_MARRERO.
 
-    KL_lines = Dm + (v^2 * r^2) / (48 * Dm);
+    Pe = r*v/Dm;
+
+    if Pe < sqrt(48) % Aris
+        KL_lines = Dm + (v^2 * r^2) / (48 * Dm);
+    else
+        KL_lines = (v^2 * r^2) / (48 * Dm);
+    end
+    
+    
 end

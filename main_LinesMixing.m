@@ -354,39 +354,16 @@ filedataExp = import_inputExp(filenameExp); % import input to a local variable
 
 load(pathImportAll+"expProcFullData.mat")
 
-%% mean residence time
-
-for i = 1:length(filedataExp.Key)
-    exp_params = expProcFullData.(filedataExp.Key(i)).exp_params;
-    
-    t_vals_aux = expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed;
-    C1_vals_aux = expProcFullData.(filedataExp.Key(i)).BT.Ci/100;
-
-    %resampling to have constant dt
-    idx = isfinite(t_vals_aux) & isfinite(C1_vals_aux);
-    t = t_vals_aux(idx);
-    C = C1_vals_aux(idx);
-    
-    [t, k] = sort(t);
-    C = C(k);
-    
-    t_mean_meas = trapz(t, 1 - C);   % [s]
-end
-
-% mixing models
+%% mixing models
 fitting_mixinglines_results = table();
 
 for i = 1:length(filedataExp.Key)
     exp_params = expProcFullData.(filedataExp.Key(i)).exp_params;
     V_before = exp_params.Vlinesbefore_cc*1e-6;
     V_after  = exp_params.Vlinesafter_cc*1e-6;
-    D0_SI = exp_params.D12_cm2min/(60*10000); % SI
-    dD0_SI = exp_params.dD12_cm2min/(60*10000); % SI
     
-    % guessing params
-    Dc_fit = 1e-6;
     r_before = 0.134/100; % average lines only (not valve orifice)
-    r_after = 0.121/100;
+    r_after = 0.08/100;
     % r_before = exp_params.ID_lines_cm/(2*100);
     % r_after = exp_params.ID_lines_cm/(2*100);
     A_before = pi*(r_before^2);
@@ -395,14 +372,11 @@ for i = 1:length(filedataExp.Key)
     L_line_after = V_after/A_after;
     v_lines_before = exp_params.q_SI/A_before;
     v_lines_after = exp_params.q_SI/A_after;
+    D0_SI = exp_params.D12_cm2min/(60*10000); % SI
+    dD0_SI = exp_params.dD12_cm2min/(60*10000); % SI
 
     KL_lines_before = KL_lines_taylor_aris(v_lines_before, r_before, D0_SI);
     KL_lines_after = KL_lines_taylor_aris(v_lines_after, r_after, D0_SI);
-
-    % L_line_before = 547.62/100;
-    % L_line_after = 253.2/100;
-    % % L_line_before = exp_params.L_linesbefore_SI;
-    % % L_line_after = exp_params.L_linesafter_SI;
 
     exp_params.v_lines_before_SI = v_lines_before;
     exp_params.v_lines_before_cmmin = v_lines_before*60*100;
@@ -547,7 +521,7 @@ for i = 1:length(filedataExp.Key)
     if isfile(pathExportAll + "fitting_mixinglines_results.xlsx")
         delete(pathExportAll + "fitting_mixinglines_results.xlsx")
     end
-    writetable(fitting_mixinglines_results, pathExportAll + "fitting_mixinglines_results.xlsx");
+    writetable(fitting_mixinglines_results,pathExportAll + "fitting_mixinglines_results.xlsx");
 
     expProcFullData.(filedataExp.Key(i)).exp_params = exp_params;
     expProcFullData.(filedataExp.Key(i)).BT_fit = BT_fit;
