@@ -357,6 +357,7 @@ load(pathImportAll+"expProcFullData.mat")
 %% mixing models
 fitting_mixinglines_results = table();
 
+% variable f_up and f_down
 for i = 1:length(filedataExp.Key)
     exp_params = expProcFullData.(filedataExp.Key(i)).exp_params;
     V_before = exp_params.Vlinesbefore_cc*1e-6;
@@ -433,8 +434,222 @@ for i = 1:length(filedataExp.Key)
     % C1_eval = model(Dc_fit,t_vals);
 
     x0 = [Dc_OB 1 1];
-    lb = [lbDc 0.4 0.4];
-    ub = [ubDc 1 1];
+    lb = [lbDc 0.7 0.4];
+    ub = [ubDc 0.9 0.6];
+    xfit = lsqcurvefit( ...
+        model,...
+        x0,...
+        t_vals,...
+        C1_vals,...
+        lb,...
+        ub);
+
+    Dc_fit = xfit(1);
+    f_up = xfit(2);
+    f_down = xfit(3);
+
+    C1_eval = model(xfit,t_vals);
+
+    exp_params.Dcore_fit_SI = Dc_fit;
+    exp_params.Dcore_fit_cm2min = Dc_fit*(60*10^4);
+
+    exp_params.f_upstream = f_up;
+    exp_params.f_downstream = f_down;
+    fprintf('Q = %.1f ml/min\n',filedataExp.Q(i));
+    fprintf('Dcore = %.3f cm2/min\n',...
+        Dc_fit*60*1e4);
+    fprintf('f_up = %.3f\n',f_up);
+    fprintf('f_down = %.3f\n',f_down);
+
+    fit_idx = (C1_vals >= 0.16) & (C1_vals <= 0.84);
+
+    C_fit_data = C1_vals(fit_idx);
+    C_fit_model = C1_eval(fit_idx);
+
+    res = C_fit_data - C_fit_model; 
+    SS_res = sum(res.^2);
+    SS_tot = sum((C_fit_data - mean(C_fit_data)).^2);
+    R2 = 1 - SS_res/SS_tot;
+
+    exp_params.R2conv = R2;
+
+    model2 = @(Dc,t) three_segment_model(t, Dc, ...
+        exp_params.q_SI, A_before, ...
+        exp_params.A_SI, exp_params.phi, A_after, ...
+        L_line_before, exp_params.L_SI, ...
+        0, ...
+        KL_lines_before, ...
+        0, 1);
+
+    Dc_fit_ups_core = lsqcurvefit(model2, Dc_OB, t_vals, C1_vals, lbDc, ubDc);
+
+    exp_params.Dcore_fit_upscore_SI = Dc_fit_ups_core;
+    exp_params.Dcore_fit_upscore_cm2min = Dc_fit_ups_core*(60*10^4);
+
+    C1_eval_upscore = model2(Dc_fit_ups_core,t_vals);
+
+    BT_fit = table();
+    BT_fit.SecondsElapsed = t_vals;
+    BT_fit.Ci_corr_mean = C1_eval*100;
+    BT_fit.Ci_upscore = C1_eval_upscore*100;
+
+    C1_ob = ob_step(t_vals,exp_params.L_SI,exp_params.u_SI,Dc_fit,1);
+    BT_fit.Ci_ob = C1_ob*100;
+
+    C1_ob_linesbefore = ob_step(t_vals,L_line_before,v_lines_before,KL_lines_before,1);
+    BT_fit.C1_ob_linesbefore = C1_ob_linesbefore*100;
+
+    C1_ob_linesafter = ob_step(t_vals,L_line_after,v_lines_after,KL_lines_after,1);
+    BT_fit.C1_ob_linesafter = C1_ob_linesafter*100;
+
+    % variances
+    % Upstream RTD
+    G_up = impulse_from_step(t_vals, f_up*L_line_before, v_lines_before, KL_lines_before);
+    G_up(G_up < 0) = 0;
+    G_up = G_up / trapz(t_vals, G_up);
+    
+    % Core RTD
+    G_core = impulse_from_step(t_vals, exp_params.L_SI, exp_params.u_SI, Dc_fit);
+    G_core(G_core < 0) = 0;
+    G_core = G_core / trapz(t_vals, G_core);
+    
+    % Downstream RTD
+    G_down = impulse_from_step(t_vals, f_down*L_line_after, v_lines_after, KL_lines_after);
+    G_down(G_down < 0) = 0;
+    G_down = G_down / trapz(t_vals, G_down);
+
+    % Means
+    mu_up   = trapz(t_vals, t_vals .* G_up);
+    mu_core = trapz(t_vals, t_vals .* G_core);
+    mu_down = trapz(t_vals, t_vals .* G_down);
+    
+    % Variances
+    sigma2_up   = trapz(t_vals, (t_vals - mu_up  ).^2 .* G_up);
+    sigma2_core = trapz(t_vals, (t_vals - mu_core).^2 .* G_core);
+    sigma2_down = trapz(t_vals, (t_vals - mu_down).^2 .* G_down);
+    
+    % Total variance (by convolution theory)
+    sigma2_tot = sigma2_up + sigma2_core + sigma2_down;
+    
+    frac_up   = sigma2_up   / sigma2_tot * 100;
+    frac_core = sigma2_core / sigma2_tot * 100;
+    frac_down = sigma2_down / sigma2_tot * 100;
+    
+    fprintf('Variance contributions:\n');
+    fprintf('  Upstream:   %.1f %%\n', frac_up);
+    fprintf('  Core:       %.1f %%\n', frac_core);
+    fprintf('  Downstream: %.1f %%\n', frac_down);
+    
+    figure 
+    plot(t_vals, G_up,'LineWidth', 1.2,'DisplayName','G_{upstream}')
+    hold on
+    plot(t_vals, G_core,'LineWidth', 1.2,'DisplayName','G_{core}')
+    plot(t_vals, G_down,'LineWidth', 1.2,'DisplayName','G_{down}')
+    xlabel('Seconds elapsed [seconds]');
+    ylabel('g [s{-1}]');
+    lgd = legend();
+    title (lgd, "Q = " + filedataExp.Q(i) + " ml/min")
+    grid on    
+    saveas(gcf,pathExportAll + "g_functions" + "Q = " + filedataExp.Q(i),'png')
+    savefig(gcf,pathExportAll + "g_functions" + "Q = " + filedataExp.Q(i))
+    
+    % saving mixing params
+    fitting_mixinglines_results = [fitting_mixinglines_results;exp_params];
+    if isfile(pathExportAll + "fitting_mixinglines_results.xlsx")
+        delete(pathExportAll + "fitting_mixinglines_results.xlsx")
+    end
+    writetable(fitting_mixinglines_results,pathExportAll + "fitting_mixinglines_results.xlsx");
+
+    expProcFullData.(filedataExp.Key(i)).exp_params = exp_params;
+    expProcFullData.(filedataExp.Key(i)).BT_fit = BT_fit;
+
+end
+
+f_up = (fitting_mixinglines_results.f_upstream)'*...
+    fitting_mixinglines_results.R2conv/(sum(fitting_mixinglines_results.R2conv));
+
+f_down = (fitting_mixinglines_results.f_downstream)'*...
+    fitting_mixinglines_results.R2conv/(sum(fitting_mixinglines_results.R2conv));
+
+% fixed f_up and f_down
+for i = 1:length(filedataExp.Key)
+    exp_params = expProcFullData.(filedataExp.Key(i)).exp_params;
+    V_before = exp_params.Vlinesbefore_cc*1e-6;
+    V_after  = exp_params.Vlinesafter_cc*1e-6;
+    
+    r_before = 0.134/100; % average lines only (not valve orifice)
+    r_after = 0.121/100;
+    % r_before = exp_params.ID_lines_cm/(2*100);
+    % r_after = exp_params.ID_lines_cm/(2*100);
+    A_before = pi*(r_before^2);
+    A_after = pi*(r_after^2);
+    L_line_before = V_before/A_before;
+    L_line_after = V_after/A_after;
+    v_lines_before = exp_params.q_SI/A_before;
+    v_lines_after = exp_params.q_SI/A_after;
+    D0_SI = exp_params.D12_cm2min/(60*10000); % SI
+    dD0_SI = exp_params.dD12_cm2min/(60*10000); % SI
+
+    KL_lines_before = KL_lines_taylor_aris(v_lines_before, r_before, D0_SI);
+    KL_lines_after = KL_lines_taylor_aris(v_lines_after, r_after, D0_SI);
+
+    exp_params.v_lines_before_SI = v_lines_before;
+    exp_params.v_lines_before_cmmin = v_lines_before*60*100;
+    exp_params.v_lines_after_SI = v_lines_after;
+    exp_params.v_lines_after_cmmin = v_lines_after*60*100;
+    exp_params.KL2_lines_before_SI = KL_lines_before;
+    exp_params.KL2_lines_before_cmmin = KL_lines_before*60*(10^4);
+    exp_params.KL2_lines_after_SI = KL_lines_after;
+    exp_params.KL2_lines_after_cmmin = KL_lines_after*60*(10^4);
+
+    % model = @(Dc,t) three_segment_model(t, Dc, ...
+    %     exp_params.q_SI, A_before, ...
+    %     exp_params.A_SI, exp_params.phi, A_after, ...
+    %     L_line_before, exp_params.L_SI, ...
+    %     L_line_after, ...
+    %     KL_lines_before, ...
+    %     KL_lines_after, 1);
+
+    model = @(x,t) three_segment_model( ...
+        t,...
+        x(1),...
+        exp_params.q_SI,...
+        A_before,...
+        exp_params.A_SI,...
+        exp_params.phi,...
+        A_after,...
+        x(2)*L_line_before,...
+        exp_params.L_SI,...
+        x(3)*L_line_after,...
+        KL_lines_before,...
+        KL_lines_after,...
+        1);
+
+    % Check effect of Llines apart from change in time residence, why kcore
+    % fit is not changing with that
+        
+    t_vals_aux = expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed;
+    C1_vals_aux = expProcFullData.(filedataExp.Key(i)).BT.Ci/100;
+
+    %resampling to have constant dt
+    idx_finite = isfinite(t_vals_aux) & isfinite(C1_vals_aux);
+    t_vals_aux = t_vals_aux(idx_finite);
+    C1_vals_aux = C1_vals_aux(idx_finite);
+    dt = median(diff(t_vals_aux));
+    t_vals = (t_vals_aux(1):dt:t_vals_aux(end))';
+    C1_vals = interp1(t_vals_aux, C1_vals_aux, t_vals, 'linear');
+
+    Dc_OB = expProcFullData.(filedataExp.Key(i)).results.KL_SI;
+
+    lbDc = Dc_OB*0.9;                     % lower bound
+    ubDc = Dc_OB*1.1;                  % upper bound
+
+    % Dc_fit = lsqcurvefit(model, Dc_OB, t_vals, C1_vals, lbDc, ubDc);
+    % C1_eval = model(Dc_fit,t_vals);
+
+    x0 = [Dc_OB 1 1];
+    lb = [lbDc f_up f_down];
+    ub = [ubDc f_up f_down];
     xfit = lsqcurvefit( ...
         model,...
         x0,...
