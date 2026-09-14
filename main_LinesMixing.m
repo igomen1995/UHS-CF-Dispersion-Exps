@@ -409,6 +409,9 @@ for i = 1:length(filedataExp.Key)
         KL_lines_before,...
         KL_lines_after,...
         1);
+
+    % Check effect of Llines apart from change in time residence, why kcore
+    % fit is not changing with that
         
     t_vals_aux = expProcFullData.(filedataExp.Key(i)).BT.SecondsElapsed;
     C1_vals_aux = expProcFullData.(filedataExp.Key(i)).BT.Ci/100;
@@ -421,18 +424,17 @@ for i = 1:length(filedataExp.Key)
     t_vals = (t_vals_aux(1):dt:t_vals_aux(end))';
     C1_vals = interp1(t_vals_aux, C1_vals_aux, t_vals, 'linear');
 
-    Dc0 = 1e-9;                 % initial guess
-    lb = 0;                     % lower bound
-    ub = 1e-3;                  % upper bound
-
     Dc_OB = expProcFullData.(filedataExp.Key(i)).results.KL_SI;
 
-    % Dc_fit = lsqcurvefit(model, Dc0, t_vals, C1_vals, lb, ub);
+    lbDc = Dc_OB*0.9;                     % lower bound
+    ubDc = Dc_OB*1.1;                  % upper bound
+
+    % Dc_fit = lsqcurvefit(model, Dc_OB, t_vals, C1_vals, lbDc, ubDc);
     % C1_eval = model(Dc_fit,t_vals);
 
     x0 = [Dc_OB 1 1];
-    lb = [1e-8 0.6 0.6];
-    ub = [1e-3 1 1];
+    lb = [lbDc 0.4 0.4];
+    ub = [ubDc 1 1];
     xfit = lsqcurvefit( ...
         model,...
         x0,...
@@ -478,7 +480,7 @@ for i = 1:length(filedataExp.Key)
         KL_lines_before, ...
         0, 1);
 
-    Dc_fit_ups_core = lsqcurvefit(model2, Dc0, t_vals, C1_vals, lb, ub);
+    Dc_fit_ups_core = lsqcurvefit(model2, Dc_OB, t_vals, C1_vals, lbDc, ubDc);
 
     exp_params.Dcore_fit_upscore_SI = Dc_fit_ups_core;
     exp_params.Dcore_fit_upscore_cm2min = Dc_fit_ups_core*(60*10^4);
@@ -501,7 +503,7 @@ for i = 1:length(filedataExp.Key)
 
     % variances
     % Upstream RTD
-    G_up = impulse_from_step(t_vals, L_line_before, v_lines_before, f_up*KL_lines_before);
+    G_up = impulse_from_step(t_vals, f_up*L_line_before, v_lines_before, KL_lines_before);
     G_up(G_up < 0) = 0;
     G_up = G_up / trapz(t_vals, G_up);
     
@@ -511,14 +513,9 @@ for i = 1:length(filedataExp.Key)
     G_core = G_core / trapz(t_vals, G_core);
     
     % Downstream RTD
-    G_down = impulse_from_step(t_vals, L_line_after, v_lines_after, f_down*KL_lines_after);
+    G_down = impulse_from_step(t_vals, f_down*L_line_after, v_lines_after, KL_lines_after);
     G_down(G_down < 0) = 0;
     G_down = G_down / trapz(t_vals, G_down);
-
-    exp_params.KLfit_lines_before_SI = f_up*KL_lines_before;
-    exp_params.KLfit_lines_before_cmmin = f_up*KL_lines_before*60*(10^4);
-    exp_params.KLfit_lines_after_SI = f_down*KL_lines_after;
-    exp_params.KLfit_lines_after_cmmin = f_down*KL_lines_after*60*(10^4);
 
     % Means
     mu_up   = trapz(t_vals, t_vals .* G_up);
