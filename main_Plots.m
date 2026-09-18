@@ -288,7 +288,7 @@ for i = 1:length(Fluid1_unique)
                                         hold on;
                                     end
                                     hold off
-                                    % saveas(gcf,pathImportAll + "CF_" + Fluid1_unique(i) + Fluid2_unique(ii) + "_T" + T_unique(j) + "_P" + P_unique(k) +"_Qall",'png')
+                                    saveas(gcf,pathImportAll + "CF_" + Fluid1_unique(i) + Fluid2_unique(ii) + "_T" + T_unique(j) + "_P" + P_unique(k) +"_Qall",'png')
                                 end
                             end
                         end
@@ -343,7 +343,7 @@ for i = 1:length(Fluid1_unique)
                                         hold on;
                                     end
                                     hold off
-                                    % saveas(gcf,pathImportAll + "CF_" + Fluid1_unique(i) + Fluid2_unique(ii) + "_T" + T_unique(j) + "_P" + P_unique(k) +"_Qall_nd",'png')
+                                    saveas(gcf,pathImportAll + "CF_" + Fluid1_unique(i) + Fluid2_unique(ii) + "_T" + T_unique(j) + "_P" + P_unique(k) +"_Qall_nd",'png')
                                 end
                             end
                         end
@@ -371,7 +371,7 @@ for i = 1:length(filedataExp.Key)
     legend('Location','southeast', 'Interpreter','none');
     hold on
 end
-% saveas(gcf,pathImportAll + "all_fluids_T_P_Q",'png')
+saveas(gcf,pathImportAll + "all_fluids_T_P_Q",'png')
 
 %%
 
@@ -386,8 +386,8 @@ for i = 1:length(filedataExp.Key)
     ylim([0,1]);
     title(filedataExp.Key(i) + " concentrations dimensionless", 'Interpreter', 'none')
     grid on;
-    legend('Location','southeast', 'Interpreter','none');
+    legend('Location','northwest', 'Interpreter','none');
     hold on
 end
-% saveas(gcf,pathImportAll + "all_fluids_T_P_Q_nd",'png')
+saveas(gcf,pathImportAll + "all_fluids_T_P_Q_nd",'png')
 

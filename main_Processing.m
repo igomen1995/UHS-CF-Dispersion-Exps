@@ -434,6 +434,8 @@ for i = 1:length(filedataExp.Key)
 
         Cmin = 0.16;
         Cmax = 0.84;
+        % Cmin = 0;
+        % Cmax = 0.76;
 
         % experiment params (fixed for fitting)
         Ci = filedataExp.C1init(i)/100;
@@ -592,8 +594,9 @@ end
 
 % Select best method
 [~, idx_best] = max(mean_R2./mean_RMSE);
-% best_method = valid_methods(idx_best);
-best_method = "dt_fixed_wdt_wfit_lim";
+%best_method = valid_methods(idx_best);
+% best_method = "dt_fixed_wdt_wfit_lim";
+best_method = "dt_fixed_nwdt_wfit_lim"; % for He-Xe CT data
 
 disp("Best method: " + best_method)
 
