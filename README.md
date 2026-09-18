@@ -347,7 +347,14 @@ main_Processing
      ↓
 main_LinesMixing (optional)
 ```
+## Setup
+The CT repo depends on functions from the BTC repo. Clone both into the same parent folder:
 
+Research/
+├── UHS-CF-Dispersion-Exps/
+└── UHS-CT-Dispersion-Exps-Analog/
+
+Both repos are developed together for personal research and may change without notice.
 ---
 
 # Outputs Summary
