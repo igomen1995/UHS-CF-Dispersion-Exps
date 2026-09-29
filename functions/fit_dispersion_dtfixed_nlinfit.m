@@ -45,9 +45,10 @@ function out = fit_dispersion_dtfixed_nlinfit(C,t,u,Cj,Ci,L,dt_fixed,p0,dC,Cmin,
 %
 %   OUTPUT
 
-
-out = struct('KL', NaN, 'dKL', NaN, 'dt', NaN, 'ddt', NaN, 'C_fit', NaN(size(C)), ...
-    'C_pred', NaN(size(C)), 'dC_pred', NaN(size(C)), 'RMSE', NaN, 'R2', NaN, ...
+out = struct('KL', NaN, 'dKL', NaN, 'dt', NaN, 'ddt', NaN, ...
+    'KL_cm2min', NaN, 'dKL_cm2min', NaN, 'dt_min', NaN, 'ddt_min', NaN, ...
+    'C_fit', NaN(size(C)), 'C_pred', NaN(size(C)), 'dC_pred', NaN(size(C)), ...
+    'RMSE', NaN, 'R2', NaN, ...
     'Cfun', [], 'R', [], 'J', [], 'CovB', [], 'MSE', NaN, 'ErrorModelInfo', []);
 
 w = 1./(dC.^2); % weights = 1/variance
@@ -104,6 +105,10 @@ out.KL = KL;
 out.dKL = dKL;
 out.dt = dt_fixed;
 out.ddt = 0;
+out.KL_cm2min = KL*10000*60;
+out.dKL_cm2min = dKL*10000*60;
+out.dt_min = dt_fixed/60;
+out.ddt_min = 0;
 
 out.C_fit = C_fit; % Best fit model prediction using estimated parameters
 out.C_pred = C_pred; % 95% prediction interval, which includes paramters uncertainty and residual variance
