@@ -214,6 +214,10 @@ out.KL = KL;
 out.dKL = dKL;
 out.dt = dt;
 out.ddt = d_dt;
+out.KL_cm2min = KL*10000*60;
+out.dKL_cm2min = dKL*10000*60;
+out.dt_min = dt/60;
+out.ddt_min = d_dt/60;
 
 out.C_fit = C_fit; % Best fit model prediction using estimated parameters
 out.C_pred = C_pred; % 95% prediction interval, which includes paramters uncertainty and residual variance
