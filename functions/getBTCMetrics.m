@@ -136,6 +136,10 @@ BTC.stdDimLess = sqrt(BTC.varDimLess);
 BTC.skew = trapz(t,(t-BTC.tSeconds_cm).^3.*C)/(trapz(t,C)*BTC.stdSeconds^3);
 BTC.skewDimLess = trapz(tD,(tD-BTC.tDimLess_cm).^3.*C)/(trapz(tD,C)*BTC.stdDimLess^3);
 
+% kurtosis (~3 for a Gaussian-shaped BTC derivative; report raw, not "excess")
+BTC.kurt = trapz(t,(t-BTC.tSeconds_cm).^4.*C)/(trapz(t,C)*BTC.stdSeconds^4);
+BTC.kurtDimLess = trapz(tD,(tD-BTC.tDimLess_cm).^4.*C)/(trapz(tD,C)*BTC.stdDimLess^4);
+
 % Central variance (16-84%)
 
 idxCentral = (C >= 0.16) & (C <= 0.84);
@@ -149,6 +153,15 @@ BTC.tDimLess_cmCentral = trapz(tDCentral,tDCentral.*CCentral)/trapz(tDCentral,CC
 
 BTC.varSecondsCentral = trapz(tCentral,(tCentral-BTC.tSeconds_cmCentral).^2.*CCentral)/trapz(tCentral,CCentral);
 BTC.varDimLessCentral = trapz(tDCentral,(tDCentral-BTC.tDimLess_cmCentral).^2.*CCentral)/trapz(tDCentral,CCentral);
+
+BTC.stdSecondsCentral = sqrt(BTC.varSecondsCentral);
+BTC.stdDimLessCentral = sqrt(BTC.varDimLessCentral);
+
+BTC.skewCentral = trapz(tCentral,(tCentral-BTC.tSeconds_cmCentral).^3.*CCentral)/(trapz(tCentral,CCentral)*BTC.stdSecondsCentral^3);
+BTC.skewDimLessCentral = trapz(tDCentral,(tDCentral-BTC.tDimLess_cmCentral).^3.*CCentral)/(trapz(tDCentral,CCentral)*BTC.stdDimLessCentral^3);
+
+BTC.kurtCentral = trapz(tCentral,(tCentral-BTC.tSeconds_cmCentral).^4.*CCentral)/(trapz(tCentral,CCentral)*BTC.stdSecondsCentral^4);
+BTC.kurtDimLessCentral = trapz(tDCentral,(tDCentral-BTC.tDimLess_cmCentral).^4.*CCentral)/(trapz(tDCentral,CCentral)*BTC.stdDimLessCentral^4);
 
 % Tail metrics
 
