@@ -572,45 +572,46 @@ end
 
 %% Select the best valid method for EACH experiment (key)
 
-% drop any best_per_key left over from a previous run of this section
 if isfield(method_results,'best_per_key')
     method_results = rmfield(method_results,'best_per_key');
 end
 
 method_names = fieldnames(method_results);
-
-% choose candidates by name, not position
-candidate_methods = method_names(startsWith(method_names,"dt_fixed"));
-% candidate_methods = method_names;   % also allow dt_free methods
+% candidate_methods = method_names(startsWith(method_names,"dt_fixed");
+% candidate_methods = method_names(startsWith(method_names,"dt_fixed_nwdt_nwfit")&endsWith(method_names,"lim"));
+candidate_methods = method_names;   % also allow dt_free methods
 
 disp("Candidate methods:"); disp(candidate_methods)
 
-nExp = height(filedataExp);
+nExp  = height(filedataExp);
+nCand = numel(candidate_methods);
 best_rows  = table();
 best_score = nan(nExp,1);
+cand_row   = nan(nExp,nCand);   % row of key i in method m (NaN = not valid)
+
+KL_valid_min = 0;     % cm2/min (exclusive)
+KL_valid_max = 100;   % cm2/min
 
 for i = 1:nExp
     key = filedataExp.Key(i);
     best_row = [];
 
-    for m = 1:numel(candidate_methods)
+    for m = 1:nCand
         Tm = method_results.(candidate_methods{m});
         if isempty(Tm), continue, end
-
-        % find this key's row (dt_fixed tables can have missing rows)
-        if ismember('Key', Tm.Properties.VariableNames)
-            r = find(string(Tm.Key) == string(key), 1);
-        else
-            r = i;   % assumes rows are in filedataExp order
-        end
-        if isempty(r) || r > height(Tm), continue, end
-
-        ok = isfinite(Tm.KL_SI(r)) && Tm.KL_SI(r) > 0 && ...
-             isfinite(Tm.dKL_SI(r)) && ...
-             isfinite(Tm.R2(r)) && isfinite(Tm.RMSE(r)) && Tm.RMSE(r) > 0;
+    
+        r = find(Tm.Key == string(key), 1);   % Key always exists now
+        if isempty(r), continue, end          % method not run for this key
+    
+        ok = isfinite(Tm.KL_cm2min(r)) && ...
+            Tm.KL_cm2min(r) > KL_valid_min && Tm.KL_cm2min(r) <= KL_valid_max && ...
+            isfinite(Tm.dKL_SI(r)) && ...
+            isfinite(Tm.R2(r)) && isfinite(Tm.RMSE(r)) && Tm.RMSE(r) > 0;
         if ~ok, continue, end
-
-        score = Tm.R2(r) / Tm.RMSE(r); 
+    
+        cand_row(i,m) = r;   % remember valid methods for the spread
+    
+        score = Tm.R2(r) / Tm.RMSE(r);
         if isnan(best_score(i)) || score > best_score(i)
             best_score(i) = score;
             best_row = Tm(r,:);
@@ -623,20 +624,29 @@ for i = 1:nExp
     best_rows = [best_rows; best_row];
 end
 best_rows.best_score = best_score;
+best_rows.nMethods   = sum(~isnan(cand_row),2);
 
-% register as a pseudo-method so alpha/saving sections pick it up
+% Method-to-method uncertainty (std across valid candidate methods)
+spread_vars = {'KL_SI','KL_cm2min','dt_SI','dt_min','dtD', ...
+               'Pe_upump_L_KL','Pe_uMFM_L_KL'};
+best_rows = addMethodSpread(best_rows, method_results, candidate_methods, cand_row, spread_vars);
+
+% Total uncertainty = sqrt(fit error^2 + method spread^2)
+fit_err_pairs = {'KL_SI','dKL_SI'; 'KL_cm2min','dKL_cm2min'; ...
+                 'dt_SI','d_dt_SI'; 'dt_min','d_dt_min'; 'dtD','d_dtD'; ...
+                 'Pe_upump_L_KL','dPe_upump_L_KL'; 'Pe_uMFM_L_KL','dPe_uMFM_L_KL'};
+best_rows = addTotalUncert(best_rows, fit_err_pairs);
+
 method_results.best_per_key = best_rows;
 best_method = "best_per_key";
 best_method_table = best_rows;
 
 disp(table(filedataExp.Key, best_rows.model, ...
-    best_rows.KL_SI, best_rows.dKL_SI, ...
-    best_rows.KL_cm2min, best_rows.dKL_cm2min, ...
-    best_rows.R2, best_rows.RMSE, ...
-    'VariableNames', {'Key','BestMethod','KL_SI','dKL_SI', ...
-    'KL_cm2min','dKL_cm2min','R2','RMSE'}))
+    best_rows.KL_cm2min, best_rows.dKL_cm2min, best_rows.uncertKL_cm2min, best_rows.totUncertKL_cm2min, ...
+    best_rows.R2, best_rows.RMSE, best_rows.nMethods, ...
+    'VariableNames', {'Key','BestMethod','KL_cm2min','dKL_cm2min', ...
+    'uncertKL_cm2min','totUncertKL_cm2min','R2','RMSE','nMethods'}))
 
-% Store best fit in expProcData
 for i = 1:nExp
     key = filedataExp.Key(i);
     expProcData.(key).results = best_rows(i,:);
@@ -665,11 +675,13 @@ for i = 1:length(filedataExp.Key)
     end
     hold on
     for j = 1:length(method_names) % model already according to fitData type
-        method_results_table = method_results.(method_names{j});
+        Tm = method_results.(method_names{j});
+        if isempty(Tm), continue, end
+        r = find(Tm.Key == filedataExp.Key(i), 1);
+        if isempty(r), continue, end          % method not run for this key
         plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed, ...
-            method_results_table.C_fit{i}*100,'LineWidth',1.5, ...
-            'Color', colors(j,:), ...
-            'DisplayName',method_names{j})
+            Tm.C_fit{r}*100,'LineWidth',1.5, ...
+            'Color', colors(j,:), 'DisplayName',method_names{j})
     end
     % KL best % model already according to fitData type
     plot(expProcData.(filedataExp.Key(i)).BT.TimeElapsed, ...
@@ -1067,6 +1079,7 @@ for j = 1:length(Fluid1_unique)
                 h_titles = [];
         
                 count = 0;
+                Q_seen = [];
         
                 for i = 1:length(filedataExp.Key)
         
@@ -1098,7 +1111,16 @@ for j = 1:length(Fluid1_unique)
                             'DisplayName',"C_{MFM}");
                         h2(count) = plot(tDtotal_cond, CD_fit_cond, ...
                             'LineWidth',3,'Color', colorsdark(count,:),'DisplayName',"C_{fit}"); 
-                        h_titles(count) = plot(NaN,NaN,'w', 'LineStyle','none', 'DisplayName', "\bf Q = " + filedataExp.Q(i) + " ml/min");
+                        % run number: from the input file if it has a Run column,
+                        % otherwise count repeats of the same Q in this figure
+                        if ismember('Run', filedataExp.Properties.VariableNames)
+                            runN = filedataExp.Run(i);
+                        else
+                            Q_seen(end+1) = filedataExp.Q(i);
+                            runN = sum(Q_seen == filedataExp.Q(i));
+                        end
+                        h_titles(count) = plot(NaN,NaN,'w', 'LineStyle','none', ...
+                            'DisplayName', "\bf Q = " + filedataExp.Q(i) + " ml/min, run " + runN);
                         xlabel('Dimensionless Time (total)[-]');
                         ylabel('C_{D}[-]');
                         ylim([-0.001,1.001]);
@@ -1201,16 +1223,20 @@ method_names = fieldnames(method_results);
 
 Fluid1_unique = unique(filedataExp.Fluid1);
 Fluid2_unique = unique(filedataExp.Fluid2);
-T_unique = unique(filedataExp.T);
-P_unique = unique(filedataExp.P);
-L_unique = unique(filedataExp.L); % inches
-theta_unique = unique(filedataExp.Angle);
+T_unique      = unique(filedataExp.T);
+P_unique      = unique(filedataExp.P);
+L_unique      = unique(filedataExp.L); % inches
+theta_unique  = unique(filedataExp.Angle);
 
-min_points_alpha = 2;
+min_points_alpha     = 2;
 min_points_alpha_tau = 3;
-
-p_guess_alpha = 1;
+p_guess_alpha     = 1;
 p_guess_alpha_tau = [1,1];
+
+alpha_cols = {'alpha_SI','d_alpha_SI','alpha_cm','d_alpha_cm', ...
+    'alpha_tau_SI','d_alpha_tau_SI','alpha_tau_cm','d_alpha_tau_cm','tau','d_tau', ...
+    'Pe_upump_alpha_D0','dPe_upump_alpha_D0','Pe_upump_alpha_tau_D0','dPe_upump_alpha_tau_D0', ...
+    'Pe_uMFM_alpha_D0','dPe_uMFM_alpha_D0','Pe_uMFM_alpha_tau_D0','dPe_uMFM_alpha_tau_D0'};
 
 alpha_results = struct();
 
@@ -1219,240 +1245,265 @@ for mm = 1:length(method_names)
     current_method = method_names{mm};
     Tmethod = method_results.(current_method);
     nRows = height(Tmethod);
+    if nRows == 0
+        alpha_results.(current_method) = table();
+        continue
+    end
 
-    % Add columns if they do not exist
-    nRows = height(Tmethod);
-    Tmethod.alpha_SI = nan(nRows,1);
-    Tmethod.d_alpha_SI = nan(nRows,1);
-    Tmethod.alpha_cm = nan(nRows,1);
-    Tmethod.d_alpha_cm = nan(nRows,1);
-    Tmethod.alpha_tau_SI = nan(nRows,1);
-    Tmethod.d_alpha_tau_SI = nan(nRows,1);
-    Tmethod.alpha_tau_cm = nan(nRows,1);
-    Tmethod.d_alpha_tau_cm = nan(nRows,1);
-    Tmethod.tau = nan(nRows,1);
-    Tmethod.d_tau = nan(nRows,1);
-    Tmethod.Pe_upump_alpha_D0 = nan(nRows,1);
-    Tmethod.dPe_upump_alpha_D0 = nan(nRows,1);
-    Tmethod.Pe_upump_alpha_tau_D0 = nan(nRows,1);
-    Tmethod.dPe_upump_alpha_tau_D0 = nan(nRows,1);
-    Tmethod.Pe_uMFM_alpha_D0 = nan(nRows,1);
-    Tmethod.dPe_uMFM_alpha_D0 = nan(nRows,1);
-    Tmethod.Pe_uMFM_alpha_tau_D0 = nan(nRows,1);
-    Tmethod.dPe_uMFM_alpha_tau_D0 = nan(nRows,1);
+    for c = 1:numel(alpha_cols)
+        Tmethod.(alpha_cols{c}) = nan(nRows,1);
+    end
+    Tmethod.GroupID = strings(nRows,1);
+
+    % map each row of this method table to its filedataExp row BY KEY
+    expIdx = nan(nRows,1);
+    for l = 1:nRows
+        e = find(string(filedataExp.Key) == Tmethod.Key(l), 1);
+        if ~isempty(e), expIdx(l) = e; end
+    end
 
     alpha_struct = struct();
     count_row = 0;
 
-    % Group by Fluid1, Fluid2, T, P and L
     for i = 1:length(Fluid1_unique)
-        for j = 1:length(Fluid2_unique)
-            for k = 1:length(T_unique)
-                for m = 1:length(P_unique)
-                    for n = 1:length(L_unique)
-                        for theta = 1:length(theta_unique)
-                            KL = [];
-                            dKL = [];
-                            Pe_upump_L_D0 = [];
-                            Pe_uMFM_L_D0 = [];
-                            D0_group = [];
-                            dD0_group = [];
-                            match_idx = [];
-                            
-                            % collect matching experiments
-                            for l = 1:height(Tmethod)
-                                if filedataExp.Fluid1(l) == Fluid1_unique(i) && ...
-                                   filedataExp.Fluid2(l) == Fluid2_unique(j) && ...
-                                   filedataExp.T(l) == T_unique(k) && ...
-                                   filedataExp.P(l) == P_unique(m) && ...
-                                   filedataExp.L(l) == L_unique(n) && ...
-                                   filedataExp.Angle(l) == theta_unique(theta)
-        
-                                    if isfinite(Tmethod.KL_SI(l))
-                                        KL = [KL;  Tmethod.KL_SI(l)];
-                                        dKL = [dKL; Tmethod.dKL_SI(l)];
-                                        Pe_upump_L_D0 = [Pe_upump_L_D0; Tmethod.Pe_upump_L_D0(l)];
-                                        Pe_uMFM_L_D0 = [Pe_uMFM_L_D0; Tmethod.Pe_uMFM_L_D0(l)];
-                                        D0_group = [D0_group; Tmethod.D12_SI(l)];
-                                        dD0_group = [dD0_group; Tmethod.dD12_SI(l)];
-                                        match_idx = [match_idx; l];
-                                    end
-                                end
-                            end
-        
-                            n_points = length(KL);
-        
-                            if n_points == 0
-                                continue
-                            end
-                            % D0 should be unique for each group
-                            D0_val = D0_group(1);
-                            dD0_val = dD0_group(1);
-                            Dp_val = L_unique(n)*0.0254;
-    
-                            % group ID
-                            groupID = string(Fluid1_unique(i)) + "_" + string(Fluid2_unique(j)) + ...
-                                "_T" + string(T_unique(k)) + "_P" + string(P_unique(m)) + "_L" + ...
-                                string(L_unique(n)) + "_THETA" + string(theta_unique(theta));
-                            
-                            % Summary row
-                            count_row = count_row + 1;
-        
-                            alpha_struct(count_row).method = string(current_method);
-                            alpha_struct(count_row).GroupID = groupID;
-                            alpha_struct(count_row).Fluid1 = Fluid1_unique(i);
-                            alpha_struct(count_row).Fluid2 = Fluid2_unique(j);
-                            alpha_struct(count_row).T_C = T_unique(k);
-                            alpha_struct(count_row).P_psig = P_unique(m);
-                            alpha_struct(count_row).L_in = L_unique(n);
-                            alpha_struct(count_row).Angle = theta_unique(theta);
-                            alpha_struct(count_row).n_points = n_points;
-        
-                            alpha_struct(count_row).alpha_SI = NaN;
-                            alpha_struct(count_row).d_alpha_SI = NaN;
-                            alpha_struct(count_row).alpha_cm = NaN;
-                            alpha_struct(count_row).d_alpha_cm = NaN;
-        
-                            alpha_struct(count_row).alpha_tau_SI = NaN;
-                            alpha_struct(count_row).d_alpha_tau_SI = NaN;
-                            alpha_struct(count_row).alpha_tau_cm = NaN;
-                            alpha_struct(count_row).d_alpha_tau_cm = NaN;
-        
-                            alpha_struct(count_row).tau = NaN;
-                            alpha_struct(count_row).d_tau = NaN;
-        
-                            % Alpha fit
-        
-                            if n_points >= min_points_alpha
-        
-                                try
-        
-                                    out_alpha = fit_dispersion_params_alpha( ...
-                                        KL, Pe_upump_L_D0, D0_val, Dp_val, ...
-                                        p_guess_alpha, dKL);
-        
-                                    alpha_struct(count_row).alpha_SI = out_alpha.alpha_SI;
-                                    alpha_struct(count_row).d_alpha_SI = out_alpha.d_alpha_SI;
-                                    alpha_struct(count_row).alpha_cm = out_alpha.alpha_cm;
-                                    alpha_struct(count_row).d_alpha_cm = out_alpha.d_alpha_cm;
-        
-                                    for idx = match_idx'
-        
-                                        Tmethod.alpha_SI(idx) = out_alpha.alpha_SI;
-                                        Tmethod.d_alpha_SI(idx) = out_alpha.d_alpha_SI;
-                                        Tmethod.alpha_cm(idx) = out_alpha.alpha_cm;
-                                        Tmethod.d_alpha_cm(idx) = out_alpha.d_alpha_cm;
-                                        Tmethod.GroupID(idx) = groupID;
-        
-                                        upump  = Tmethod.u_SI(idx);
-                                        dupump  = 0.1 *Tmethod.u_SI(idx);
-                                        uMFM = Tmethod.uavg_MFM_SI(idx);
-                                        duMFM = Tmethod.ustd_MFM_SI(idx);
-        
-                                        Tmethod.Pe_upump_alpha_D0(idx) = ...
-                                            upump*out_alpha.alpha_SI/D0_val;
-    
-                                        Tmethod.Pe_uMFM_alpha_D0(idx) = ...
-                                            uMFM*out_alpha.alpha_SI/D0_val;
-        
-                                        Tmethod.dPe_upump_alpha_D0(idx) = Tmethod.Pe_upump_alpha_D0(idx)* ...
-                                            (((dupump/upump)^2+(out_alpha.d_alpha_SI/out_alpha.alpha_SI)^2+(dD0_val/D0_val)^2)^(1/2));
-    
-                                        Tmethod.dPe_uMFM_alpha_D0(idx) = Tmethod.Pe_uMFM_alpha_D0(idx)* ...
-                                            (((duMFM/uMFM)^2+(out_alpha.d_alpha_SI/out_alpha.alpha_SI)^2+(dD0_val/D0_val)^2)^(1/2));
-                                    end
-        
-                                catch 
-                                end
-        
-                            end
-        
-                            % Alpha + Tau fit
-        
-                            if n_points >= min_points_alpha_tau
-        
-                                try
-        
-                                    out_tau = fit_dispersion_params_alpha_tau( ...
-                                        KL, Pe_upump_L_D0, D0_val, Dp_val, ...
-                                        p_guess_alpha_tau, dKL);
-        
-                                    if isfinite(out_tau.tau)
-        
-                                        alpha_struct(count_row).alpha_tau_SI = out_tau.alpha_SI;
-                                        alpha_struct(count_row).d_alpha_tau_SI = out_tau.d_alpha_SI;
-                                        alpha_struct(count_row).alpha_tau_cm = out_tau.alpha_cm;
-                                        alpha_struct(count_row).d_alpha_tau_cm = out_tau.d_alpha_cm;
-                                        alpha_struct(count_row).tau = out_tau.tau;
-                                        alpha_struct(count_row).d_tau = out_tau.d_tau;
-        
-                                        for idx = match_idx'
-                                            Tmethod.alpha_tau_SI(idx) = out_tau.alpha_SI;
-                                            Tmethod.d_alpha_tau_SI(idx) = out_tau.d_alpha_SI;
-                                            Tmethod.alpha_tau_cm(idx) = out_tau.alpha_cm;
-                                            Tmethod.d_alpha_tau_cm(idx) = out_tau.d_alpha_cm;
-                                            Tmethod.tau(idx) = out_tau.tau;
-                                            Tmethod.d_tau(idx) = out_tau.d_tau;
-                                            Tmethod.GroupID(idx) = groupID;
-    
-                                        upump  = Tmethod.u_SI(idx);
-                                        dupump  = 0.1 *Tmethod.u_SI(idx);
-                                        uMFM = Tmethod.uavg_MFM_SI(idx);
-                                        duMFM = Tmethod.ustd_MFM_SI(idx);
-        
-                                        Tmethod.Pe_upump_alpha_tau_D0(idx) = ...
-                                            upump*out_tau.alpha_SI/D0_val;
-    
-                                        Tmethod.Pe_uMFM_alpha_tau_D0(idx) = ...
-                                            uMFM*out_tau.alpha_SI/D0_val;
-        
-                                        Tmethod.dPe_upump_alpha_tau_D0(idx) = Tmethod.Pe_upump_alpha_tau_D0(idx)* ...
-                                            (((dupump/upump)^2+(out_tau.d_alpha_SI/out_tau.alpha_SI)^2+(dD0_val/D0_val)^2)^(1/2));
-    
-                                        Tmethod.dPe_uMFM_alpha_tau_D0(idx) = Tmethod.Pe_uMFM_alpha_tau_D0(idx)* ...
-                                            (((duMFM/uMFM)^2+(out_tau.d_alpha_SI/out_tau.alpha_SI)^2+(dD0_val/D0_val)^2)^(1/2));
-        
-                                        end
-        
-                                    end
-        
-                                catch
-                                end
-        
-                            end
-                        end
-                    end
+     for j = 1:length(Fluid2_unique)
+      for k = 1:length(T_unique)
+       for m = 1:length(P_unique)
+        for n = 1:length(L_unique)
+         for theta = 1:length(theta_unique)
+
+            % rows of Tmethod belonging to this group
+            match = false(nRows,1);
+            for l = 1:nRows
+                e = expIdx(l);
+                if isnan(e), continue, end
+                match(l) = filedataExp.Fluid1(e) == Fluid1_unique(i) && ...
+                           filedataExp.Fluid2(e) == Fluid2_unique(j) && ...
+                           filedataExp.T(e)      == T_unique(k) && ...
+                           filedataExp.P(e)      == P_unique(m) && ...
+                           filedataExp.L(e)      == L_unique(n) && ...
+                           filedataExp.Angle(e)  == theta_unique(theta) && ...
+                           isfinite(Tmethod.KL_SI(l));
+            end
+            match_idx = find(match);
+            n_points  = numel(match_idx);
+            if n_points == 0, continue, end
+
+            KL            = Tmethod.KL_SI(match_idx);
+            dKL           = Tmethod.dKL_SI(match_idx);
+            Pe_upump_L_D0 = Tmethod.Pe_upump_L_D0(match_idx);
+            D0_val  = Tmethod.D12_SI(match_idx(1));    % unique within group
+            dD0_val = Tmethod.dD12_SI(match_idx(1));
+            Dp_val  = L_unique(n)*0.0254;
+
+            upump = Tmethod.u_SI(match_idx);          dupump = 0.1*upump;
+            uMFM  = Tmethod.uavg_MFM_SI(match_idx);   duMFM  = Tmethod.ustd_MFM_SI(match_idx);
+
+            groupID = string(Fluid1_unique(i)) + "_" + string(Fluid2_unique(j)) + ...
+                "_T" + string(T_unique(k)) + "_P" + string(P_unique(m)) + ...
+                "_L" + string(L_unique(n)) + "_THETA" + string(theta_unique(theta));
+            Tmethod.GroupID(match_idx) = groupID;
+
+            % summary row
+            count_row = count_row + 1;
+            alpha_struct(count_row).method   = string(current_method);
+            alpha_struct(count_row).GroupID  = groupID;
+            alpha_struct(count_row).Fluid1   = Fluid1_unique(i);
+            alpha_struct(count_row).Fluid2   = Fluid2_unique(j);
+            alpha_struct(count_row).T_C      = T_unique(k);
+            alpha_struct(count_row).P_psig   = P_unique(m);
+            alpha_struct(count_row).L_in     = L_unique(n);
+            alpha_struct(count_row).Angle    = theta_unique(theta);
+            alpha_struct(count_row).n_points = n_points;
+            alpha_struct(count_row).Keys     = strjoin(Tmethod.Key(match_idx), ";");
+            for c = {'alpha_SI','d_alpha_SI','alpha_cm','d_alpha_cm', ...
+                     'alpha_tau_SI','d_alpha_tau_SI','alpha_tau_cm','d_alpha_tau_cm','tau','d_tau'}
+                alpha_struct(count_row).(c{1}) = NaN;
+            end
+
+            % alpha only
+            if n_points >= min_points_alpha
+                try
+                    out_alpha = fit_dispersion_params_alpha( ...
+                        KL, Pe_upump_L_D0, D0_val, Dp_val, p_guess_alpha, dKL);
+
+                    alpha_struct(count_row).alpha_SI   = out_alpha.alpha_SI;
+                    alpha_struct(count_row).d_alpha_SI = out_alpha.d_alpha_SI;
+                    alpha_struct(count_row).alpha_cm   = out_alpha.alpha_cm;
+                    alpha_struct(count_row).d_alpha_cm = out_alpha.d_alpha_cm;
+
+                    Tmethod.alpha_SI(match_idx)   = out_alpha.alpha_SI;
+                    Tmethod.d_alpha_SI(match_idx) = out_alpha.d_alpha_SI;
+                    Tmethod.alpha_cm(match_idx)   = out_alpha.alpha_cm;
+                    Tmethod.d_alpha_cm(match_idx) = out_alpha.d_alpha_cm;
+
+                    [Tmethod.Pe_upump_alpha_D0(match_idx), Tmethod.dPe_upump_alpha_D0(match_idx)] = ...
+                        peAlpha(upump, dupump, out_alpha.alpha_SI, out_alpha.d_alpha_SI, D0_val, dD0_val);
+                    [Tmethod.Pe_uMFM_alpha_D0(match_idx), Tmethod.dPe_uMFM_alpha_D0(match_idx)] = ...
+                        peAlpha(uMFM, duMFM, out_alpha.alpha_SI, out_alpha.d_alpha_SI, D0_val, dD0_val);
+                catch ME
+                    warning("alpha fit failed (%s, %s): %s", current_method, groupID, ME.message)
                 end
+            end
+
+            % alpha + tau
+            if n_points >= min_points_alpha_tau
+                try
+                    out_tau = fit_dispersion_params_alpha_tau( ...
+                        KL, Pe_upump_L_D0, D0_val, Dp_val, p_guess_alpha_tau, dKL);
+
+                    if isfinite(out_tau.tau)
+                        alpha_struct(count_row).alpha_tau_SI   = out_tau.alpha_SI;
+                        alpha_struct(count_row).d_alpha_tau_SI = out_tau.d_alpha_SI;
+                        alpha_struct(count_row).alpha_tau_cm   = out_tau.alpha_cm;
+                        alpha_struct(count_row).d_alpha_tau_cm = out_tau.d_alpha_cm;
+                        alpha_struct(count_row).tau            = out_tau.tau;
+                        alpha_struct(count_row).d_tau          = out_tau.d_tau;
+
+                        Tmethod.alpha_tau_SI(match_idx)   = out_tau.alpha_SI;
+                        Tmethod.d_alpha_tau_SI(match_idx) = out_tau.d_alpha_SI;
+                        Tmethod.alpha_tau_cm(match_idx)   = out_tau.alpha_cm;
+                        Tmethod.d_alpha_tau_cm(match_idx) = out_tau.d_alpha_cm;
+                        Tmethod.tau(match_idx)            = out_tau.tau;
+                        Tmethod.d_tau(match_idx)          = out_tau.d_tau;
+
+                        [Tmethod.Pe_upump_alpha_tau_D0(match_idx), Tmethod.dPe_upump_alpha_tau_D0(match_idx)] = ...
+                            peAlpha(upump, dupump, out_tau.alpha_SI, out_tau.d_alpha_SI, D0_val, dD0_val);
+                        [Tmethod.Pe_uMFM_alpha_tau_D0(match_idx), Tmethod.dPe_uMFM_alpha_tau_D0(match_idx)] = ...
+                            peAlpha(uMFM, duMFM, out_tau.alpha_SI, out_tau.d_alpha_SI, D0_val, dD0_val);
+                    end
+                catch ME
+                    warning("alpha+tau fit failed (%s, %s): %s", current_method, groupID, ME.message)
+                end
+            end
+
+         end
+        end
+       end
+      end
+     end
+    end
+
+    method_results.(current_method) = Tmethod;
+    if count_row > 0
+        alpha_results.(current_method) = struct2table(alpha_struct);
+    else
+        alpha_results.(current_method) = table();
+    end
+end
+
+% alpha table of the best (per-key) method + per-key storage BY KEY
+if isfield(alpha_results,char(best_method))
+    alpha_table = alpha_results.(char(best_method));
+    best_method_table = method_results.(char(best_method));   % built in filedataExp order
+    expProcData.alpha_table_best = alpha_table;
+    expProcData.alpha_results    = alpha_results;
+
+    for i = 1:nExp
+        key = filedataExp.Key(i);
+        expProcData.(key).results      = best_method_table(i,:);
+        expProcData.(key).alphaGroupID = best_method_table.GroupID(i);
+        for m = 1:length(method_names)
+            Tm = method_results.(method_names{m});
+            r = [];
+            if ~isempty(Tm), r = find(Tm.Key == key, 1); end
+            if isempty(r)
+                expProcData.(key).method_results.(method_names{m}) = table();
+            else
+                expProcData.(key).method_results.(method_names{m}) = Tm(r,:);
             end
         end
     end
-
-    % Store updated method table
-    method_results.(current_method) = Tmethod;
-
-    % Store alpha summary table
-    alpha_results.(current_method) = struct2table(alpha_struct);
-
-end
-
-% alpha table corresponding to best fitting method
-if isfield(alpha_results,char(best_method))
-    alpha_table = alpha_results.(char(best_method));
-    expProcData.alpha_table_best = alpha_table;
-    expProcData.alpha_results = alpha_results;
-    best_method_table = method_results.(char(best_method));
-        for i = 1:length(filedataExp.Key)
-            key = filedataExp.Key(i);
-            expProcData.(key).results = best_method_table(i,:);
-            expProcData.(key).alphaGroupID = best_method_table.GroupID(i);
-            for m = 1:length(method_names)
-                method_name = method_names{m};
-                expProcData.(key).method_results.(method_name) = ...
-                    method_results.(method_name)(i,:);
-            end
-        end
 else
     error("Best method %s not found in alpha_results",best_method)
+end
+
+%% Method-to-method + total uncertainty for alpha, tau and alpha-based Pe
+
+grp_vars = {'alpha_SI','alpha_cm','alpha_tau_SI','alpha_tau_cm','tau'};
+
+% group level: spread of each group's value across candidate methods
+for v = 1:numel(grp_vars)
+    alpha_table.(uncertName(grp_vars{v})) = nan(height(alpha_table),1);
+end
+for g = 1:height(alpha_table)
+    for v = 1:numel(grp_vars)
+        var = grp_vars{v};
+        vals = [];
+        for m = 1:nCand
+            Ta = alpha_results.(candidate_methods{m});
+            if ~all(ismember({'GroupID',var}, Ta.Properties.VariableNames)), continue, end
+            r = find(Ta.GroupID == alpha_table.GroupID(g), 1);
+            if ~isempty(r) && isfinite(Ta.(var)(r))
+                vals(end+1) = Ta.(var)(r); 
+            end
+        end
+        if numel(vals) >= 2
+            alpha_table.(uncertName(var))(g) = std(vals);
+        end
+    end
+end
+
+% per key: copy the group's alpha/tau spread
+for v = 1:numel(grp_vars)
+    best_method_table.(uncertName(grp_vars{v})) = nan(nExp,1);
+end
+for i = 1:nExp
+    g = find(alpha_table.GroupID == best_method_table.GroupID(i), 1);
+    if isempty(g), continue, end
+    for v = 1:numel(grp_vars)
+        best_method_table.(uncertName(grp_vars{v}))(i) = alpha_table.(uncertName(grp_vars{v}))(g);
+    end
+end
+
+% per key: alpha-based Peclet numbers
+pe_alpha_vars = {'Pe_upump_alpha_D0','Pe_uMFM_alpha_D0', ...
+                 'Pe_upump_alpha_tau_D0','Pe_uMFM_alpha_tau_D0'};
+best_method_table = addMethodSpread(best_method_table, method_results, ...
+    candidate_methods, cand_row, pe_alpha_vars);
+
+% total uncertainty
+alpha_pairs = {'alpha_SI','d_alpha_SI'; 'alpha_cm','d_alpha_cm'; ...
+               'alpha_tau_SI','d_alpha_tau_SI'; 'alpha_tau_cm','d_alpha_tau_cm'; ...
+               'tau','d_tau'};
+pe_alpha_pairs = {'Pe_upump_alpha_D0','dPe_upump_alpha_D0'; ...
+                  'Pe_uMFM_alpha_D0','dPe_uMFM_alpha_D0'; ...
+                  'Pe_upump_alpha_tau_D0','dPe_upump_alpha_tau_D0'; ...
+                  'Pe_uMFM_alpha_tau_D0','dPe_uMFM_alpha_tau_D0'};
+alpha_table       = addTotalUncert(alpha_table, alpha_pairs);
+best_method_table = addTotalUncert(best_method_table, [alpha_pairs; pe_alpha_pairs]);
+
+% push updated tables back everywhere
+method_results.best_per_key  = best_method_table;
+alpha_results.best_per_key   = alpha_table;
+expProcData.alpha_table_best = alpha_table;
+expProcData.alpha_results    = alpha_results;
+for i = 1:nExp
+    key = filedataExp.Key(i);
+    expProcData.(key).results = best_method_table(i,:);
+    expProcData.(key).method_results.best_per_key = best_method_table(i,:);
+end
+
+% print alpha results (best per-key method)
+if isempty(alpha_table) || ~ismember('GroupID', alpha_table.Properties.VariableNames)
+    disp("No alpha results to display.")
+else
+    disp("Alpha fit (K_L = D0 + alpha*u) - best per-key method:")
+    disp(table(alpha_table.GroupID, alpha_table.n_points, ...
+        alpha_table.alpha_cm, alpha_table.d_alpha_cm, ...
+        alpha_table.uncertAlpha_cm, alpha_table.totUncertAlpha_cm, ...
+        'VariableNames', {'GroupID','nPoints','alpha_cm','d_alpha_cm', ...
+        'uncertAlpha_cm','totUncertAlpha_cm'}))
+
+    disp("Alpha + tau fit (K_L = D0/tau + alpha*u) - best per-key method:")
+    disp(table(alpha_table.GroupID, alpha_table.n_points, ...
+        alpha_table.alpha_tau_cm, alpha_table.d_alpha_tau_cm, ...
+        alpha_table.uncertAlpha_tau_cm, alpha_table.totUncertAlpha_tau_cm, ...
+        alpha_table.tau, alpha_table.d_tau, ...
+        alpha_table.uncertTau, alpha_table.totUncertTau, ...
+        'VariableNames', {'GroupID','nPoints','alpha_tau_cm','d_alpha_tau_cm', ...
+        'uncertAlpha_tau_cm','totUncertAlpha_tau_cm', ...
+        'tau','d_tau','uncertTau','totUncertTau'}))
 end
 
 %% Save results
@@ -1747,4 +1798,64 @@ for i = 1:length(Fluid1_unique)
             end
         end
     end
+end
+
+%% Local functions
+function name = uncertName(var)
+    var  = char(var);
+    name = ['uncert' upper(var(1)) var(2:end)];     % KL_SI -> uncertKL_SI
+end
+
+function name = totName(var)
+    u    = uncertName(var);
+    name = ['tot' upper(u(1)) u(2:end)];             % KL_SI -> totUncertKL_SI
+end
+
+function Tbest = addMethodSpread(Tbest, method_results, candidate_methods, cand_row, vars)
+% Std of each variable across all valid candidate methods, per key.
+    for v = 1:numel(vars)
+        var   = vars{v};
+        uname = uncertName(var);
+        Tbest.(uname) = nan(height(Tbest),1);
+        found = false;
+        for i = 1:height(Tbest)
+            vals = [];
+            for m = 1:numel(candidate_methods)
+                r = cand_row(i,m);
+                if isnan(r), continue, end
+                Tm = method_results.(candidate_methods{m});
+                if ~ismember(var, Tm.Properties.VariableNames) || r > height(Tm), continue, end
+                found = true;
+                x = Tm.(var)(r);
+                if isfinite(x), vals(end+1) = x; end 
+            end
+            if numel(vals) >= 2
+                Tbest.(uname)(i) = std(vals);
+            end
+        end
+        if ~found
+            warning("addMethodSpread: column '%s' not found in method tables", var)
+        end
+    end
+end
+
+function T = addTotalUncert(T, pairs)
+% pairs: {value var, fit-error var; ...}
+% adds totUncert<Var> = sqrt(fitError^2 + methodSpread^2)
+    for p = 1:size(pairs,1)
+        var = pairs{p,1};  dvar = pairs{p,2};
+        uname = uncertName(var);
+        if ~all(ismember({dvar, uname}, T.Properties.VariableNames))
+            warning("addTotalUncert: missing '%s' or '%s'", dvar, uname)
+            continue
+        end
+        methErr = T.(uname);
+        methErr(isnan(methErr)) = 0;     % <2 valid methods -> fit error only
+        T.(totName(var)) = sqrt(T.(dvar).^2 + methErr.^2);
+    end
+end
+
+function [Pe, dPe] = peAlpha(u, du, a, da, D0, dD0)
+    Pe  = u.*a./D0;
+    dPe = Pe.*sqrt((du./u).^2 + (da./a).^2 + (dD0./D0).^2);
 end
