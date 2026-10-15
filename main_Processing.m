@@ -570,44 +570,64 @@ for i = 1:length(filedataExp.Key)
     end
 end
 
-%% Select the valid and best method results
+%% Select the best valid method for EACH experiment (key)
 method_names = fieldnames(method_results);
+
+candidate_methods = method_names(3:end);   % skip dt_free methods
+% candidate_methods = method_names;        % allow dt_free methods
+
 nExp = height(filedataExp);
+best_rows  = table();
+best_score = nan(nExp,1);
 
-valid_methods = [];
-mean_R2 = [];
-mean_RMSE = [];
+for i = 1:nExp
+    key = filedataExp.Key(i);
+    best_row = [];
 
+    for m = 1:numel(candidate_methods)
+        Tm = method_results.(candidate_methods{m});
+        if isempty(Tm), continue, end
 
-for m = 3:length(method_names)
+        % find this key's row (dt_fixed tables can have missing rows)
+        if ismember('Key', Tm.Properties.VariableNames)
+            r = find(string(Tm.Key) == string(key), 1);
+        else
+            r = i;   % assumes rows are in filedataExp order
+        end
+        if isempty(r) || r > height(Tm), continue, end
 
-    method_table = method_results.(method_names{m});
+        ok = isfinite(Tm.KL_SI(r)) && Tm.KL_SI(r) > 0 && ...
+             isfinite(Tm.dKL_SI(r)) && ...
+             isfinite(Tm.R2(r)) && isfinite(Tm.RMSE(r)) && Tm.RMSE(r) > 0;
+        if ~ok, continue, end
 
-    valid = isfinite(method_table.KL_SI) & isfinite(method_table.R2) & isfinite(method_table.RMSE);
-
-    if all(valid)
-        valid_methods = [valid_methods; string(method_names{m})];
-        mean_R2 = [mean_R2; mean(method_table.R2)];
-        mean_RMSE = [mean_RMSE; mean(method_table.RMSE)];
+        score = Tm.R2(r) / Tm.RMSE(r); 
+        if isnan(best_score(i)) || score > best_score(i)
+            best_score(i) = score;
+            best_row = Tm(r,:);
+        end
     end
+
+    if isempty(best_row)
+        error("No valid fitting method found for %s", key)
+    end
+    best_rows = [best_rows; best_row];
 end
+best_rows.best_score = best_score;
 
-% Select best method
-[~, idx_best] = max(mean_R2./mean_RMSE);
-best_method = valid_methods(idx_best);
-% best_method = "dt_fixed_wdt_wfit_lim";
-%best_method = "dt_fixed_nwdt_wfit_lim"; % for He-Xe CT data
+% register as a pseudo-method so alpha/saving sections pick it up
+method_results.best_per_key = best_rows;
+best_method = "best_per_key";
+best_method_table = best_rows;
 
-disp("Best method: " + best_method)
+disp(table(filedataExp.Key, best_rows.model, best_rows.R2, best_rows.RMSE, ...
+    'VariableNames', {'Key','BestMethod','R2','RMSE'}))
 
 % Store best fit in expProcData
-best_method_table = method_results.(best_method);
-for i = 1:length(filedataExp.Key)
+for i = 1:nExp
     key = filedataExp.Key(i);
-    row_best = best_method_table(i,:);
-    expProcData.(key).results = row_best;
-    expProcData.(key).BT.C_fit_best = ...
-        100 * best_method_table.C_fit{i};
+    expProcData.(key).results = best_rows(i,:);
+    expProcData.(key).BT.C_fit_best = 100 * best_rows.C_fit{i};
 end
 
 %% Plotting KL results
