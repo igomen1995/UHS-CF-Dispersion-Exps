@@ -99,7 +99,7 @@ function row = buildRow_procResults(filedataExp, expProcData, KL_out, i)
     row.dt_min = row.dt_SI/60;
     row.d_dt_min = row.d_dt_SI/60;
     row.Pe_upump_L_KL = upump*L/row.KL_SI;
-    row.dPe_upump_L_KL = row.Pe_upump_L_KL*(((dupump/upump)^2+(dD12_SI/D12_SI)^2)^(1/2));
+    row.dPe_upump_L_KL = row.Pe_upump_L_KL*sqrt((dupump/upump)^2 + (row.dKL_SI/row.KL_SI)^2);
     row.dtD = upump*row.dt_SI/L;  % respect to Vcore
     row.d_dtD = (((upump/L)^2)*(row.d_dt_SI^2))^(1/2); 
     row.L_lines = row.v_lines_SI*row.dt_SI; 
@@ -112,7 +112,7 @@ function row = buildRow_procResults(filedataExp, expProcData, KL_out, i)
     row.d_V_lines_SI = row.dV_lines_cc*(10^-6);
     row.C_fit = {KL_out.C_fit}; 
     row.Pe_uMFM_L_KL = uMFM*L/row.KL_SI;
-    row.dPe_uMFM_L_KL = row.Pe_uMFM_L_KL*(((duMFM/uMFM)^2+(dD12_SI/D12_SI)^2)^(1/2));
+    row.dPe_uMFM_L_KL  = row.Pe_uMFM_L_KL *sqrt((duMFM/uMFM)^2  + (row.dKL_SI/row.KL_SI)^2);
     
 end
 
