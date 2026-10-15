@@ -565,7 +565,7 @@ for i = 1:length(filedataExp.Key)
     
             method_results.(row.model) = [method_results.dt_fixed_nwdt_nwfit_full; row];
 
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wdt_nwfit_full = 100*KL_out.C_fit;
+            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwdt_nwfit_full = 100*KL_out.C_fit;
         end
     end
 end
@@ -594,9 +594,9 @@ end
 
 % Select best method
 [~, idx_best] = max(mean_R2./mean_RMSE);
-%best_method = valid_methods(idx_best);
+best_method = valid_methods(idx_best);
 % best_method = "dt_fixed_wdt_wfit_lim";
-best_method = "dt_fixed_nwdt_wfit_lim"; % for He-Xe CT data
+%best_method = "dt_fixed_nwdt_wfit_lim"; % for He-Xe CT data
 
 disp("Best method: " + best_method)
 
