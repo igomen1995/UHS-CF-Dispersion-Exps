@@ -337,11 +337,36 @@ pathImportAll = inputFileConfig.exportPath{:}; % Path for INPUT
 pathExportAll = pathImportAll;
 mkdir(pathImportAll); % Create directory for output
 
+% validity limits (move to the INPUT section if the dt-fixed fitting also uses them)
+KL_valid_min  = 0;     % cm2/min (exclusive)
+KL_valid_max  = 100;   % cm2/min
+dtD_valid_min = 0;     % dimensionless delay (pore volumes)
+dtD_valid_max = 5;
+min_exp_dtfixed = 0; 
+
 %% IMPORT variables
 
 filedataExp = import_inputExp(filenameExp); % import input to a local variable
 
 load(pathImportAll+"expProcData.mat")
+
+%% dt groups: same fluids, T, P and setup (line configuration) -> same dtD
+nExp = height(filedataExp);
+setupVersion = strings(nExp,1);
+for i = 1:nExp
+    ep = expProcData.(filedataExp.Key(i)).exp_params;
+    if ~ismember('setupVersion', ep.Properties.VariableNames)
+        error("setupVersion missing in exp_params of %s", filedataExp.Key(i))
+    end
+    setupVersion(i) = string(ep.setupVersion);
+end
+dtGroupID = string(filedataExp.Fluid1) + "_" + string(filedataExp.Fluid2) + ...
+            "_T" + string(filedataExp.T) + "_P" + string(filedataExp.P) + ...
+            "_S" + setupVersion;
+
+[gU,~,gIdx] = unique(dtGroupID, 'stable');
+disp("dt groups (same fluids, T, P, setup):")
+disp(table(gU, accumarray(gIdx,1), 'VariableNames', {'dtGroupID','nExp'}))
 
 %% Fitting dispersion to find KL and dt short equation ADE
 % dt free
@@ -393,6 +418,8 @@ for i = 1:length(filedataExp.Key)
 
         % exp params for table
         row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
+        row.dtGroupID = dtGroupID(i);
+        row.n_dtGroup = NaN;          % dt not fixed for dt_free fits
         row.model = "dt_free_wfit";
 
         method_results.(row.model) = [method_results.dt_free_wfit; row];
@@ -405,6 +432,8 @@ for i = 1:length(filedataExp.Key)
 
         % exp params for table
         row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
+        row.dtGroupID = dtGroupID(i);
+        row.n_dtGroup = NaN;          % dt not fixed for dt_free fits
         row.model = "dt_free_nwfit";
 
         method_results.(row.model) = [method_results.dt_free_nwfit; row];
@@ -414,161 +443,98 @@ for i = 1:length(filedataExp.Key)
     end
 end
 
-%% Fitting dispersion to find KL short equation ADE
-% dt fixed
+%% Fitting dispersion to find KL with dt fixed PER SETUP GROUP
+% dt is fixed from the dt_free fits of the experiments in the same group
+% (same fluids, T, P and setupVersion; different Q). dtD = u*dt/L is the
+% dead volume in pore volumes, so it is the same for every Q of a group.
 
-for i = 1:length(filedataExp.Key)
-    if filedataExp.Type(i) == "CF"
+Cmin = 0.16;  Cmax = 0.84;
 
-        % data
-        t_vals = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed;
+dt_sources = {'wdt',  'dt_free_wfit'; ...      % {tag, dt_free method used}
+              'nwdt', 'dt_free_nwfit'};
+fit_types  = {'wfit', 'nwfit'};
+ranges     = {'lim', Cmin, Cmax; ...
+              'full', 0,    1};
 
-        switch fitData            
-            case "woEOS"
-                C1_vals = expProcData.(filedataExp.Key(i)).BT.rho_norm;
-                dC_vals = expProcData.(filedataExp.Key(i)).BT.drho_norm;
-            otherwise
-                C1_vals = expProcData.(filedataExp.Key(i)).BT.Ci/100;
-                dC_vals = expProcData.(filedataExp.Key(i)).BT.dC/100;       
+dtfixed_info = table();
+
+for i = 1:nExp
+    if filedataExp.Type(i) ~= "CF", continue, end
+    key = filedataExp.Key(i);
+
+    t_vals = expProcData.(key).BT.SecondsElapsed;
+    switch fitData
+        case "woEOS"
+            C1_vals = expProcData.(key).BT.rho_norm;
+            dC_vals = expProcData.(key).BT.drho_norm;
+        otherwise
+            C1_vals = expProcData.(key).BT.Ci/100;
+            dC_vals = expProcData.(key).BT.dC/100;
+    end
+    Ci = filedataExp.C1init(i)/100;
+    Cj = filedataExp.C1j(i)/100;
+    u  = expProcData.(key).exp_params.u_SI;
+    L  = expProcData.(key).exp_params.L_SI;
+
+    groupKeys = string(filedataExp.Key(dtGroupID == dtGroupID(i)));
+
+    for s = 1:size(dt_sources,1)
+        srcTag = dt_sources{s,1};
+        Tsrc   = method_results.(dt_sources{s,2});
+
+        % valid dt_free fits from the same setup group
+        inGrp = ismember(Tsrc.Key, groupKeys) & ...
+                isfinite(Tsrc.dtD) & isfinite(Tsrc.d_dtD) & Tsrc.d_dtD > 0 & ...
+                Tsrc.dtD >= dtD_valid_min & Tsrc.dtD <= dtD_valid_max;
+        nGrp = sum(inGrp);
+        if nGrp < min_exp_dtfixed, continue, end      % not enough Q in this setup group
+
+        wts         = 1 ./ Tsrc.d_dtD(inGrp).^2;                 % inverse-variance
+        dtD_fixed   = sum(wts .* Tsrc.dtD(inGrp)) / sum(wts);
+        d_dtD_fixed = sqrt(std(Tsrc.dtD(inGrp))^2 + 1/sum(wts)); % run-to-run scatter + fit error
+        dt_fixed    = dtD_fixed*L/u;
+
+        % KL initial guess: this key's own dt_free fit (by Key), else group median
+        r0 = find(Tsrc.Key == key, 1);
+        if ~isempty(r0) && isfinite(Tsrc.KL_SI(r0)) && Tsrc.KL_SI(r0) > 0
+            p_guess = sqrt(Tsrc.KL_SI(r0));
+        else
+            p_guess = sqrt(median(Tsrc.KL_SI(inGrp), 'omitnan'));
         end
 
-        Cmin = 0.16;
-        Cmax = 0.84;
-        % Cmin = 0;
-        % Cmax = 0.76;
+        for f = 1:numel(fit_types)
+            if strcmp(fit_types{f}, 'wfit')
+                w_vals = dC_vals;
+            else
+                w_vals = ones(size(C1_vals));
+            end
 
-        % experiment params (fixed for fitting)
-        Ci = filedataExp.C1init(i)/100;
-        Cj = filedataExp.C1j(i)/100;
-        u = expProcData.(filedataExp.Key(i)).exp_params.u_SI;
-        % u = expProcData.(filedataExp.Key(i)).exp_params.uavg_MFM_SI; % from MFM average
-        L = expProcData.(filedataExp.Key(i)).exp_params.L_SI;
+            for rg = 1:size(ranges,1)
+                mName = ['dt_fixed_' srcTag '_' fit_types{f} '_' ranges{rg,1}];
 
-        % run dt fixed fitting only if dt guess from weigthed or non weigthed dt free are valid
+                KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals, t_vals, u, Cj, Ci, L, ...
+                    dt_fixed, p_guess, w_vals, ranges{rg,2}, ranges{rg,3});
 
-        % dtfixed from dt free weigthed
-        valid_dtD_fixed_w = isfinite(method_results.dt_free_wfit.dtD) & ...
-            isfinite(method_results.dt_free_wfit.d_dtD);
+                row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
+                row = setFixedDt(row, dtD_fixed, d_dtD_fixed, u, L);
+                row.dtGroupID = dtGroupID(i);
+                row.n_dtGroup = nGrp;
+                row.model     = string(mName);
 
-        if any(valid_dtD_fixed_w)
-            % dtD guess fixed is a weigthed average of previous dtD
-            dtD_guess = (method_results.dt_free_wfit.dtD(valid_dtD_fixed_w)')*(method_results.dt_free_wfit.d_dtD(valid_dtD_fixed_w)/sum(method_results.dt_free_wfit.d_dtD(valid_dtD_fixed_w))); % dtD fixed is a weigthed average
-            d_dt_dtfixed_SI = (method_results.dt_free_wfit.d_dt_SI(valid_dtD_fixed_w)')*(method_results.dt_free_wfit.d_dtD(valid_dtD_fixed_w)/sum(method_results.dt_free_wfit.d_dtD(valid_dtD_fixed_w)));
-            dt_fixed = dtD_guess*L/u; %  dt estimate according to velocity of each experiment
-            p_guess = sqrt(method_results.dt_free_wfit.KL_SI(i));
-
-            % dt fixed weigthed fit wit dt weigthed limited C
-            % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
-            KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals,Cmin,Cmax);
-
-            % exp params for table
-            row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
-            row.model = "dt_fixed_wdt_wfit_lim";
-    
-            method_results.(row.model) = [method_results.dt_fixed_wdt_wfit_lim; row];
-
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wdt_wfit_lim = 100*KL_out.C_fit;
-
-            % dt fixed non weigthed fit wit dt weigthed limited C
-
-            % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
-            KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,ones(size(C1_vals)),Cmin,Cmax);
-
-            % exp params for table
-            row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
-            row.model = "dt_fixed_wdt_nwfit_lim";
-    
-            method_results.(row.model) = [method_results.dt_fixed_wdt_nwfit_lim; row];
-
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wdt_nwfit_lim = 100*KL_out.C_fit;
-
-            % dt fixed weigthed fit wit dt weigthed full
-            % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
-            KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals,0,1);
-
-            % exp params for table
-            row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
-            row.model = "dt_fixed_wdt_wfit_full";
-    
-            method_results.(row.model) = [method_results.dt_fixed_wdt_wfit_full; row];
-
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wdt_wfit_full = 100*KL_out.C_fit;
-
-            % dt fixed non weigthed fit wit dt weigthed full
-            % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
-            KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,ones(size(C1_vals)),0,1);
-
-            % exp params for table
-            row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
-            row.model = "dt_fixed_wdt_nwfit_full";
-    
-            method_results.(row.model) = [method_results.dt_fixed_wdt_nwfit_full; row];
-
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_wdt_nwfit_full = 100*KL_out.C_fit;
+                method_results.(mName) = [method_results.(mName); row];
+                expProcData.(key).BT.(['C_fit_' mName]) = 100*KL_out.C_fit;
+            end
         end
 
-        % Non weigthed for dtfixed
-        valid_dtD_fixed_nw = isfinite(method_results.dt_free_nwfit.dtD) & ...
-            isfinite(method_results.dt_free_nwfit.d_dtD);
-        
-        if any(valid_dtD_fixed_nw)
-            % dtD guess nw fixed is a weigthed average of previous dtD non weigthed
-            dtD_guess = (method_results.dt_free_nwfit.dtD(valid_dtD_fixed_nw)')*(method_results.dt_free_nwfit.d_dtD(valid_dtD_fixed_nw)/sum(method_results.dt_free_nwfit.d_dtD(valid_dtD_fixed_nw))); % dtD fixed is a weigthed average
-            d_dt_dtfixed_SI = (method_results.dt_free_nwfit.d_dt_SI(valid_dtD_fixed_nw)')*(method_results.dt_free_nwfit.d_dtD(valid_dtD_fixed_nw)/sum(method_results.dt_free_nwfit.d_dtD(valid_dtD_fixed_nw)));
-            dt_fixed = dtD_guess*L/u; %  dt estimate according to velocity of each experiment
-            p_guess = sqrt(method_results.dt_free_nwfit.KL_SI(i));
-
-            % dt fixed weigthed fit wit dt non weigthed limited C
-            % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
-            KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals,Cmin,Cmax);
-
-            % exp params for table
-            row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
-            row.model = "dt_fixed_nwdt_wfit_lim";
-    
-            method_results.(row.model) = [method_results.dt_fixed_nwdt_wfit_lim; row];
-
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwdt_wfit_lim = 100*KL_out.C_fit;
-
-            % dt fixed non weigthed fit wit dt non weigthed limited C
-
-            % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
-            KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,ones(size(C1_vals)),Cmin,Cmax);
-
-            % exp params for table
-            row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
-            row.model = "dt_fixed_nwdt_nwfit_lim";
-    
-            method_results.(row.model) = [method_results.dt_fixed_nwdt_nwfit_lim; row];
-
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwdt_nwfit_lim = 100*KL_out.C_fit;
-
-            % dt fixed weigthed fit wit dt weigthed full
-            % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
-            KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,dC_vals,0,1);
-
-            % exp params for table
-            row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
-            row.model = "dt_fixed_nwdt_wfit_full";
-
-            method_results.(row.model) = [method_results.dt_fixed_nwdt_wfit_full; row];
-
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwdt_wfit_full = 100*KL_out.C_fit;
-
-            % dt fixed non weigthed fit wit dt non weigthed full
-            % non linear fitting using [p_est,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(t_trim, C_trim, C_function, p0, opts, 'Weights', w_trim);
-            KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals,t_vals,u,Cj,Ci,L,dt_fixed,p_guess,ones(size(C1_vals)),0,1);
-
-            % exp params for table
-            row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
-            row.model = "dt_fixed_nwdt_nwfit_full";
-    
-            method_results.(row.model) = [method_results.dt_fixed_nwdt_nwfit_full; row];
-
-            expProcData.(filedataExp.Key(i)).BT.C_fit_dt_fixed_nwdt_nwfit_full = 100*KL_out.C_fit;
-        end
+        dtfixed_info = [dtfixed_info; table(key, dtGroupID(i), string(srcTag), nGrp, ...
+            dtD_fixed, d_dtD_fixed, dt_fixed/60, ...
+            'VariableNames', {'Key','dtGroupID','dtSource','nExpGroup', ...
+                              'dtD_fixed','d_dtD_fixed','dt_fixed_min'})]; %#ok<AGROW>
     end
 end
+
+disp("Fixed dt per experiment (from its setup group):")
+disp(dtfixed_info)
 
 %% Select the best valid method for EACH experiment (key)
 
@@ -588,12 +554,6 @@ nCand = numel(candidate_methods);
 best_rows  = table();
 best_score = nan(nExp,1);
 cand_row   = nan(nExp,nCand);   % row of key i in method m (NaN = not valid)
-
-% validity limits (move to the INPUT section if the dt-fixed fitting also uses them)
-KL_valid_min  = 0;     % cm2/min (exclusive)
-KL_valid_max  = 100;   % cm2/min
-dtD_valid_min = 0;     % dimensionless delay (pore volumes)
-dtD_valid_max = 5;
 
 % best method per key (KL validity)
 for i = 1:nExp
@@ -1817,4 +1777,19 @@ function lbl = pointLabels(Tg)
         end
         lbl(r) = "Q = " + Tg.Q_mlmin(r) + " ml/min, run " + runN + " (" + Tg.model(r) + ")";
     end
+end
+
+function row = setFixedDt(row, dtD, d_dtD, u, L)
+% dt of a dt-fixed fit: value and uncertainty come from the setup group
+    row.dtD      = dtD;
+    row.d_dtD    = d_dtD;
+    row.dt_SI    = dtD*L/u;
+    row.d_dt_SI  = d_dtD*L/u;
+    row.dt_min   = row.dt_SI/60;
+    row.d_dt_min = row.d_dt_SI/60;
+    % line volume/length uncertainties follow dt
+    row.dL_lines     = row.v_lines_SI*row.d_dt_SI;
+    row.d_L_lines_cm = row.dL_lines*100;
+    row.dV_lines_cc  = row.Q_mlmin*row.d_dt_SI/60;
+    row.d_V_lines_SI = row.dV_lines_cc*1e-6;
 end
