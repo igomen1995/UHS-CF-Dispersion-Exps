@@ -825,397 +825,211 @@ for i = 1:length(filedataExp.Key)
     savefig(gcf,pathExportAll + filedataExp.Key(i) + "_dimlessTotal_fitting_" + fitData)
 end
 
-%% Fitting and experimental data all CF plot
+%% Fitting and experimental data all CF plot (one figure per fluid pair, T, P)
 
-colors = orderedcolors("glow");
-colorsdark = orderedcolors("earth"); 
+colors     = orderedcolors("glow");   nC  = size(colors,1);
+colorsdark = orderedcolors("earth");  nCd = size(colorsdark,1);
 
-% empty objects
-h1 = gobjects(length(filedataExp.Key),1);
-h2 = gobjects(length(filedataExp.Key),1);
-h_titles = gobjects(length(filedataExp.Key),1);
+% one case ID per experiment; loop only over cases that exist
+caseID = string(filedataExp.Fluid1) + "_" + string(filedataExp.Fluid2) + ...
+         "_T" + string(filedataExp.T) + "_P" + string(filedataExp.P);
+cases  = unique(caseID, 'stable');
+hasRun = ismember('Run', filedataExp.Properties.VariableNames);
 
-Fluid1_unique = unique(filedataExp.Fluid1);
-Fluid2_unique = unique(filedataExp.Fluid2);
-T_unique = unique(filedataExp.T);
-P_unique = unique(filedataExp.P);
+for c = 1:numel(cases)
 
-for j = 1:length(Fluid1_unique)
-    for jj = 1:length(Fluid2_unique)
-        for k = 1:length(T_unique)
-            for l = 1:length(P_unique)
+    % experiments in this case that have a best fit, sorted by Q
+    idxCase = find(caseID == cases(c));
+    idxCase = idxCase(arrayfun(@(e) ismember('C_fit_best', ...
+        expProcData.(filedataExp.Key(e)).BT.Properties.VariableNames), idxCase));
+    if isempty(idxCase), continue, end
+    [~, ord] = sort(filedataExp.Q(idxCase));
+    idxCase  = idxCase(ord);
 
-                figure
-                h = [];
-                h1 = [];
-                h2 = [];
-                h_titles = [];
-        
-                count = 0;
-        
-                for i = 1:length(filedataExp.Key)
-        
-                    if filedataExp.Fluid1(i) == Fluid1_unique(j) && filedataExp.Fluid2(i) == Fluid2_unique(jj) ...
-                            && filedataExp.T(i) == T_unique(k) && filedataExp.P(i) == P_unique(l)
-        
-                        count = count + 1;
-        
-                        t = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
-                        t_sec = expProcData.(filedataExp.Key(i)).BT.SecondsElapsed;
-                        
-                        switch fitData
-                            case "woEOS"
-                                C1 = expProcData.(filedataExp.Key(i)).BT.rho_norm*100;
-                                C1min = 100*(expProcData.(filedataExp.Key(i)).BT.rho_norm - expProcData.(filedataExp.Key(i)).BT.drho_norm);
-                                C1max = 100*(expProcData.(filedataExp.Key(i)).BT.rho_norm + expProcData.(filedataExp.Key(i)).BT.drho_norm);
-                            otherwise
-                                C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
-                                C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
-                                C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
-                        end
-                        % fitted vals C or rho norm
-                        C_fit = expProcData.(filedataExp.Key(i)).BT.C_fit_best;
-                        % plot vals with function dt fixed weighted
-                        cond = (C_fit>=16)&(C_fit<=84);
-                        t_sec_cond = t(cond);
-                        t_sec_cond.Format = 'hh:mm:ss';
-                        C_fit_cond = C_fit(cond);
-                        % Uncomment below line to show error bar
-                        errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', ...
-                            'Color', [0.88 0.88 0.88],'HandleVisibility','Off')
-                        hold on
-                        h1(count) = scatter(t,C1,5,'filled','MarkerFaceColor',colors(count,:), ...
-                            'DisplayName',"C_{MFM} \pm \DeltaC_{MFM}");
-                        h2(count) = plot(t_sec_cond, C_fit_cond, ...
-                            'LineWidth',3,'Color', colorsdark(count,:),'DisplayName',"C_{fit}"); 
-                        h_titles(count) = plot(NaN,NaN,'w', 'LineStyle','none', 'DisplayName', "\bf Q = " + filedataExp.Q(i) + " ml/min");
-                        xlabel('Time elapsed [hh:mm:ss]','FontSize',14);
-                        xtickformat('hh:mm:ss')
-                        ylabel('C_{H_2} [mol %]','FontSize',14);
-                        ylim([-0.1,100.1]);
-                        ax = gca; % Get current axes
-                        ax.FontSize = 12;
-                        % title("Breakthrough curves fitting", 'Interpreter', 'none')
-                        grid on;
-                        % h = [h; h1];
-                        h = [h;h_titles(count);h1(count);h2(count)];
-                        
-                        save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(i)+"_T"+filedataExp.T(i)+"_P"+filedataExp.P(i)+"_"+fitData;
-                        % add vertical or horizontal to tile (fix input excel (add orientation variable) for that)
-                    end
-                end
-                lgd = legend(h, 'NumColumns', 1, ...
-                    'Location', 'southeast', 'FontSize', 10);
-                lgd.ItemTokenSize = [15 8];   % tighter symbols
-                
-                drawnow  % REQUIRED for correct positions
-                
-                lgd_pos = lgd.Position;  % [x y width height]
-                nQ = count;
-                nRows = 3 * nQ;
-                rowH = lgd_pos(4) / nRows;   % approximate row height
-                
-                
-                for i = 1:nQ
-                    % Row indices (from top of legend)
-                    row_Q    = (i-1)*3 + 1;
-                    row_Data = row_Q + 1;
-                
-                    % Y positions (legend is bottom-based)
-                    y1 = lgd_pos(2) + lgd_pos(4) - (row_Q-0.12)*rowH;
-                
-                    % X positions (small indentation inside legend box)
-                    x1 = lgd_pos(1);
-                    x2 = lgd_pos(1) + lgd_pos(3);
-                
-                    % Draw line
-                    annotation('line', [x1 x2], [y1 y1], ...
-                        'Color','k', 'LineWidth',0.8);
-                end
-                
-                for i = 1:nQ-1
-                
-                    % Y positions (legend is bottom-based)
-                    y1 = lgd_pos(2) + lgd_pos(4) - 3*i*rowH;
-                
-                    % X positions (small indentation inside legend box)
-                    x1 = lgd_pos(1);
-                    x2 = lgd_pos(1) + lgd_pos(3);
-                
-                    % Draw line
-                    annotation('line', [x1 x2], [y1 y1], ...
-                        'Color','k', 'LineWidth',0.8);
-                end
-                
-                % title(save_name,'Interpreter','none')
-                saveas(gcf,pathExportAll + save_name + "_BTfitting",'png')
-                savefig(gcf,pathExportAll + save_name + "_BTfitting")
+    save_name = "CF_" + cases(c) + "_" + fitData;
 
-            end
+    figure
+    hold on
+    h = [];
+    Q_seen = [];
+
+    for q = 1:numel(idxCase)
+        i   = idxCase(q);
+        key = filedataExp.Key(i);
+        t   = expProcData.(key).BT.TimeElapsed;
+
+        switch fitData
+            case "woEOS"
+                C1    = expProcData.(key).BT.rho_norm*100;
+                C1min = 100*(expProcData.(key).BT.rho_norm - expProcData.(key).BT.drho_norm);
+                C1max = 100*(expProcData.(key).BT.rho_norm + expProcData.(key).BT.drho_norm);
+            otherwise
+                C1    = expProcData.(key).BT.Ci;
+                C1min = expProcData.(key).BT.CiMin;
+                C1max = expProcData.(key).BT.CiMax;
         end
+
+        % fitted curve, shown only in the 16-84 % range
+        C_fit = expProcData.(key).BT.C_fit_best;
+        cond  = (C_fit >= 16) & (C_fit <= 84);
+        t_cond = t(cond);
+        t_cond.Format = 'hh:mm:ss';
+
+        % run number: Run column if present, else repeat count of same Q
+        if hasRun
+            runN = filedataExp.Run(i);
+        else
+            Q_seen(end+1) = filedataExp.Q(i);
+            runN = sum(Q_seen == filedataExp.Q(i));
+        end
+
+        errorbar(t, C1, C1 - C1min, C1max - C1, 'LineStyle','none', ...
+            'Color', [0.88 0.88 0.88], 'HandleVisibility','off')
+        h1 = scatter(t, C1, 5, 'filled', 'MarkerFaceColor', colors(mod(q-1,nC)+1,:), ...
+            'DisplayName', "C_{MFM} \pm \DeltaC_{MFM}");
+        h2 = plot(t_cond, C_fit(cond), 'LineWidth', 3, ...
+            'Color', colorsdark(mod(q-1,nCd)+1,:), 'DisplayName', "C_{fit}");
+        hT = plot(NaN, NaN, 'w', 'LineStyle','none', ...
+            'DisplayName', "\bf Q = " + filedataExp.Q(i) + " ml/min, run " + runN);
+        h = [h; hT; h1; h2];
     end
+
+    xlabel('Time elapsed [hh:mm:ss]', 'FontSize', 14);
+    xtickformat('hh:mm:ss')
+    ylabel('C_{H_2} [mol %]', 'FontSize', 14);
+    ylim([-0.1, 100.1]);
+    ax = gca;  ax.FontSize = 12;
+    grid on
+
+    lgd = legend(h, 'NumColumns', 1, 'Location', 'southeast', 'FontSize', 10);
+    lgd.ItemTokenSize = [15 8];
+    drawnow   % required for correct legend position
+
+    % separator lines in the legend
+    lgd_pos = lgd.Position;
+    nQ   = numel(idxCase);
+    rowH = lgd_pos(4) / (3*nQ);
+    x1 = lgd_pos(1);  x2 = lgd_pos(1) + lgd_pos(3);
+    for q = 1:nQ
+        row_Q = (q-1)*3 + 1;
+        y1 = lgd_pos(2) + lgd_pos(4) - (row_Q - 0.12)*rowH;
+        annotation('line', [x1 x2], [y1 y1], 'Color','k', 'LineWidth',0.8);
+    end
+    for q = 1:nQ-1
+        y1 = lgd_pos(2) + lgd_pos(4) - 3*q*rowH;
+        annotation('line', [x1 x2], [y1 y1], 'Color','k', 'LineWidth',0.8);
+    end
+
+    title(save_name, 'Interpreter','none')
+    saveas(gcf, pathExportAll + save_name + "_BTfitting", 'png')
+    savefig(gcf, pathExportAll + save_name + "_BTfitting")
 end
 
 
-%% Fitting and experimental data all CF plot
-% dimensionless
-colors = orderedcolors("glow");
-colorsdark = orderedcolors("earth"); 
+%% Fitting and experimental data all CF plot: dimensionless (tD and tDtotal)
+% one figure per existing case (fluid pair, T, P), for each x-axis variant
 
-% empty objects
-h1 = gobjects(length(filedataExp.Key),1);
-h2 = gobjects(length(filedataExp.Key),1);
-h_titles = gobjects(length(filedataExp.Key),1);
+colors     = orderedcolors("glow");   nC  = size(colors,1);
+colorsdark = orderedcolors("earth");  nCd = size(colorsdark,1);
 
-Fluid1_unique = unique(filedataExp.Fluid1);
-Fluid2_unique = unique(filedataExp.Fluid2);
-T_unique = unique(filedataExp.T);
-P_unique = unique(filedataExp.P);
+caseID = string(filedataExp.Fluid1) + "_" + string(filedataExp.Fluid2) + ...
+         "_T" + string(filedataExp.T) + "_P" + string(filedataExp.P);
+cases  = unique(caseID, 'stable');
+hasRun = ismember('Run', filedataExp.Properties.VariableNames);
 
-for j = 1:length(Fluid1_unique)
-    for jj = 1:length(Fluid2_unique)
-        for k = 1:length(T_unique)
-            for l = 1:length(P_unique)
+% {BT variable for x, file suffix, x-axis label}
+variants = {'tD',      "_BTfitting_dimless",      'Dimensionless time t_D [-]'; ...
+            'tDtotal', "_BTfitting_dimlessTotal", 'Dimensionless time t_{D,total} [-]'};
 
-                figure
-                h = [];
-                h1 = [];
-                h2 = [];
-                h_titles = [];
-        
-                count = 0;
-        
-                for i = 1:length(filedataExp.Key)
-        
-                    if filedataExp.Fluid1(i) == Fluid1_unique(j) && filedataExp.Fluid2(i) == Fluid2_unique(jj) ...
-                            && filedataExp.T(i) == T_unique(k) && filedataExp.P(i) == P_unique(l)
-        
-                        count = count + 1;
+for v = 1:size(variants,1)
+    xVar   = variants{v,1};
+    suffix = variants{v,2};
+    xLabel = variants{v,3};
 
-                        tD = expProcData.(filedataExp.Key(i)).BT.tD;
-                        switch fitData
-                            case "woEOS"
-                                CD1 = expProcData.(filedataExp.Key(i)).BT.rho_norm;
-                                CD1min = expProcData.(filedataExp.Key(i)).BT.rho_norm - expProcData.(filedataExp.Key(i)).BT.drho_norm;
-                                CD1max = expProcData.(filedataExp.Key(i)).BT.rho_norm + expProcData.(filedataExp.Key(i)).BT.drho_norm;
-                            otherwise
-                                CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
-                                CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
-                                CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
-                        end
-                        % fitted vals C or rho norm
-                        CD_fit = expProcData.(filedataExp.Key(i)).BT.C_fit_best/100;
-                        % plot vals with function dt fixed weighted
-                        cond = (CD_fit>=0.16)&(CD_fit<=0.84);
-                        tD_cond = tD(cond);
-                        CD_fit_cond = CD_fit(cond);
-                        hold on
-                        h1(count) = scatter(tD,CD1,5,'filled','MarkerFaceColor',colors(count,:), ...
-                            'DisplayName',"C_{MFM}");
-                        h2(count) = plot(tD_cond, CD_fit_cond, ...
-                            'LineWidth',3,'Color', colorsdark(count,:),'DisplayName',"C_{fit}"); 
-                        h_titles(count) = plot(NaN,NaN,'w', 'LineStyle','none', 'DisplayName', "\bf Q = " + filedataExp.Q(i) + " ml/min");
-                        xlabel('Dimensionless Time [-]');
-                        ylabel('C_{D}[-]');
-                        ylim([-0.001,1.001]);
-                        ax = gca; % Get current axes
-                        ax.FontSize = 12;
-                        % title("Breakthrough curves fitting", 'Interpreter', 'none')
-                        grid on;
-                        % h = [h; h1];
-                        h = [h;h_titles(count);h1(count);h2(count)];
-                        
-                        save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(i)+"_T"+filedataExp.T(i)+"_P"+filedataExp.P(i)+"_"+fitData;
-                        % add vertical or horizontal to tile (fix input excel (add orientation variable) for that)
-                    end
-                end
-                lgd = legend(h, 'NumColumns', 1, ...
-                    'Location', 'southeast', 'FontSize', 10);
-                lgd.ItemTokenSize = [15 8];   % tighter symbols
-                
-                drawnow  % REQUIRED for correct positions
-                
-                lgd_pos = lgd.Position;  % [x y width height]
-                nQ = count;
-                nRows = 3 * nQ;
-                rowH = lgd_pos(4) / nRows;   % approximate row height
-                
-                
-                for i = 1:nQ
-                    % Row indices (from top of legend)
-                    row_Q    = (i-1)*3 + 1;
-                    row_Data = row_Q + 1;
-                
-                    % Y positions (legend is bottom-based)
-                    y1 = lgd_pos(2) + lgd_pos(4) - (row_Q-0.12)*rowH;
-                
-                    % X positions (small indentation inside legend box)
-                    x1 = lgd_pos(1);
-                    x2 = lgd_pos(1) + lgd_pos(3);
-                
-                    % Draw line
-                    annotation('line', [x1 x2], [y1 y1], ...
-                        'Color','k', 'LineWidth',0.8);
-                end
-                
-                for i = 1:nQ-1
-                
-                    % Y positions (legend is bottom-based)
-                    y1 = lgd_pos(2) + lgd_pos(4) - 3*i*rowH;
-                
-                    % X positions (small indentation inside legend box)
-                    x1 = lgd_pos(1);
-                    x2 = lgd_pos(1) + lgd_pos(3);
-                
-                    % Draw line
-                    annotation('line', [x1 x2], [y1 y1], ...
-                        'Color','k', 'LineWidth',0.8);
-                end
-                
-                title(save_name,'Interpreter','none')
-                saveas(gcf,pathExportAll + save_name + "_BTfitting_dimless",'png')
-                savefig(gcf,pathExportAll + save_name + "_BTfitting_dimless")
+    for c = 1:numel(cases)
 
+        % experiments in this case, sorted by Q
+        idxCase = find(caseID == cases(c));
+        if isempty(idxCase), continue, end
+        [~, ord] = sort(filedataExp.Q(idxCase));
+        idxCase  = idxCase(ord);
+
+        save_name = "CF_" + cases(c) + "_" + fitData;
+
+        figure
+        hold on
+        h = [];
+        Q_seen = [];
+
+        for q = 1:numel(idxCase)
+            i   = idxCase(q);
+            key = filedataExp.Key(i);
+            x   = expProcData.(key).BT.(xVar);
+
+            switch fitData
+                case "woEOS"
+                    CD1    = expProcData.(key).BT.rho_norm;
+                    CD1min = CD1 - expProcData.(key).BT.drho_norm;
+                    CD1max = CD1 + expProcData.(key).BT.drho_norm;
+                otherwise
+                    CD1    = expProcData.(key).BT.CDi;
+                    CD1min = expProcData.(key).BT.CDiMin;
+                    CD1max = expProcData.(key).BT.CDiMax;
             end
+
+            % fitted curve, shown only in the 16-84 % range
+            CD_fit = expProcData.(key).BT.C_fit_best/100;
+            cond   = (CD_fit >= 0.16) & (CD_fit <= 0.84);
+
+            % run number: Run column if present, else repeat count of same Q
+            if hasRun
+                runN = filedataExp.Run(i);
+            else
+                Q_seen(end+1) = filedataExp.Q(i);
+                runN = sum(Q_seen == filedataExp.Q(i));
+            end
+
+            errorbar(x, CD1, CD1 - CD1min, CD1max - CD1, 'LineStyle','none', ...
+                'Color', [0.88 0.88 0.88], 'HandleVisibility','off')
+            h1 = scatter(x, CD1, 5, 'filled', 'MarkerFaceColor', colors(mod(q-1,nC)+1,:), ...
+                'DisplayName', "C_{MFM} \pm \DeltaC_{MFM}");
+            h2 = plot(x(cond), CD_fit(cond), 'LineWidth', 3, ...
+                'Color', colorsdark(mod(q-1,nCd)+1,:), 'DisplayName', "C_{fit}");
+            hT = plot(NaN, NaN, 'w', 'LineStyle','none', ...
+                'DisplayName', "\bf Q = " + filedataExp.Q(i) + " ml/min, run " + runN);
+            h = [h; hT; h1; h2];
         end
+
+        xlabel(xLabel, 'FontSize', 14)
+        ylabel('C_D [-]', 'FontSize', 14)
+        ylim([-0.001, 1.001])
+        ax = gca;  ax.FontSize = 12;
+        grid on
+
+        lgd = legend(h, 'NumColumns', 1, 'Location', 'southeast', 'FontSize', 10);
+        lgd.ItemTokenSize = [15 8];
+        drawnow   % required for correct legend position
+
+        % separator lines in the legend
+        lgd_pos = lgd.Position;
+        nQ   = numel(idxCase);
+        rowH = lgd_pos(4) / (3*nQ);
+        x1 = lgd_pos(1);  x2 = lgd_pos(1) + lgd_pos(3);
+        for q = 1:nQ
+            row_Q = (q-1)*3 + 1;
+            y1 = lgd_pos(2) + lgd_pos(4) - (row_Q - 0.12)*rowH;
+            annotation('line', [x1 x2], [y1 y1], 'Color','k', 'LineWidth',0.8);
+        end
+        for q = 1:nQ-1
+            y1 = lgd_pos(2) + lgd_pos(4) - 3*q*rowH;
+            annotation('line', [x1 x2], [y1 y1], 'Color','k', 'LineWidth',0.8);
+        end
+
+        title(save_name, 'Interpreter','none')
+        saveas(gcf, pathExportAll + save_name + suffix, 'png')
+        savefig(gcf, pathExportAll + save_name + suffix)
     end
 end
-
-%% Fitting and experimental data all CF plot
-% dimensionless total
-colors = orderedcolors("glow");
-colorsdark = orderedcolors("earth"); 
-
-% empty objects
-h1 = gobjects(length(filedataExp.Key),1);
-h2 = gobjects(length(filedataExp.Key),1);
-h_titles = gobjects(length(filedataExp.Key),1);
-
-Fluid1_unique = unique(filedataExp.Fluid1);
-Fluid2_unique = unique(filedataExp.Fluid2);
-T_unique = unique(filedataExp.T);
-P_unique = unique(filedataExp.P);
-
-for j = 1:length(Fluid1_unique)
-    for jj = 1:length(Fluid2_unique)
-        for k = 1:length(T_unique)
-            for l = 1:length(P_unique)
-
-                figure
-                h = [];
-                h1 = [];
-                h2 = [];
-                h_titles = [];
-        
-                count = 0;
-                Q_seen = [];
-        
-                for i = 1:length(filedataExp.Key)
-        
-                    if filedataExp.Fluid1(i) == Fluid1_unique(j) && filedataExp.Fluid2(i) == Fluid2_unique(jj) ...
-                            && filedataExp.T(i) == T_unique(k) && filedataExp.P(i) == P_unique(l)
-        
-                        count = count + 1;
-
-                        tDtotal = expProcData.(filedataExp.Key(i)).BT.tDtotal;
-                        switch fitData
-                            case "woEOS"
-                                CD1 = expProcData.(filedataExp.Key(i)).BT.rho_norm;
-                                CD1min = expProcData.(filedataExp.Key(i)).BT.rho_norm - expProcData.(filedataExp.Key(i)).BT.drho_norm;
-                                CD1max = expProcData.(filedataExp.Key(i)).BT.rho_norm + expProcData.(filedataExp.Key(i)).BT.drho_norm;
-                            otherwise
-                                CD1 = expProcData.(filedataExp.Key(i)).BT.CDi;
-                                CD1min = expProcData.(filedataExp.Key(i)).BT.CDiMin;
-                                CD1max = expProcData.(filedataExp.Key(i)).BT.CDiMax;
-                        end
-
-                        % fitted vals C or rho norm
-                        CD_fit = expProcData.(filedataExp.Key(i)).BT.C_fit_best/100;
-                        % plot vals with function dt fixed weighted
-                        cond = (CD_fit>=0.16)&(CD_fit<=0.84);
-                        tDtotal_cond = tDtotal(cond);
-                        CD_fit_cond = CD_fit(cond);
-                        hold on
-                        h1(count) = scatter(tDtotal,CD1,5,'filled','MarkerFaceColor',colors(count,:), ...
-                            'DisplayName',"C_{MFM}");
-                        h2(count) = plot(tDtotal_cond, CD_fit_cond, ...
-                            'LineWidth',3,'Color', colorsdark(count,:),'DisplayName',"C_{fit}"); 
-                        % run number: from the input file if it has a Run column,
-                        % otherwise count repeats of the same Q in this figure
-                        if ismember('Run', filedataExp.Properties.VariableNames)
-                            runN = filedataExp.Run(i);
-                        else
-                            Q_seen(end+1) = filedataExp.Q(i);
-                            runN = sum(Q_seen == filedataExp.Q(i));
-                        end
-                        h_titles(count) = plot(NaN,NaN,'w', 'LineStyle','none', ...
-                            'DisplayName', "\bf Q = " + filedataExp.Q(i) + " ml/min, run " + runN);
-                        xlabel('Dimensionless Time (total)[-]');
-                        ylabel('C_{D}[-]');
-                        ylim([-0.001,1.001]);
-                        ax = gca; % Get current axes
-                        ax.FontSize = 12;
-                        % title("Breakthrough curves fitting", 'Interpreter', 'none')
-                        grid on;
-                        % h = [h; h1];
-                        h = [h;h_titles(count);h1(count);h2(count)];
-                        
-                        save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(i)+"_T"+filedataExp.T(i)+"_P"+filedataExp.P(i)+"_"+fitData;
-                        % add vertical or horizontal to tile (fix input excel (add orientation variable) for that)
-                    end
-                end
-                lgd = legend(h, 'NumColumns', 1, ...
-                    'Location', 'southeast', 'FontSize', 10);
-                lgd.ItemTokenSize = [15 8];   % tighter symbols
-                
-                drawnow  % REQUIRED for correct positions
-                
-                lgd_pos = lgd.Position;  % [x y width height]
-                nQ = count;
-                nRows = 3 * nQ;
-                rowH = lgd_pos(4) / nRows;   % approximate row height
-                
-                
-                for i = 1:nQ
-                    % Row indices (from top of legend)
-                    row_Q    = (i-1)*3 + 1;
-                    row_Data = row_Q + 1;
-                
-                    % Y positions (legend is bottom-based)
-                    y1 = lgd_pos(2) + lgd_pos(4) - (row_Q-0.12)*rowH;
-                
-                    % X positions (small indentation inside legend box)
-                    x1 = lgd_pos(1);
-                    x2 = lgd_pos(1) + lgd_pos(3);
-                
-                    % Draw line
-                    annotation('line', [x1 x2], [y1 y1], ...
-                        'Color','k', 'LineWidth',0.8);
-                end
-                
-                for i = 1:nQ-1
-                
-                    % Y positions (legend is bottom-based)
-                    y1 = lgd_pos(2) + lgd_pos(4) - 3*i*rowH;
-                
-                    % X positions (small indentation inside legend box)
-                    x1 = lgd_pos(1);
-                    x2 = lgd_pos(1) + lgd_pos(3);
-                
-                    % Draw line
-                    annotation('line', [x1 x2], [y1 y1], ...
-                        'Color','k', 'LineWidth',0.8);
-                end
-                
-                title(save_name,'Interpreter','none')
-                saveas(gcf,pathExportAll + save_name + "_BTfitting_dimlessTotal",'png')
-                savefig(gcf,pathExportAll + save_name + "_BTfitting_dimlessTotal")
-
-            end
-        end
-    end
-end
-
 %% BTC metrics
 
 BTC_Metrics_All = table();
@@ -1705,7 +1519,7 @@ if exist('alpha_pooled','var')
     end
 end
 
-%% ---- one figure per case (fluid pair, T, P, L, angle)
+% one figure per case (fluid pair, T, P, L, angle)
 for c = 1:nCases
     g  = cases(c);
     ga = find(alpha_table.GroupID == g, 1);
@@ -1783,7 +1597,7 @@ for c = 1:nCases
     savefig(gcf, pathExportAll + "KLD0vsPe_" + save_name)
 end
 
-%% ---- all cases together
+% all cases together
 if nCases > 0
     usePooled = isfinite(pooled.alpha_cm);
     save_all  = "CF_all_cases_" + fitData;
