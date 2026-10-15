@@ -975,6 +975,8 @@ save(pathExportAll + "expProcData.mat",'expProcData')
 
 for i = 1:length(filedataExp.Key)
     delete(pathExportAll + filedataExp.Key(i) + '.xlsx')
+    PGD1_data_name = filedataExp.path(i) + filedataExp.PGD1_data_name(i);
+    PGD2_data_name = filedataExp.path(i) + filedataExp.PGD2_data_name(i);
 
     writetable(expProcData.(filedataExp.Key(i)).pumpsData,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'pumps_data');
     writetable(expProcData.(filedataExp.Key(i)).transData,pathExportAll + filedataExp.Key(i) + '.xlsx', 'Sheet', 'trans_data');
