@@ -443,24 +443,72 @@ for i = 1:length(filedataExp.Key)
     end
 end
 
-%% Fitting dispersion to find KL with dt fixed PER SETUP GROUP
-% dt is fixed from the dt_free fits of the experiments in the same group
-% (same fluids, T, P and setupVersion; different Q). dtD = u*dt/L is the
-% dead volume in pore volumes, so it is the same for every Q of a group.
+%% Group delay per setup group and dt source, weighted by fit quality
+% dtD = u*dt/L = external dead volume in pore volumes -> one value per setup
+% group (same fluids, T, P, setupVersion) and per dt source:
+%   wdt  <- dt_free_wfit fits of the group
+%   nwdt <- dt_free_nwfit fits of the group
+% Weight of each fit: w = 1/RMSE^2 (better fit -> more weight).
+
+dt_sources = {'wdt',  'dt_free_wfit'; ...
+              'nwdt', 'dt_free_nwfit'};
+gList     = unique(dtGroupID, 'stable');
+dt_groups = table();
+
+for g = 1:numel(gList)
+    keysG = string(filedataExp.Key(dtGroupID == gList(g)));
+    rowG  = table(gList(g), numel(keysG), 'VariableNames', {'dtGroupID','nExpGroup'});
+
+    for s = 1:size(dt_sources,1)
+        tag = dt_sources{s,1};
+        Ts  = method_results.(dt_sources{s,2});
+
+        ok = ismember(Ts.Key, keysG) & ...
+             isfinite(Ts.dtD) & Ts.dtD >= dtD_valid_min & Ts.dtD <= dtD_valid_max & ...
+             isfinite(Ts.KL_cm2min) & Ts.KL_cm2min > KL_valid_min & Ts.KL_cm2min <= KL_valid_max & ...
+             isfinite(Ts.R2) & isfinite(Ts.RMSE) & Ts.RMSE > 0;
+
+        vals  = Ts.dtD(ok);
+        dfit  = Ts.d_dtD(ok);
+        nUsed = numel(vals);
+        dtD_g = NaN;  d_dtD_g = NaN;
+
+        if nUsed >= max(min_exp_dtfixed, 1)
+            wn    = (1 ./ Ts.RMSE(ok).^2);  wn = wn / sum(wn);     % fit-quality weights
+            dtD_g = sum(wn .* vals);
+            if nUsed > 1
+                scatter_g = sqrt(sum(wn .* (vals - dtD_g).^2) * nUsed/(nUsed-1));
+            else
+                scatter_g = 0;
+            end
+            d_dtD_g = sqrt(scatter_g^2 + sum(wn .* dfit, 'omitnan')^2);
+        end
+
+        rowG.(['nUsed_' tag])     = nUsed;
+        rowG.(['dtD_group_' tag]) = dtD_g;
+        rowG.(['d_dtD_group_' tag]) = d_dtD_g;
+        rowG.(['Keys_' tag])      = strjoin(Ts.Key(ok), ";");
+    end
+    dt_groups = [dt_groups; rowG]; %#ok<AGROW>
+end
+
+disp("Setup-group delay per dt source (dtD weighted by fit quality, w = 1/RMSE^2):")
+disp(dt_groups(:, {'dtGroupID','nExpGroup', ...
+    'nUsed_wdt','dtD_group_wdt','d_dtD_group_wdt', ...
+    'nUsed_nwdt','dtD_group_nwdt','d_dtD_group_nwdt'}))
+
+%% Fitting dispersion to find KL with dt fixed PER SETUP GROUP (8 methods)
 
 Cmin = 0.16;  Cmax = 0.84;
-
-dt_sources = {'wdt',  'dt_free_wfit'; ...      % {tag, dt_free method used}
-              'nwdt', 'dt_free_nwfit'};
-fit_types  = {'wfit', 'nwfit'};
-ranges     = {'lim', Cmin, Cmax; ...
-              'full', 0,    1};
-
-dtfixed_info = table();
+fit_types = {'wfit', 'nwfit'};
+ranges    = {'lim', Cmin, Cmax; ...
+             'full', 0,    1};
 
 for i = 1:nExp
     if filedataExp.Type(i) ~= "CF", continue, end
-    key = filedataExp.Key(i);
+    key  = filedataExp.Key(i);
+    gRow = find(dt_groups.dtGroupID == dtGroupID(i), 1);
+    if isempty(gRow), continue, end
 
     t_vals = expProcData.(key).BT.SecondsElapsed;
     switch fitData
@@ -476,30 +524,22 @@ for i = 1:nExp
     u  = expProcData.(key).exp_params.u_SI;
     L  = expProcData.(key).exp_params.L_SI;
 
-    groupKeys = string(filedataExp.Key(dtGroupID == dtGroupID(i)));
-
     for s = 1:size(dt_sources,1)
-        srcTag = dt_sources{s,1};
-        Tsrc   = method_results.(dt_sources{s,2});
+        tag  = dt_sources{s,1};
+        Tsrc = method_results.(dt_sources{s,2});
 
-        % valid dt_free fits from the same setup group
-        inGrp = ismember(Tsrc.Key, groupKeys) & ...
-                isfinite(Tsrc.dtD) & isfinite(Tsrc.d_dtD) & Tsrc.d_dtD > 0 & ...
-                Tsrc.dtD >= dtD_valid_min & Tsrc.dtD <= dtD_valid_max;
-        nGrp = sum(inGrp);
-        if nGrp < min_exp_dtfixed, continue, end      % not enough Q in this setup group
-
-        wts         = 1 ./ Tsrc.d_dtD(inGrp).^2;                 % inverse-variance
-        dtD_fixed   = sum(wts .* Tsrc.dtD(inGrp)) / sum(wts);
-        d_dtD_fixed = sqrt(std(Tsrc.dtD(inGrp))^2 + 1/sum(wts)); % run-to-run scatter + fit error
-        dt_fixed    = dtD_fixed*L/u;
+        dtD_fixed   = dt_groups.(['dtD_group_' tag])(gRow);
+        d_dtD_fixed = dt_groups.(['d_dtD_group_' tag])(gRow);
+        if ~isfinite(dtD_fixed), continue, end         % no valid fits for this source
+        dt_fixed = dtD_fixed*L/u;                      % same dtD, dt scales with 1/Q
 
         % KL initial guess: this key's own dt_free fit (by Key), else group median
         r0 = find(Tsrc.Key == key, 1);
         if ~isempty(r0) && isfinite(Tsrc.KL_SI(r0)) && Tsrc.KL_SI(r0) > 0
             p_guess = sqrt(Tsrc.KL_SI(r0));
         else
-            p_guess = sqrt(median(Tsrc.KL_SI(inGrp), 'omitnan'));
+            inG = ismember(Tsrc.Key, string(filedataExp.Key(dtGroupID == dtGroupID(i))));
+            p_guess = sqrt(median(Tsrc.KL_SI(inG), 'omitnan'));
         end
 
         for f = 1:numel(fit_types)
@@ -510,7 +550,7 @@ for i = 1:nExp
             end
 
             for rg = 1:size(ranges,1)
-                mName = ['dt_fixed_' srcTag '_' fit_types{f} '_' ranges{rg,1}];
+                mName = ['dt_fixed_' tag '_' fit_types{f} '_' ranges{rg,1}];
 
                 KL_out = fit_dispersion_dtfixed_nlinfit(C1_vals, t_vals, u, Cj, Ci, L, ...
                     dt_fixed, p_guess, w_vals, ranges{rg,2}, ranges{rg,3});
@@ -518,23 +558,34 @@ for i = 1:nExp
                 row = buildRow_procResults(filedataExp, expProcData, KL_out, i);
                 row = setFixedDt(row, dtD_fixed, d_dtD_fixed, u, L);
                 row.dtGroupID = dtGroupID(i);
-                row.n_dtGroup = nGrp;
+                row.n_dtGroup = dt_groups.(['nUsed_' tag])(gRow);
                 row.model     = string(mName);
 
                 method_results.(mName) = [method_results.(mName); row];
                 expProcData.(key).BT.(['C_fit_' mName]) = 100*KL_out.C_fit;
             end
         end
-
-        dtfixed_info = [dtfixed_info; table(key, dtGroupID(i), string(srcTag), nGrp, ...
-            dtD_fixed, d_dtD_fixed, dt_fixed/60, ...
-            'VariableNames', {'Key','dtGroupID','dtSource','nExpGroup', ...
-                              'dtD_fixed','d_dtD_fixed','dt_fixed_min'})]; %#ok<AGROW>
     end
 end
 
-disp("Fixed dt per experiment (from its setup group):")
-disp(dtfixed_info)
+%% Attach the group delays to every method table (saved with the results)
+mList = fieldnames(method_results);
+for m = 1:numel(mList)
+    Tm = method_results.(mList{m});
+    if isempty(Tm), continue, end
+    [~, gi] = ismember(Tm.dtGroupID, dt_groups.dtGroupID);
+    for s = 1:size(dt_sources,1)
+        tag = dt_sources{s,1};
+        dtD  = dt_groups.(['dtD_group_' tag])(gi);
+        ddtD = dt_groups.(['d_dtD_group_' tag])(gi);
+        Tm.(['dtD_group_' tag])      = dtD;
+        Tm.(['d_dtD_group_' tag])    = ddtD;
+        Tm.(['dt_group_min_' tag])   = dtD  .* Tm.L_SI ./ Tm.u_SI / 60;   % in this experiment's time
+        Tm.(['d_dt_group_min_' tag]) = ddtD .* Tm.L_SI ./ Tm.u_SI / 60;
+    end
+    method_results.(mList{m}) = Tm;
+end
+expProcData.dt_groups = dt_groups;
 
 %% Select the best valid method for EACH experiment (key)
 
@@ -628,11 +679,13 @@ disp(table(filedataExp.Key, best_rows.model, ...
     best_rows.KL_cm2min, best_rows.dKL_cm2min, best_rows.uncertKL_cm2min, best_rows.totUncertKL_cm2min, ...
     best_rows.dt_min, best_rows.d_dt_min, best_rows.uncertDt_min, best_rows.totUncertDt_min, ...
     best_rows.dtD, best_rows.d_dtD, best_rows.uncertDtD, best_rows.totUncertDtD, ...
+    best_rows.dtD_group_wdt, best_rows.d_dtD_group_wdt, best_rows.dtD_group_nwdt, best_rows.d_dtD_group_nwdt, ...
     best_rows.R2, best_rows.RMSE, best_rows.nMethods, best_rows.nMethods_dt, best_rows.dtValid, ...
     'VariableNames', {'Key','BestMethod', ...
     'KL_cm2min','dKL_cm2min','uncertKL_cm2min','totUncertKL_cm2min', ...
     'dt_min','d_dt_min','uncertDt_min','totUncertDt_min', ...
     'dtD','d_dtD','uncertDtD','totUncertDtD', ...
+    'dtD_group_wdt','d_dtD_group_wdt','dtD_group_nwdt','d_dtD_group_nwdt', ...
     'R2','RMSE','nMethods','nMethods_dt','dtValid'}))
 
 % store in expProcData
@@ -1421,7 +1474,12 @@ writetable(T, fitting_results_name, ...
 writetable(BTC_Metrics_All,fitting_results_name,...
            'Sheet','BTC');
 
-% Sheet 3+: each method
+% Sheet 3: dt_groups (setup groups according to lines config and dead
+% volume)
+
+writetable(dt_groups, fitting_results_name, 'Sheet', 'dt_groups');
+
+% Sheet 4+: each method
 method_names = fieldnames(method_results);
 
 for j = 1:length(method_names)
