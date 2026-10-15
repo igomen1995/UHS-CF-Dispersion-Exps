@@ -571,10 +571,19 @@ for i = 1:length(filedataExp.Key)
 end
 
 %% Select the best valid method for EACH experiment (key)
+
+% drop any best_per_key left over from a previous run of this section
+if isfield(method_results,'best_per_key')
+    method_results = rmfield(method_results,'best_per_key');
+end
+
 method_names = fieldnames(method_results);
 
-candidate_methods = method_names(3:end);   % skip dt_free methods
-% candidate_methods = method_names;        % allow dt_free methods
+% choose candidates by name, not position
+candidate_methods = method_names(startsWith(method_names,"dt_fixed"));
+% candidate_methods = method_names;   % also allow dt_free methods
+
+disp("Candidate methods:"); disp(candidate_methods)
 
 nExp = height(filedataExp);
 best_rows  = table();
@@ -620,8 +629,12 @@ method_results.best_per_key = best_rows;
 best_method = "best_per_key";
 best_method_table = best_rows;
 
-disp(table(filedataExp.Key, best_rows.model, best_rows.R2, best_rows.RMSE, ...
-    'VariableNames', {'Key','BestMethod','R2','RMSE'}))
+disp(table(filedataExp.Key, best_rows.model, ...
+    best_rows.KL_SI, best_rows.dKL_SI, ...
+    best_rows.KL_cm2min, best_rows.dKL_cm2min, ...
+    best_rows.R2, best_rows.RMSE, ...
+    'VariableNames', {'Key','BestMethod','KL_SI','dKL_SI', ...
+    'KL_cm2min','dKL_cm2min','R2','RMSE'}))
 
 % Store best fit in expProcData
 for i = 1:nExp
