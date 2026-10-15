@@ -344,7 +344,7 @@ dtD_valid_min = 0;     % dimensionless delay (pore volumes)
 dtD_valid_max = 5;
 min_exp_dtfixed = 0; 
 
-beta_tau = 1.2;   % exponent of the dispersive term in KL = D0*(1/tau + C2*Pe^beta); 1 = linear
+beta_tau = 1.0;   % exponent of the dispersive term in KL = D0*(1/tau + C2*Pe^beta); 1 = linear
 
 %% IMPORT variables
 
@@ -1175,7 +1175,8 @@ for mm = 1:length(method_names)
             alpha_struct(count_row).n_points = n_points;
             alpha_struct(count_row).Keys     = strjoin(Tmethod.Key(match_idx), ";");
             for c = {'alpha_SI','d_alpha_SI','alpha_cm','d_alpha_cm', ...
-                     'alpha_tau_SI','d_alpha_tau_SI','alpha_tau_cm','d_alpha_tau_cm','tau','d_tau'}
+                     'alpha_tau_SI','d_alpha_tau_SI','alpha_tau_cm','d_alpha_tau_cm', ...
+                     'tau','d_tau','C2_tau','d_C2_tau','beta_tau'}
                 alpha_struct(count_row).(c{1}) = NaN;
             end
 
@@ -1658,7 +1659,7 @@ if nCases > 0
     savefig(gcf, pathExportAll + "KLvsVel_" + save_all)
 
     % ---------- KL/D0 vs Pe, all cases (collapse onto one curve with pooled alpha)
-    figure; hold on
+    figure('Position', [100 100 1000 700]); hold on      % [left bottom width height] in pixels
     xall = [];  yall = [];
     for c = 1:nCases
         g   = cases(c);
@@ -1696,8 +1697,9 @@ if nCases > 0
                 plot(Pe_line, KL_Pe_alpha_tau_model(Pe_line*Lref/(pooled.alpha_cm/100), 1, ...
                     [(pooled.alpha_tau_cm/100)/Lref; pooled.tau], beta_tau), ...
                     'k--', 'LineWidth', 2, 'DisplayName', ...
-                    sprintf('Pooled: KL/D0 = 1/tau + C2*Pe_L^%.1f  (tau = %.2f +/- %.2f)', ...
-                    beta_tau, pooled.tau, pooled.d_tau))
+                    sprintf(['Pooled: KL/D0 = 1/tau + C2*Pe_L^%.1f  ' ...
+                             '(alpha = %.3f +/- %.3f cm, tau = %.2f +/- %.2f)'], ...
+                    beta_tau, pooled.alpha_tau_cm, pooled.d_alpha_tau_cm, pooled.tau, pooled.d_tau))
             end
             xlabel('Pe = u_x \alpha_{pooled} / D_0')
         else
@@ -1711,7 +1713,7 @@ if nCases > 0
         grid on
         title(save_all, 'Interpreter','none')
         legend('Location','northwest','Interpreter','none')
-        saveas(gcf, pathExportAll + "KLD0vsPe_" + save_all, 'png')
+        exportgraphics(gcf, pathExportAll + "KLD0vsPe_" + save_all + ".png", 'Resolution', 300)
         savefig(gcf, pathExportAll + "KLD0vsPe_" + save_all)
     end
 end
