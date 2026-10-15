@@ -577,8 +577,8 @@ if isfield(method_results,'best_per_key')
 end
 
 method_names = fieldnames(method_results);
-% candidate_methods = method_names(startsWith(method_names,"dt_fixed");
-% candidate_methods = method_names(startsWith(method_names,"dt_fixed_nwdt_nwfit")&endsWith(method_names,"lim"));
+% candidate_methods = method_names(startsWith(method_names,"dt_fixed"));
+% candidate_methods = method_names(startsWith(method_names,"dt_fixed_nwdt_nwfit") & endsWith(method_names,"lim"));
 candidate_methods = method_names;   % also allow dt_free methods
 
 disp("Candidate methods:"); disp(candidate_methods)
@@ -589,9 +589,13 @@ best_rows  = table();
 best_score = nan(nExp,1);
 cand_row   = nan(nExp,nCand);   % row of key i in method m (NaN = not valid)
 
-KL_valid_min = 0;     % cm2/min (exclusive)
-KL_valid_max = 100;   % cm2/min
+% validity limits (move to the INPUT section if the dt-fixed fitting also uses them)
+KL_valid_min  = 0;     % cm2/min (exclusive)
+KL_valid_max  = 100;   % cm2/min
+dtD_valid_min = 0;     % dimensionless delay (pore volumes)
+dtD_valid_max = 5;
 
+% best method per key (KL validity)
 for i = 1:nExp
     key = filedataExp.Key(i);
     best_row = [];
@@ -599,18 +603,18 @@ for i = 1:nExp
     for m = 1:nCand
         Tm = method_results.(candidate_methods{m});
         if isempty(Tm), continue, end
-    
-        r = find(Tm.Key == string(key), 1);   % Key always exists now
+
+        r = find(Tm.Key == string(key), 1);
         if isempty(r), continue, end          % method not run for this key
-    
+
         ok = isfinite(Tm.KL_cm2min(r)) && ...
-            Tm.KL_cm2min(r) > KL_valid_min && Tm.KL_cm2min(r) <= KL_valid_max && ...
-            isfinite(Tm.dKL_SI(r)) && ...
-            isfinite(Tm.R2(r)) && isfinite(Tm.RMSE(r)) && Tm.RMSE(r) > 0;
+             Tm.KL_cm2min(r) > KL_valid_min && Tm.KL_cm2min(r) <= KL_valid_max && ...
+             isfinite(Tm.dKL_SI(r)) && ...
+             isfinite(Tm.R2(r)) && isfinite(Tm.RMSE(r)) && Tm.RMSE(r) > 0;
         if ~ok, continue, end
-    
+
         cand_row(i,m) = r;   % remember valid methods for the spread
-    
+
         score = Tm.R2(r) / Tm.RMSE(r);
         if isnan(best_score(i)) || score > best_score(i)
             best_score(i) = score;
@@ -621,32 +625,57 @@ for i = 1:nExp
     if isempty(best_row)
         error("No valid fitting method found for %s", key)
     end
-    best_rows = [best_rows; best_row];
+    best_rows = [best_rows; best_row]; %#ok<AGROW>
 end
 best_rows.best_score = best_score;
 best_rows.nMethods   = sum(~isnan(cand_row),2);
 
-% Method-to-method uncertainty (std across valid candidate methods)
-spread_vars = {'KL_SI','KL_cm2min','dt_SI','dt_min','dtD', ...
-               'Pe_upump_L_KL','Pe_uMFM_L_KL'};
-best_rows = addMethodSpread(best_rows, method_results, candidate_methods, cand_row, spread_vars);
+% dt-specific validity: a method can give a good KL but an unrealistic dt
+cand_row_dt = cand_row;
+for i = 1:nExp
+    for m = 1:nCand
+        r = cand_row(i,m);
+        if isnan(r), continue, end
+        Tm = method_results.(candidate_methods{m});
+        ok_dt = isfinite(Tm.dtD(r)) && isfinite(Tm.d_dtD(r)) && ...
+                Tm.dtD(r) >= dtD_valid_min && Tm.dtD(r) <= dtD_valid_max;
+        if ~ok_dt, cand_row_dt(i,m) = NaN; end
+    end
+end
+best_rows.nMethods_dt = sum(~isnan(cand_row_dt),2);
+best_rows.dtValid     = isfinite(best_rows.dtD) & ...
+    best_rows.dtD >= dtD_valid_min & best_rows.dtD <= dtD_valid_max;
 
-% Total uncertainty = sqrt(fit error^2 + method spread^2)
+% method-to-method uncertainty (std across valid methods)
+best_rows = addMethodSpread(best_rows, method_results, candidate_methods, cand_row, ...
+    {'KL_SI','KL_cm2min','Pe_upump_L_KL','Pe_uMFM_L_KL'});
+best_rows = addMethodSpread(best_rows, method_results, candidate_methods, cand_row_dt, ...
+    {'dt_SI','dt_min','dtD'});
+
+% total uncertainty = sqrt(fit error^2 + method spread^2)
 fit_err_pairs = {'KL_SI','dKL_SI'; 'KL_cm2min','dKL_cm2min'; ...
                  'dt_SI','d_dt_SI'; 'dt_min','d_dt_min'; 'dtD','d_dtD'; ...
                  'Pe_upump_L_KL','dPe_upump_L_KL'; 'Pe_uMFM_L_KL','dPe_uMFM_L_KL'};
 best_rows = addTotalUncert(best_rows, fit_err_pairs);
 
+% register as pseudo-method
 method_results.best_per_key = best_rows;
 best_method = "best_per_key";
 best_method_table = best_rows;
 
+% print
 disp(table(filedataExp.Key, best_rows.model, ...
     best_rows.KL_cm2min, best_rows.dKL_cm2min, best_rows.uncertKL_cm2min, best_rows.totUncertKL_cm2min, ...
-    best_rows.R2, best_rows.RMSE, best_rows.nMethods, ...
-    'VariableNames', {'Key','BestMethod','KL_cm2min','dKL_cm2min', ...
-    'uncertKL_cm2min','totUncertKL_cm2min','R2','RMSE','nMethods'}))
+    best_rows.dt_min, best_rows.d_dt_min, best_rows.uncertDt_min, best_rows.totUncertDt_min, ...
+    best_rows.dtD, best_rows.d_dtD, best_rows.uncertDtD, best_rows.totUncertDtD, ...
+    best_rows.R2, best_rows.RMSE, best_rows.nMethods, best_rows.nMethods_dt, best_rows.dtValid, ...
+    'VariableNames', {'Key','BestMethod', ...
+    'KL_cm2min','dKL_cm2min','uncertKL_cm2min','totUncertKL_cm2min', ...
+    'dt_min','d_dt_min','uncertDt_min','totUncertDt_min', ...
+    'dtD','d_dtD','uncertDtD','totUncertDtD', ...
+    'R2','RMSE','nMethods','nMethods_dt','dtValid'}))
 
+% store in expProcData
 for i = 1:nExp
     key = filedataExp.Key(i);
     expProcData.(key).results = best_rows(i,:);
