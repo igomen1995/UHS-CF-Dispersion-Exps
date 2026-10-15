@@ -1506,6 +1506,69 @@ else
         'tau','d_tau','uncertTau','totUncertTau'}))
 end
 
+%% Pooled alpha / tau: all experiments together (same rock)
+% Independent of Q, fluid pair, T and P. D0, L and Pe stay per experiment.
+
+method_names_all = fieldnames(method_results);   % includes best_per_key
+alpha0_cm = median(alpha_table.alpha_cm, 'omitnan');   % initial guess from grouped fits
+if ~isfinite(alpha0_cm) || alpha0_cm <= 0, alpha0_cm = 0.1; end
+
+pooled_rows = cell(numel(method_names_all),1);
+
+for mm = 1:numel(method_names_all)
+    Tm = method_results.(method_names_all{mm});
+
+    s = struct('method', string(method_names_all{mm}), 'n_points', 0, 'Keys', "", ...
+        'alpha_cm', NaN, 'd_alpha_cm', NaN, 'R2_alpha', NaN, ...
+        'alpha_tau_cm', NaN, 'd_alpha_tau_cm', NaN, 'tau', NaN, 'd_tau', NaN, ...
+        'R2_alpha_tau', NaN);
+
+    if ~isempty(Tm)
+        ok = isfinite(Tm.KL_cm2min) & ...
+             Tm.KL_cm2min > KL_valid_min & Tm.KL_cm2min <= KL_valid_max & ...
+             isfinite(Tm.dKL_SI) & Tm.dKL_SI > 0;
+
+        s.n_points = sum(ok);
+        s.Keys     = strjoin(Tm.Key(ok), ";");
+
+        if s.n_points >= min_points_alpha
+            X = [Tm.Pe_upump_L_D0(ok), Tm.D12_SI(ok), Tm.L_SI(ok)];
+            fit = pooledAlphaFit(X, Tm.KL_SI(ok), Tm.dKL_SI(ok), ...
+                                 alpha0_cm, min_points_alpha_tau);
+            for f = fieldnames(fit)'
+                s.(f{1}) = fit.(f{1});
+            end
+        end
+    end
+    pooled_rows{mm} = s;
+end
+alpha_pooled = struct2table([pooled_rows{:}]);
+
+% method-to-method spread (candidate methods only) and total uncertainty
+pooled_vars = {'alpha_cm','alpha_tau_cm','tau'};
+is_cand  = ismember(alpha_pooled.method, string(candidate_methods));
+row_best = find(alpha_pooled.method == "best_per_key", 1);
+for v = 1:numel(pooled_vars)
+    var  = pooled_vars{v};
+    alpha_pooled.(uncertName(var)) = nan(height(alpha_pooled),1);
+    vals = alpha_pooled.(var)(is_cand);
+    vals = vals(isfinite(vals));
+    if numel(vals) >= 2 && ~isempty(row_best)
+        alpha_pooled.(uncertName(var))(row_best) = std(vals);
+    end
+end
+alpha_pooled = addTotalUncert(alpha_pooled, ...
+    {'alpha_cm','d_alpha_cm'; 'alpha_tau_cm','d_alpha_tau_cm'; 'tau','d_tau'});
+
+expProcData.alpha_pooled = alpha_pooled;
+
+% print
+disp("Pooled fit - all experiments together (same rock):")
+disp(alpha_pooled(:, {'method','n_points', ...
+    'alpha_cm','d_alpha_cm','uncertAlpha_cm','totUncertAlpha_cm','R2_alpha', ...
+    'alpha_tau_cm','d_alpha_tau_cm','tau','d_tau', ...
+    'uncertTau','totUncertTau','R2_alpha_tau'}))
+
 %% Save results
 
 alpha_table_name = pathExportAll + "alpha_results_" + fitData;
@@ -1534,6 +1597,8 @@ for mm = 1:length(method_names)
     writetable(Talpha, alpha_table_name + ".xlsx", ...
         'Sheet', sheet_name);
 end
+
+writetable(alpha_pooled, alpha_table_name + ".xlsx", 'Sheet', 'pooled_all');
 
 fitting_results_name = pathExportAll + "fitting_results_" + fitData +".xlsx";
 
@@ -1574,229 +1639,212 @@ end
 expProcFullData = expProcData;
 save(pathExportAll + "expProcFullData.mat",'expProcFullData')
 
-%% Plot KL vs vel
+%% Plot KL vs u and KL/D0 vs Pe: per case and all cases together
 
-Fluid1_unique = unique(best_method_table.Fluid1);
-Fluid2_unique = unique(best_method_table.Fluid2);
-T_unique      = unique(best_method_table.T_C);
-P_unique      = unique(best_method_table.P_psig);
-L_unique      = unique(best_method_table.L_in);
-theta_unique  = unique(best_method_table.Angle);
+T_plot = best_method_table;
+if ismember('Run', filedataExp.Properties.VariableNames) && ...
+        ~ismember('Run', T_plot.Properties.VariableNames)
+    T_plot.Run = filedataExp.Run;          % best_method_table is in filedataExp order
+end
 
-colors = orderedcolors("glow");
-nColors = size(colors,1);
+% error bars: total uncertainty if available, otherwise fit error only
+if ismember('totUncertKL_SI', T_plot.Properties.VariableNames)
+    T_plot.errKL_SI = T_plot.totUncertKL_SI;
+else
+    T_plot.errKL_SI = T_plot.dKL_SI;
+end
+sc = 60e4;                                  % m2/s -> cm2/min
+T_plot.errKL_cm2min = T_plot.errKL_SI*sc;
 
-for i = 1:length(Fluid1_unique)
-    for j = 1:length(Fluid2_unique)
-        for k = 1:length(T_unique)
-            for m = 1:length(P_unique)
-                for n = 1:length(L_unique)
-                    for theta = 1:length(theta_unique)
+ok_plot = ~ismissing(T_plot.GroupID) & T_plot.GroupID ~= "" & isfinite(T_plot.KL_SI);
+cases   = unique(T_plot.GroupID(ok_plot), 'stable');
+nCases  = numel(cases);
 
-                        % filter rows for this group
-                        idx = best_method_table.Fluid1 == Fluid1_unique(i) & ...
-                            best_method_table.Fluid2 == Fluid2_unique(j) & ...
-                            best_method_table.T_C    == T_unique(k) & ...
-                            best_method_table.P_psig == P_unique(m) & ...
-                            best_method_table.L_in   == L_unique(n) & ...
-                            best_method_table.Angle  == theta_unique(theta);
+colors     = orderedcolors("glow");  nColors = size(colors,1);
+caseColors = lines(max(nCases,1));
+markers    = {'o','s','^','d','v','>','<','p','h'};  nMark = numel(markers);
 
-                        if ~any(idx), continue, end   % empty combination
-
-                        % extract data (all filtered by idx)
-                        u_array_cmmin = best_method_table.u_cmmin(idx);
-                        KL_array      = best_method_table.KL_cm2min(idx);
-                        dKL_array     = best_method_table.dKL_cm2min(idx);
-                        Pe_D0_array   = best_method_table.Pe_upump_L_D0(idx);
-                        Q_grp         = best_method_table.Q_mlmin(idx);
-                        model_grp     = best_method_table.model(idx);
-                        D0    = unique(best_method_table.D12_SI(idx));
-                        Dp_SI = unique(best_method_table.L_SI(idx));
-
-                        % get alpha for this group
-                        idx_alpha = alpha_table.Fluid1 == Fluid1_unique(i) & ...
-                            alpha_table.Fluid2 == Fluid2_unique(j) & ...
-                            alpha_table.T_C    == T_unique(k) & ...
-                            alpha_table.P_psig == P_unique(m) & ...
-                            alpha_table.L_in   == L_unique(n) & ...
-                            alpha_table.Angle  == theta_unique(theta);
-
-                        if ~any(idx_alpha), continue, end
-
-                        alpha_SI      = alpha_table.alpha_SI(idx_alpha);
-                        dalpha_SI     = alpha_table.d_alpha_SI(idx_alpha);
-                        alpha_cm      = alpha_SI * 100;
-                        dalpha_cm     = dalpha_SI * 100;
-                        alpha_tau_SI  = alpha_table.alpha_tau_SI(idx_alpha);
-                        dalpha_tau_SI = alpha_table.d_alpha_tau_SI(idx_alpha);
-                        alpha_tau_cm  = alpha_tau_SI * 100;
-                        dalpha_tau_cm = dalpha_tau_SI * 100;
-                        tau   = alpha_table.tau(idx_alpha);     % FIX: indexed
-                        d_tau = alpha_table.d_tau(idx_alpha);   % FIX: d_tau, not tau
-
-                        % model curves vs Pe (D0 denominator)
-                        Pe_D0_array_plot = 0:1:ceil(max(Pe_D0_array));
-                        KL_array_alpha_SI_plot = KL_Pe_alpha_only_model(Pe_D0_array_plot,D0,alpha_SI/Dp_SI);
-                        KL_array_alpha_cm2min_plot = KL_array_alpha_SI_plot*(60*10^4);
-                        u_array_cmmin_plot = (Pe_D0_array_plot*D0/Dp_SI)*(60*10^2);
-
-                        % plot
-                        figure
-                        hold on
-                        if isfinite(alpha_SI)
-                            plot(u_array_cmmin_plot, KL_array_alpha_cm2min_plot, ...
-                                'k','LineWidth',2, ...
-                                'DisplayName','K_L = \alpha u_x')
-                        end
-                        if isfinite(tau)
-                            KL_array_tau_SI_plot = KL_Pe_alpha_tau_model(Pe_D0_array_plot,D0,[alpha_tau_SI/Dp_SI;tau]);
-                            KL_array_tau_cm2min_plot = KL_array_tau_SI_plot*(60*10^4);
-                            plot(u_array_cmmin_plot, KL_array_tau_cm2min_plot, ...
-                                'k','LineWidth',2,'LineStyle','--', ...
-                                'DisplayName','K_L = D_0/\tau + \alpha u_x')
-                        end
-
-                        % data
-                        for ii = 1:length(u_array_cmmin)
-                            c = colors(mod(ii-1,nColors)+1,:);
-                            errorbar(u_array_cmmin(ii), KL_array(ii), ...
-                                dKL_array(ii), dKL_array(ii), ...
-                                'Color','k','HandleVisibility','off')
-                            scatter(u_array_cmmin(ii), KL_array(ii), 36, ...
-                                'filled','MarkerFaceColor',c,'MarkerEdgeColor',c, ...
-                                'DisplayName',"Q = " + Q_grp(ii) + " ml/min (" + model_grp(ii) + ")")
-                        end
-
-                        xlabel('Interstitial velocity (u_x) [cm/min]')
-                        ylabel('K_L [cm^2/min]')
-                        xlim([0,1.1*max(u_array_cmmin)])
-                        ylim([0,1.1*max(KL_array)])
-                        grid on
-
-                        % FIX: name from the group values, not filedataExp rows
-                        save_name = "CF_" + Fluid1_unique(i) + "_" + Fluid2_unique(j) + ...
-                            "_T" + T_unique(k) + "_P" + P_unique(m) + "_L" + L_unique(n) + ...
-                            "_THETA" + theta_unique(theta) + "_" + fitData;
-                        title(save_name, 'Interpreter','none')
-
-                        annotation('textbox',[0.25 0.2 0.5 0.05], ...
-                            'String',sprintf('\\alpha_1 = %.2f ± %.2f cm', alpha_cm, dalpha_cm), ...
-                            'EdgeColor','none')
-                        if isfinite(tau)
-                            annotation('textbox',[0.25 0.15 0.5 0.05], ...
-                                'String',sprintf('\\alpha_2 = %.2f ± %.2f cm, \\tau = %.2f ± %.2f', ...
-                                alpha_tau_cm, dalpha_tau_cm, tau, d_tau), ...
-                                'EdgeColor','none')
-                        end
-                        legend('Location','northwest','Interpreter','tex')
-
-                        saveas(gcf, pathExportAll + "KLvsVel_" + save_name, 'png')
-                        savefig(gcf, pathExportAll + "KLvsVel_" + save_name)
-                    end
-                end
-            end
+% pooled alpha/tau (best per-key method), if the pooled section was run
+pooled = struct('alpha_cm',NaN,'d_alpha_cm',NaN,'alpha_tau_cm',NaN, ...
+                'd_alpha_tau_cm',NaN,'tau',NaN,'d_tau',NaN);
+if exist('alpha_pooled','var')
+    rb = find(alpha_pooled.method == "best_per_key", 1);
+    if ~isempty(rb)
+        for f = fieldnames(pooled)'
+            pooled.(f{1}) = alpha_pooled.(f{1})(rb);
         end
     end
 end
 
-%% Plot KL/D0 vs Pe
+%% ---- one figure per case (fluid pair, T, P, L, angle)
+for c = 1:nCases
+    g  = cases(c);
+    ga = find(alpha_table.GroupID == g, 1);
+    if isempty(ga), continue, end
+    a  = alpha_table(ga,:);
 
-for i = 1:length(Fluid1_unique)
-    for j = 1:length(Fluid2_unique)
-        for k = 1:length(T_unique)
-            for m = 1:length(P_unique)
-                for n = 1:length(L_unique)
-                    for theta = 1:length(theta_unique)   % FIX: theta loop added
+    Tg  = sortrows(T_plot(ok_plot & T_plot.GroupID == g, :), 'Q_mlmin');
+    lbl = pointLabels(Tg);
+    D0  = Tg.D12_SI(1);  dD0 = Tg.dD12_SI(1);  L = Tg.L_SI(1);
+    save_name = "CF_" + g + "_" + fitData;
 
-                        idx = best_method_table.Fluid1 == Fluid1_unique(i) & ...
-                            best_method_table.Fluid2 == Fluid2_unique(j) & ...
-                            best_method_table.T_C    == T_unique(k) & ...
-                            best_method_table.P_psig == P_unique(m) & ...
-                            best_method_table.L_in   == L_unique(n) & ...
-                            best_method_table.Angle  == theta_unique(theta);
+    % ---------- KL vs u
+    figure; hold on
+    u_line  = linspace(0, 1.1*max(Tg.u_SI), 100);          % m/s
+    Pe_line = u_line*L/D0;
+    if isfinite(a.alpha_SI)
+        plot(u_line*6000, KL_Pe_alpha_only_model(Pe_line, D0, a.alpha_SI/L)*sc, ...
+            'k-', 'LineWidth', 2, 'DisplayName', ...
+            sprintf('KL = alpha*u  (alpha = %.3f +/- %.3f cm)', a.alpha_cm, a.d_alpha_cm))
+    end
+    if isfinite(a.tau)
+        plot(u_line*6000, KL_Pe_alpha_tau_model(Pe_line, D0, [a.alpha_tau_SI/L; a.tau])*sc, ...
+            'k--', 'LineWidth', 2, 'DisplayName', ...
+            sprintf('KL = D0/tau + alpha*u  (alpha = %.3f +/- %.3f cm, tau = %.2f +/- %.2f)', ...
+            a.alpha_tau_cm, a.d_alpha_tau_cm, a.tau, a.d_tau))
+    end
+    for r = 1:height(Tg)
+        col = colors(mod(r-1,nColors)+1,:);
+        errorbar(Tg.u_cmmin(r), Tg.KL_cm2min(r), Tg.errKL_cm2min(r), ...
+            'k', 'LineStyle','none', 'HandleVisibility','off')
+        scatter(Tg.u_cmmin(r), Tg.KL_cm2min(r), 45, 'filled', ...
+            'Marker', markers{mod(r-1,nMark)+1}, ...
+            'MarkerFaceColor', col, 'MarkerEdgeColor', 'k', 'DisplayName', lbl(r))
+    end
+    xlabel('Interstitial velocity u_x [cm/min]')
+    ylabel('K_L [cm^2/min]')
+    xlim([0, 1.1*max(Tg.u_cmmin)])
+    ylim([0, 1.1*max(Tg.KL_cm2min + Tg.errKL_cm2min)])
+    grid on
+    title(save_name, 'Interpreter','none')
+    legend('Location','northwest','Interpreter','none')
+    saveas(gcf, pathExportAll + "KLvsVel_" + save_name, 'png')
+    savefig(gcf, pathExportAll + "KLvsVel_" + save_name)
 
-                        if ~any(idx), continue, end
+    % ---------- KL/D0 vs Pe (Pe = u*alpha/D0)
+    if ~isfinite(a.alpha_SI), continue, end
+    x  = Tg.u_SI*a.alpha_SI/D0;
+    y  = Tg.KL_SI/D0;
+    dy = Tg.errKL_SI/D0 + Tg.KL_SI*dD0/D0^2;
 
-                        % extract data
-                        u_array_SI = best_method_table.u_SI(idx);
-                        Q_grp      = best_method_table.Q_mlmin(idx);
-                        model_grp  = best_method_table.model(idx);
-                        D0    = unique(best_method_table.D12_SI(idx));
-                        dD0   = unique(best_method_table.dD12_SI(idx));
-                        Dp_SI = unique(best_method_table.L_SI(idx));
-                        KL_vs_D0_array  = best_method_table.KL_SI(idx)/D0;
-                        dKL_vs_D0_array = best_method_table.dKL_SI(idx)/D0 + ...
-                                          best_method_table.KL_SI(idx)*dD0/(D0^2);
+    figure; hold on
+    Pe_line = logspace(log10(min(x)/3), log10(max(x)*3), 200);
+    plot(Pe_line, KL_Pe_alpha_only_model(Pe_line, D0, 1)/D0, ...
+        'k-', 'LineWidth', 2, 'DisplayName', 'KL/D0 = alpha*u/D0')
+    if isfinite(a.tau)
+        % x is based on the alpha-only fit -> pass alpha_tau/alpha so the curve shares that axis
+        plot(Pe_line, KL_Pe_alpha_tau_model(Pe_line, D0, [a.alpha_tau_SI/a.alpha_SI; a.tau])/D0, ...
+            'k--', 'LineWidth', 2, 'DisplayName', 'KL/D0 = 1/tau + alpha*u/D0')
+    end
+    for r = 1:height(Tg)
+        col = colors(mod(r-1,nColors)+1,:);
+        errorbar(x(r), y(r), dy(r), 'k', 'LineStyle','none', 'HandleVisibility','off')
+        scatter(x(r), y(r), 45, 'filled', 'Marker', markers{mod(r-1,nMark)+1}, ...
+            'MarkerFaceColor', col, 'MarkerEdgeColor', 'k', 'DisplayName', lbl(r))
+    end
+    set(gca,'XScale','log','YScale','log')
+    xlim([min(x)/3, max(x)*3])
+    ylim([min(y)/3, max(y+dy)*2])
+    xlabel('Pe = u_x \alpha / D_0')
+    ylabel('K_L / D_0')
+    grid on
+    title(save_name, 'Interpreter','none')
+    legend('Location','northwest','Interpreter','none')
+    saveas(gcf, pathExportAll + "KLD0vsPe_" + save_name, 'png')
+    savefig(gcf, pathExportAll + "KLD0vsPe_" + save_name)
+end
 
-                        idx_alpha = alpha_table.Fluid1 == Fluid1_unique(i) & ...
-                            alpha_table.Fluid2 == Fluid2_unique(j) & ...
-                            alpha_table.T_C    == T_unique(k) & ...
-                            alpha_table.P_psig == P_unique(m) & ...
-                            alpha_table.L_in   == L_unique(n) & ...
-                            alpha_table.Angle  == theta_unique(theta);
+%% ---- all cases together
+if nCases > 0
+    usePooled = isfinite(pooled.alpha_cm);
+    save_all  = "CF_all_cases_" + fitData;
 
-                        if ~any(idx_alpha), continue, end
+    % ---------- KL vs u, all cases (each case keeps its own grouped alpha line)
+    figure; hold on
+    for c = 1:nCases
+        g   = cases(c);
+        Tg  = T_plot(ok_plot & T_plot.GroupID == g, :);
+        col = caseColors(c,:);  mk = markers{mod(c-1,nMark)+1};
 
-                        alpha_SI     = alpha_table.alpha_SI(idx_alpha);
-                        dalpha_SI    = alpha_table.d_alpha_SI(idx_alpha);
-                        alpha_cm     = alpha_SI * 100;
-                        dalpha_cm    = dalpha_SI * 100;
-                        alpha_tau_SI = alpha_table.alpha_tau_SI(idx_alpha);
-                        tau   = alpha_table.tau(idx_alpha);     % FIX
-                        d_tau = alpha_table.d_tau(idx_alpha);   % FIX
+        errorbar(Tg.u_cmmin, Tg.KL_cm2min, Tg.errKL_cm2min, ...
+            'LineStyle','none', 'Color', col, 'HandleVisibility','off')
+        scatter(Tg.u_cmmin, Tg.KL_cm2min, 45, 'filled', 'Marker', mk, ...
+            'MarkerFaceColor', col, 'MarkerEdgeColor', 'k', 'DisplayName', g)
 
-                        if ~isfinite(alpha_SI), continue, end
-                        Pe_D0_alpha = u_array_SI*alpha_SI/D0;
-
-                        % model curves
-                        Pe_D0_array_plot = 0.1:0.1:6;
-                        KL_array_alpha_SI_plot = KL_Pe_alpha_only_model(Pe_D0_array_plot,D0,1);
-
-                        figure
-                        hold on
-                        plot(Pe_D0_array_plot, KL_array_alpha_SI_plot/D0, ...
-                            'k','LineWidth',2, ...
-                            'DisplayName','K_L/D_0 \approx \alpha_Lu_x/D_0')
-                        if isfinite(tau)
-                            KL_array_tau_SI_plot = KL_Pe_alpha_tau_model(Pe_D0_array_plot,D0,[alpha_tau_SI/Dp_SI;tau]);
-                            plot(Pe_D0_array_plot, KL_array_tau_SI_plot/D0, ...
-                                'k','LineWidth',2,'LineStyle','--', ...
-                                'DisplayName','K_L/D_0 \approx 1/\tau + \alpha_Lu_x/D_0')
-                        end
-
-                        % data
-                        for ii = 1:length(Pe_D0_alpha)
-                            c = colors(mod(ii-1,nColors)+1,:);
-                            errorbar(Pe_D0_alpha(ii), KL_vs_D0_array(ii), ...
-                                dKL_vs_D0_array(ii), dKL_vs_D0_array(ii), ...
-                                'Color','k','HandleVisibility','off')
-                            scatter(Pe_D0_alpha(ii), KL_vs_D0_array(ii), 36, ...
-                                'filled','MarkerFaceColor',c,'MarkerEdgeColor',c, ...
-                                'DisplayName',"Q = " + Q_grp(ii) + " ml/min (" + model_grp(ii) + ")")
-                        end
-
-                        xlabel('Pe = u_x\alpha/D_0')
-                        ylabel('K_L/D_0')
-                        xlim([0.1,10])
-                        ylim([0.1,10])
-                        set(gca,'XScale','log','YScale','log')
-                        grid on
-
-                        save_name = "CF_" + Fluid1_unique(i) + "_" + Fluid2_unique(j) + ...
-                            "_T" + T_unique(k) + "_P" + P_unique(m) + "_L" + L_unique(n) + ...
-                            "_THETA" + theta_unique(theta) + "_" + fitData;
-                        title(save_name, 'Interpreter','none')
-                        annotation('textbox',[0.25 0.2 0.5 0.05], ...
-                            'String',sprintf('\\alpha = %.2f ± %.2f cm', alpha_cm, dalpha_cm), ...
-                            'EdgeColor','none')
-                        legend('Location','northwest')
-
-                        saveas(gcf, pathExportAll + "KLD0vsPe_all_" + save_name, 'png')
-                        savefig(gcf, pathExportAll + "KLD0vsPe_all_" + save_name)
-                    end
-                end
-            end
+        ga = find(alpha_table.GroupID == g, 1);
+        if ~isempty(ga) && isfinite(alpha_table.alpha_SI(ga))
+            D0 = Tg.D12_SI(1);  L = Tg.L_SI(1);
+            u_line = linspace(0, 1.1*max(Tg.u_SI), 100);
+            plot(u_line*6000, ...
+                KL_Pe_alpha_only_model(u_line*L/D0, D0, alpha_table.alpha_SI(ga)/L)*sc, ...
+                '-', 'Color', col, 'LineWidth', 1.2, 'HandleVisibility','off')
         end
+    end
+    xlabel('Interstitial velocity u_x [cm/min]')
+    ylabel('K_L [cm^2/min]')
+    xlim([0, 1.1*max(T_plot.u_cmmin(ok_plot))])
+    ylim([0, 1.1*max(T_plot.KL_cm2min(ok_plot) + T_plot.errKL_cm2min(ok_plot))])
+    grid on
+    title(save_all, 'Interpreter','none')
+    legend('Location','northwest','Interpreter','none')
+    saveas(gcf, pathExportAll + "KLvsVel_" + save_all, 'png')
+    savefig(gcf, pathExportAll + "KLvsVel_" + save_all)
+
+    % ---------- KL/D0 vs Pe, all cases (collapse onto one curve with pooled alpha)
+    figure; hold on
+    xall = [];  yall = [];
+    for c = 1:nCases
+        g   = cases(c);
+        Tg  = T_plot(ok_plot & T_plot.GroupID == g, :);
+        col = caseColors(c,:);  mk = markers{mod(c-1,nMark)+1};
+
+        if usePooled
+            alpha_x = pooled.alpha_cm/100;                       % m
+        else
+            ga = find(alpha_table.GroupID == g, 1);
+            if isempty(ga) || ~isfinite(alpha_table.alpha_SI(ga)), continue, end
+            alpha_x = alpha_table.alpha_SI(ga);
+        end
+
+        x  = Tg.u_SI.*alpha_x./Tg.D12_SI;                       % each experiment its own D0
+        y  = Tg.KL_SI./Tg.D12_SI;
+        dy = Tg.errKL_SI./Tg.D12_SI + Tg.KL_SI.*Tg.dD12_SI./Tg.D12_SI.^2;
+
+        errorbar(x, y, dy, 'LineStyle','none', 'Color', col, 'HandleVisibility','off')
+        scatter(x, y, 45, 'filled', 'Marker', mk, ...
+            'MarkerFaceColor', col, 'MarkerEdgeColor', 'k', 'DisplayName', g)
+        xall = [xall; x];  yall = [yall; y + dy]; %#ok<AGROW>
+    end
+
+    if ~isempty(xall)
+        Pe_line = logspace(log10(min(xall)/3), log10(max(xall)*3), 200);
+        D0ref = 1;   % model is proportional to D0, so KL/D0 does not depend on it
+        if usePooled
+            plot(Pe_line, KL_Pe_alpha_only_model(Pe_line, D0ref, 1)/D0ref, ...
+                'k-', 'LineWidth', 2, 'DisplayName', ...
+                sprintf('Pooled: KL/D0 = alpha*u/D0  (alpha = %.3f +/- %.3f cm)', ...
+                pooled.alpha_cm, pooled.d_alpha_cm))
+            if isfinite(pooled.tau)
+                plot(Pe_line, KL_Pe_alpha_tau_model(Pe_line, D0ref, ...
+                    [pooled.alpha_tau_cm/pooled.alpha_cm; pooled.tau])/D0ref, ...
+                    'k--', 'LineWidth', 2, 'DisplayName', ...
+                    sprintf('Pooled: KL/D0 = 1/tau + alpha*u/D0  (alpha = %.3f +/- %.3f cm, tau = %.2f +/- %.2f)', ...
+                    pooled.alpha_tau_cm, pooled.d_alpha_tau_cm, pooled.tau, pooled.d_tau))
+            end
+            xlabel('Pe = u_x \alpha_{pooled} / D_0')
+        else
+            plot(Pe_line, KL_Pe_alpha_only_model(Pe_line, D0ref, 1)/D0ref, ...
+                'k-', 'LineWidth', 2, 'DisplayName', 'KL/D0 = alpha*u/D0 (alpha per case)')
+            xlabel('Pe = u_x \alpha_{case} / D_0')
+        end
+        set(gca,'XScale','log','YScale','log')
+        xlim([min(xall)/3, max(xall)*3])
+        ylabel('K_L / D_0')
+        grid on
+        title(save_all, 'Interpreter','none')
+        legend('Location','northwest','Interpreter','none')
+        saveas(gcf, pathExportAll + "KLD0vsPe_" + save_all, 'png')
+        savefig(gcf, pathExportAll + "KLD0vsPe_" + save_all)
     end
 end
 
@@ -1858,4 +1906,72 @@ end
 function [Pe, dPe] = peAlpha(u, du, a, da, D0, dD0)
     Pe  = u.*a./D0;
     dPe = Pe.*sqrt((du./u).^2 + (da./a).^2 + (dD0./D0).^2);
+end
+
+function out = pooledAlphaFit(X, KL_SI, dKL_SI, alpha0_cm, min_pts_tau)
+% Pooled fit over experiments with different D0 and L.
+% X = [Pe_upump_L_D0, D0_SI, L_SI]. Alpha fitted in cm (better scaling).
+    sc = 60e4;                               % m2/s -> cm2/min
+    y  = KL_SI*sc;
+    w  = 1./(dKL_SI*sc).^2;  w = w/mean(w);
+    nP = size(X,1);
+
+    out = struct('alpha_cm',NaN,'d_alpha_cm',NaN,'R2_alpha',NaN, ...
+                 'alpha_tau_cm',NaN,'d_alpha_tau_cm',NaN,'tau',NaN,'d_tau',NaN, ...
+                 'R2_alpha_tau',NaN);
+
+    % alpha only: p = alpha/L for each experiment (same convention as grouped fits)
+    f1 = @(b,X) sc*arrayfun(@(k) KL_Pe_alpha_only_model(X(k,1), X(k,2), ...
+                (b(1)/100)/X(k,3)), (1:size(X,1))');
+    try
+        [b,~,~,CovB] = nlinfit(X, y, f1, alpha0_cm, 'Weights', w);
+        out.alpha_cm   = b(1);
+        out.d_alpha_cm = sqrt(CovB(1,1));
+        out.R2_alpha   = weightedR2(y, f1(b,X), w);
+    catch ME
+        warning("pooledAlpha:tauFitFailed", ...
+            "pooled alpha+tau fit failed [%s]: %s", ME.identifier, ME.message)
+    end
+
+    % alpha + tau
+    if nP >= min_pts_tau
+        f2 = @(b,X) sc*arrayfun(@(k) KL_Pe_alpha_tau_model(X(k,1), X(k,2), ...
+                    [(b(1)/100)/X(k,3); b(2)]), (1:size(X,1))');
+        a0 = out.alpha_cm;
+        if ~isfinite(a0) || a0 <= 0, a0 = alpha0_cm; end
+        try
+            [b,~,~,CovB] = nlinfit(X, y, f2, [a0, 1.5], 'Weights', w);
+            if b(2) > 0                       % keep only physical tortuosity
+                out.alpha_tau_cm   = b(1);
+                out.d_alpha_tau_cm = sqrt(CovB(1,1));
+                out.tau            = b(2);
+                out.d_tau          = sqrt(CovB(2,2));
+                out.R2_alpha_tau   = weightedR2(y, f2(b,X), w);
+            end
+        catch ME
+            warning("groupAlpha:fitFailed", ...
+                "alpha fit failed (%s, %s) [%s]: %s", ...
+                current_method, groupID, ME.identifier, ME.message)
+        end
+    end
+end
+
+function R2 = weightedR2(y, yhat, w)
+    ybar = sum(w.*y)/sum(w);
+    R2   = 1 - sum(w.*(y-yhat).^2) / sum(w.*(y-ybar).^2);
+end
+
+function lbl = pointLabels(Tg)
+% "Q = x ml/min, run n (method)" for each row of a case table
+    n = height(Tg);
+    lbl = strings(n,1);
+    hasRun = ismember('Run', Tg.Properties.VariableNames);
+    for r = 1:n
+        if hasRun
+            runN = Tg.Run(r);
+        else
+            runN = sum(Tg.Q_mlmin(1:r) == Tg.Q_mlmin(r));   % repeat count of same Q
+        end
+        lbl(r) = "Q = " + Tg.Q_mlmin(r) + " ml/min, run " + runN + " (" + Tg.model(r) + ")";
+    end
 end
