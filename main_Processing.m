@@ -344,6 +344,8 @@ dtD_valid_min = 0;     % dimensionless delay (pore volumes)
 dtD_valid_max = 5;
 min_exp_dtfixed = 0; 
 
+beta_tau = 1.2;   % exponent of the dispersive term in KL = D0*(1/tau + C2*Pe^beta); 1 = linear
+
 %% IMPORT variables
 
 filedataExp = import_inputExp(filenameExp); % import input to a local variable
@@ -1206,9 +1208,12 @@ for mm = 1:length(method_names)
             if n_points >= min_points_alpha_tau
                 try
                     out_tau = fit_dispersion_params_alpha_tau( ...
-                        KL, Pe_upump_L_D0, D0_val, Dp_val, p_guess_alpha_tau, dKL);
+                        KL, Pe_upump_L_D0, D0_val, Dp_val, p_guess_alpha_tau, dKL, beta_tau);
 
                     if isfinite(out_tau.tau)
+                        alpha_struct(count_row).C2_tau   = out_tau.C2;
+                        alpha_struct(count_row).d_C2_tau = out_tau.d_C2;
+                        alpha_struct(count_row).beta_tau = beta_tau;
                         alpha_struct(count_row).alpha_tau_SI   = out_tau.alpha_SI;
                         alpha_struct(count_row).d_alpha_tau_SI = out_tau.d_alpha_SI;
                         alpha_struct(count_row).alpha_tau_cm   = out_tau.alpha_cm;
@@ -1390,7 +1395,7 @@ for mm = 1:numel(method_names_all)
         if s.n_points >= min_points_alpha
             X = [Tm.Pe_upump_L_D0(ok), Tm.D12_SI(ok), Tm.L_SI(ok)];
             fit = pooledAlphaFit(X, Tm.KL_SI(ok), Tm.dKL_SI(ok), ...
-                                 alpha0_cm, min_points_alpha_tau);
+                alpha0_cm, min_points_alpha_tau, beta_tau);
             for f = fieldnames(fit)'
                 s.(f{1}) = fit.(f{1});
             end
@@ -1559,10 +1564,10 @@ for c = 1:nCases
             sprintf('KL = alpha*u  (alpha = %.3f +/- %.3f cm)', a.alpha_cm, a.d_alpha_cm))
     end
     if isfinite(a.tau)
-        plot(u_line*6000, KL_Pe_alpha_tau_model(Pe_line, D0, [a.alpha_tau_SI/L; a.tau])*sc, ...
+        plot(u_line*6000, KL_Pe_alpha_tau_model(Pe_line, D0, [a.C2_tau; a.tau], beta_tau)*sc, ...
             'k--', 'LineWidth', 2, 'DisplayName', ...
-            sprintf('KL = D0/tau + alpha*u  (alpha = %.3f +/- %.3f cm, tau = %.2f +/- %.2f)', ...
-            a.alpha_tau_cm, a.d_alpha_tau_cm, a.tau, a.d_tau))
+            sprintf('KL = D0*(1/tau + C2*Pe^%.1f)  (C2 = %.3f, tau = %.2f +/- %.2f)', ...
+            beta_tau, a.C2_tau, a.tau, a.d_tau))
     end
     for r = 1:height(Tg)
         col = colors(mod(r-1,nColors)+1,:);
@@ -1593,9 +1598,10 @@ for c = 1:nCases
     plot(Pe_line, KL_Pe_alpha_only_model(Pe_line, D0, 1)/D0, ...
         'k-', 'LineWidth', 2, 'DisplayName', 'KL/D0 = alpha*u/D0')
     if isfinite(a.tau)
-        % x is based on the alpha-only fit -> pass alpha_tau/alpha so the curve shares that axis
-        plot(Pe_line, KL_Pe_alpha_tau_model(Pe_line, D0, [a.alpha_tau_SI/a.alpha_SI; a.tau])/D0, ...
-            'k--', 'LineWidth', 2, 'DisplayName', 'KL/D0 = 1/tau + alpha*u/D0')
+        plot(Pe_line, KL_Pe_alpha_tau_model(Pe_line*L/a.alpha_SI, D0, ...
+            [a.C2_tau; a.tau], beta_tau)/D0, ...
+            'k--', 'LineWidth', 2, 'DisplayName', ...
+            sprintf('KL/D0 = 1/tau + C2*Pe_L^%.1f', beta_tau))
     end
     for r = 1:height(Tg)
         col = colors(mod(r-1,nColors)+1,:);
@@ -1686,11 +1692,12 @@ if nCases > 0
                 sprintf('Pooled: KL/D0 = alpha*u/D0  (alpha = %.3f +/- %.3f cm)', ...
                 pooled.alpha_cm, pooled.d_alpha_cm))
             if isfinite(pooled.tau)
-                plot(Pe_line, KL_Pe_alpha_tau_model(Pe_line, D0ref, ...
-                    [pooled.alpha_tau_cm/pooled.alpha_cm; pooled.tau])/D0ref, ...
+                Lref = median(T_plot.L_SI(ok_plot));      % one curve needs one L when beta ~= 1
+                plot(Pe_line, KL_Pe_alpha_tau_model(Pe_line*Lref/(pooled.alpha_cm/100), 1, ...
+                    [(pooled.alpha_tau_cm/100)/Lref; pooled.tau], beta_tau), ...
                     'k--', 'LineWidth', 2, 'DisplayName', ...
-                    sprintf('Pooled: KL/D0 = 1/tau + alpha*u/D0  (alpha = %.3f +/- %.3f cm, tau = %.2f +/- %.2f)', ...
-                    pooled.alpha_tau_cm, pooled.d_alpha_tau_cm, pooled.tau, pooled.d_tau))
+                    sprintf('Pooled: KL/D0 = 1/tau + C2*Pe_L^%.1f  (tau = %.2f +/- %.2f)', ...
+                    beta_tau, pooled.tau, pooled.d_tau))
             end
             xlabel('Pe = u_x \alpha_{pooled} / D_0')
         else
@@ -1769,7 +1776,7 @@ function [Pe, dPe] = peAlpha(u, du, a, da, D0, dD0)
     dPe = Pe.*sqrt((du./u).^2 + (da./a).^2 + (dD0./D0).^2);
 end
 
-function out = pooledAlphaFit(X, KL_SI, dKL_SI, alpha0_cm, min_pts_tau)
+function out = pooledAlphaFit(X, KL_SI, dKL_SI, alpha0_cm, min_pts_tau, beta)
 % Pooled fit over experiments with different D0 and L.
 % X = [Pe_upump_L_D0, D0_SI, L_SI]. Alpha fitted in cm (better scaling).
     sc = 60e4;                               % m2/s -> cm2/min
@@ -1797,7 +1804,7 @@ function out = pooledAlphaFit(X, KL_SI, dKL_SI, alpha0_cm, min_pts_tau)
     % alpha + tau
     if nP >= min_pts_tau
         f2 = @(b,X) sc*arrayfun(@(k) KL_Pe_alpha_tau_model(X(k,1), X(k,2), ...
-                    [(b(1)/100)/X(k,3); b(2)]), (1:size(X,1))');
+            [(b(1)/100)/X(k,3); b(2)], beta), (1:size(X,1))');
         a0 = out.alpha_cm;
         if ~isfinite(a0) || a0 <= 0, a0 = alpha0_cm; end
         try
@@ -1810,9 +1817,8 @@ function out = pooledAlphaFit(X, KL_SI, dKL_SI, alpha0_cm, min_pts_tau)
                 out.R2_alpha_tau   = weightedR2(y, f2(b,X), w);
             end
         catch ME
-            warning("groupAlpha:fitFailed", ...
-                "alpha fit failed (%s, %s) [%s]: %s", ...
-                current_method, groupID, ME.identifier, ME.message)
+            warning("pooledAlpha:tauFitFailed", ...
+                "pooled alpha+tau fit failed [%s]: %s", ME.identifier, ME.message)
         end
     end
 end

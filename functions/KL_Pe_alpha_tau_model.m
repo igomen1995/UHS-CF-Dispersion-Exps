@@ -1,4 +1,4 @@
-function KL_model = KL_Pe_alpha_tau_model(Pe_fromD0,D0,p)
+function KL_model = KL_Pe_alpha_tau_model(Pe_fromD0,D0,p, beta)
 
 %KL_PE_ALPHA_TAU_MODEL Dispersion model including dispersivity and tortuosity.
 %
@@ -116,8 +116,10 @@ function KL_model = KL_Pe_alpha_tau_model(Pe_fromD0,D0,p)
 %   See also KL_PE_ALPHA_ONLY_MODEL,
 %            FIT_DISPERSION_PARAMS_ALPHA_TAU.
 
+if nargin < 4 || isempty(beta), beta = 1; end
+
 % Model with beta = 1 no tortuosity
-KL_model = D0 * ( 1/p(2) + p(1) .* (Pe_fromD0.^1) );
+KL_model = D0 .* (1./p(2) + p(1).*Pe_fromD0.^beta);
 
 end
 

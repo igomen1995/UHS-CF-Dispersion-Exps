@@ -1,4 +1,4 @@
-function out = fit_dispersion_params_alpha_tau(KL,Pe_fromD0,D0,Dp,p0,dKL)
+function out = fit_dispersion_params_alpha_tau(KL,Pe_fromD0,D0,Dp,p0,dKL,beta)
 
 %FIT_DISPERSION_PARAMS_ALPHA_TAU Fit dispersivity and tortuosity parameters.
 %
@@ -18,10 +18,6 @@ function out = fit_dispersion_params_alpha_tau(KL,Pe_fromD0,D0,Dp,p0,dKL)
 %       Pe   : Peclet number with Ddiffusion and Dp as L
 %       C2   : Mechanical-dispersion coefficient
 %       tau  : Tortuosity factor
-%
-%   The scaling exponent is fixed:
-%
-%       beta = 1
 %
 %   and the fitted parameters are:
 %
@@ -175,12 +171,14 @@ function out = fit_dispersion_params_alpha_tau(KL,Pe_fromD0,D0,Dp,p0,dKL)
 %   See also NLINFIT, NLPARCI, NLPREDCI,
 %            KL_Pe_alpha_tau_model.
 
+if nargin < 7 || isempty(beta), beta = 1; end
+
 % Weights = 1/variance
 w = 1./(dKL.^2);
 
 % % Model with beta = 1 tortuosity
 
-KL_model = @(p,Pe_vals) KL_Pe_alpha_tau_model(Pe_vals,D0,p);
+KL_model = @(p,Pe_vals) KL_Pe_alpha_tau_model(Pe_vals,D0,p,beta);
 
 % Nonlinear fit (unweighted or weighted)
 opts = statset('nlinfit');
@@ -213,8 +211,13 @@ R2 = 1 - (sum(w .* (KL - KL_fit).^2))/(sum(w .* (KL - (sum(w .* KL) / sum(w))).^
 out.C2 = C2;
 out.d_C2 = dC2;
 
-out.beta = 1;        % fixed
-out.d_beta = 0;      % no uncertainty
+out.beta   = beta;          % fixed
+out.d_beta = 0;
+
+% alpha = C2*Dp is the coefficient; with beta ~= 1 the effective
+% dispersivity depends on velocity: alpha_eff = alpha*Pe^(beta-1)
+out.alpha_eff_SI = alpha .* Pe_fromD0.^(beta-1);
+out.alpha_eff_cm = out.alpha_eff_SI * 100;
 
 out.tau = tau;      
 out.d_tau = dtau;      
