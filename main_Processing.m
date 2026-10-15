@@ -1510,225 +1510,227 @@ end
 expProcFullData = expProcData;
 save(pathExportAll + "expProcFullData.mat",'expProcFullData')
 
-%% Plot Kl_vs_vel
+%% Plot KL vs vel
 
 Fluid1_unique = unique(best_method_table.Fluid1);
 Fluid2_unique = unique(best_method_table.Fluid2);
 T_unique      = unique(best_method_table.T_C);
 P_unique      = unique(best_method_table.P_psig);
 L_unique      = unique(best_method_table.L_in);
-thetha_unique = unique(best_method_table.Angle);
+theta_unique  = unique(best_method_table.Angle);
 
 colors = orderedcolors("glow");
+nColors = size(colors,1);
 
 for i = 1:length(Fluid1_unique)
     for j = 1:length(Fluid2_unique)
         for k = 1:length(T_unique)
             for m = 1:length(P_unique)
                 for n = 1:length(L_unique)
-                    for theta = 1:length(thetha_unique)
+                    for theta = 1:length(theta_unique)
+
                         % filter rows for this group
                         idx = best_method_table.Fluid1 == Fluid1_unique(i) & ...
                             best_method_table.Fluid2 == Fluid2_unique(j) & ...
-                            best_method_table.T_C == T_unique(k) & ...
+                            best_method_table.T_C    == T_unique(k) & ...
                             best_method_table.P_psig == P_unique(m) & ...
-                            best_method_table.L_in == L_unique(n) & ...
-                            best_method_table.Angle == theta_unique(theta);
-                    
-                        % extract data
+                            best_method_table.L_in   == L_unique(n) & ...
+                            best_method_table.Angle  == theta_unique(theta);
+
+                        if ~any(idx), continue, end   % empty combination
+
+                        % extract data (all filtered by idx)
                         u_array_cmmin = best_method_table.u_cmmin(idx);
-                        KL_array = best_method_table.KL_cm2min(idx);
-                        dKL_array = best_method_table.dKL_cm2min(idx);
-                        Pe_D0_array = best_method_table.Pe_upump_L_D0(idx);
-                        D0 = unique(best_method_table.D12_SI(idx));
+                        KL_array      = best_method_table.KL_cm2min(idx);
+                        dKL_array     = best_method_table.dKL_cm2min(idx);
+                        Pe_D0_array   = best_method_table.Pe_upump_L_D0(idx);
+                        Q_grp         = best_method_table.Q_mlmin(idx);
+                        model_grp     = best_method_table.model(idx);
+                        D0    = unique(best_method_table.D12_SI(idx));
                         Dp_SI = unique(best_method_table.L_SI(idx));
-                    
+
                         % get alpha for this group
                         idx_alpha = alpha_table.Fluid1 == Fluid1_unique(i) & ...
                             alpha_table.Fluid2 == Fluid2_unique(j) & ...
-                            alpha_table.T_C == T_unique(k) & ...
+                            alpha_table.T_C    == T_unique(k) & ...
                             alpha_table.P_psig == P_unique(m) & ...
-                            alpha_table.L_in == L_unique(n) & ...
-                            alpha_table.Angle == theta_unique(theta);
-                    
-                        alpha_SI = alpha_table.alpha_SI(idx_alpha);
-                        dalpha_SI = alpha_table.d_alpha_SI(idx_alpha);
-                        alpha_cm = alpha_SI * 100;
-                        dalpha_cm = dalpha_SI * 100;
-                        alpha_tau_SI = alpha_table.alpha_tau_SI(idx_alpha);
+                            alpha_table.L_in   == L_unique(n) & ...
+                            alpha_table.Angle  == theta_unique(theta);
+
+                        if ~any(idx_alpha), continue, end
+
+                        alpha_SI      = alpha_table.alpha_SI(idx_alpha);
+                        dalpha_SI     = alpha_table.d_alpha_SI(idx_alpha);
+                        alpha_cm      = alpha_SI * 100;
+                        dalpha_cm     = dalpha_SI * 100;
+                        alpha_tau_SI  = alpha_table.alpha_tau_SI(idx_alpha);
                         dalpha_tau_SI = alpha_table.d_alpha_tau_SI(idx_alpha);
-                        alpha_tau_cm = alpha_tau_SI * 100;
+                        alpha_tau_cm  = alpha_tau_SI * 100;
                         dalpha_tau_cm = dalpha_tau_SI * 100;
-                        tau = alpha_table.tau;
-                        d_tau = alpha_table.tau;
-                    
-                        % % model (KL = alpha * u)
-                        % u_model = linspace(0, max(u_array_cmmin)/(60*100), 100);
-                        % KL_model = alpha_SI * u_model;
-                        % u_model_cm = u_model * (60*100);
-                        % KL_model_cm = KL_model * (60*10^4);
-        
-                        % model based on Pe numbers (Pe with D0 denominator)
+                        tau   = alpha_table.tau(idx_alpha);     % FIX: indexed
+                        d_tau = alpha_table.d_tau(idx_alpha);   % FIX: d_tau, not tau
+
+                        % model curves vs Pe (D0 denominator)
                         Pe_D0_array_plot = 0:1:ceil(max(Pe_D0_array));
-                        % KL_Pe_alpha_only_model(Pe_fromD0,D0,p) % alpha = p * Dp; % Alpha (dispersivity) Dp is L
                         KL_array_alpha_SI_plot = KL_Pe_alpha_only_model(Pe_D0_array_plot,D0,alpha_SI/Dp_SI);
-                        KL_array_tau_SI_plot = KL_Pe_alpha_tau_model(Pe_D0_array_plot,D0,[alpha_tau_SI/Dp_SI;tau]);
                         KL_array_alpha_cm2min_plot = KL_array_alpha_SI_plot*(60*10^4);
-                        KL_array_tau_cm2min_plot = KL_array_tau_SI_plot*(60*10^4);
                         u_array_cmmin_plot = (Pe_D0_array_plot*D0/Dp_SI)*(60*10^2);
-                    
+
                         % plot
                         figure
                         hold on
-                        % model line
-                        % plot(u_model_cm, KL_model_cm, ...
-                        %     'k','LineWidth',2,...
-                        %     'DisplayName','K_L = \alpha u_x')
-                        plot(u_array_cmmin_plot, KL_array_alpha_cm2min_plot, ...
-                            'k','LineWidth',2,...
-                            'DisplayName','K_L = \alpha u_x')
-                        hold on
-                        plot(u_array_cmmin_plot, KL_array_tau_cm2min_plot, ...
-                            'k','LineWidth',2,'LineStyle','--',...
-                            'DisplayName','K_L = D_0/\tau + \alpha u_x')
+                        if isfinite(alpha_SI)
+                            plot(u_array_cmmin_plot, KL_array_alpha_cm2min_plot, ...
+                                'k','LineWidth',2, ...
+                                'DisplayName','K_L = \alpha u_x')
+                        end
+                        if isfinite(tau)
+                            KL_array_tau_SI_plot = KL_Pe_alpha_tau_model(Pe_D0_array_plot,D0,[alpha_tau_SI/Dp_SI;tau]);
+                            KL_array_tau_cm2min_plot = KL_array_tau_SI_plot*(60*10^4);
+                            plot(u_array_cmmin_plot, KL_array_tau_cm2min_plot, ...
+                                'k','LineWidth',2,'LineStyle','--', ...
+                                'DisplayName','K_L = D_0/\tau + \alpha u_x')
+                        end
+
                         % data
                         for ii = 1:length(u_array_cmmin)
+                            c = colors(mod(ii-1,nColors)+1,:);
                             errorbar(u_array_cmmin(ii), KL_array(ii), ...
                                 dKL_array(ii), dKL_array(ii), ...
                                 'Color','k','HandleVisibility','off')
-                            scatter(u_array_cmmin(ii), KL_array(ii), ...
-                                'filled', ...
-                                'Color',colors(ii,:), ...
-                                'DisplayName',"Q = " + best_method_table.Q_mlmin(ii) + " ml/min")
+                            scatter(u_array_cmmin(ii), KL_array(ii), 36, ...
+                                'filled','MarkerFaceColor',c,'MarkerEdgeColor',c, ...
+                                'DisplayName',"Q = " + Q_grp(ii) + " ml/min (" + model_grp(ii) + ")")
                         end
+
                         xlabel('Interstitial velocity (u_x) [cm/min]')
                         ylabel('K_L [cm^2/min]')
                         xlim([0,1.1*max(u_array_cmmin)])
                         ylim([0,1.1*max(KL_array)])
                         grid on
-                        save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(j)+ ...
-                            "_T"+filedataExp.T(k)+"_P"+filedataExp.P(m)+"_L"+filedataExp.L(n)+"_THETA"+filedataExp.Angle(theta)+"_"+fitData;
+
+                        % FIX: name from the group values, not filedataExp rows
+                        save_name = "CF_" + Fluid1_unique(i) + "_" + Fluid2_unique(j) + ...
+                            "_T" + T_unique(k) + "_P" + P_unique(m) + "_L" + L_unique(n) + ...
+                            "_THETA" + theta_unique(theta) + "_" + fitData;
                         title(save_name, 'Interpreter','none')
-                        annotation('textbox',[0.25 0.2 0.5 0.05],...
-                            'String',sprintf('\\alpha_1 = %.2f ± %.2f cm', alpha_cm, dalpha_cm),...
+
+                        annotation('textbox',[0.25 0.2 0.5 0.05], ...
+                            'String',sprintf('\\alpha_1 = %.2f ± %.2f cm', alpha_cm, dalpha_cm), ...
                             'EdgeColor','none')
-                        annotation('textbox',[0.25 0.15 0.5 0.05],...
-                            'String',sprintf('\\alpha_2 = %.2f ± %.2f cm', alpha_tau_cm, dalpha_tau_cm),...
-                            'EdgeColor','none')
-                        legend('Location','northwest')
-                        % save figure
+                        if isfinite(tau)
+                            annotation('textbox',[0.25 0.15 0.5 0.05], ...
+                                'String',sprintf('\\alpha_2 = %.2f ± %.2f cm, \\tau = %.2f ± %.2f', ...
+                                alpha_tau_cm, dalpha_tau_cm, tau, d_tau), ...
+                                'EdgeColor','none')
+                        end
+                        legend('Location','northwest','Interpreter','tex')
+
                         saveas(gcf, pathExportAll + "KLvsVel_" + save_name, 'png')
                         savefig(gcf, pathExportAll + "KLvsVel_" + save_name)
-
                     end
-                end            
+                end
             end
         end
     end
 end
 
-%% Plot Kl/Dl vs Pe
-
-Fluid1_unique = unique(best_method_table.Fluid1);
-Fluid2_unique = unique(best_method_table.Fluid2);
-T_unique      = unique(best_method_table.T_C);
-P_unique      = unique(best_method_table.P_psig);
-L_unique      = unique(best_method_table.L_in);
-thetha_unique = unique(best_method_table.Angle);
-
-colors = orderedcolors("glow");
+%% Plot KL/D0 vs Pe
 
 for i = 1:length(Fluid1_unique)
     for j = 1:length(Fluid2_unique)
         for k = 1:length(T_unique)
             for m = 1:length(P_unique)
                 for n = 1:length(L_unique)
-                    % filter rows for this group
-                    idx = best_method_table.Fluid1 == Fluid1_unique(i) & ... 
-                        best_method_table.Fluid2 == Fluid2_unique(j) & ...
-                        best_method_table.T_C == T_unique(k) & ...
-                        best_method_table.P_psig == P_unique(m) & ...
-                        best_method_table.L_in == L_unique(n) & ...
-                        best_method_table.Angle == theta_unique(theta);
-                
-                    % extract data
-                    u_array_cmmin = best_method_table.u_cmmin(idx);
-                    u_array_SI = best_method_table.u_SI(idx);
-                    KL_array = best_method_table.KL_cm2min(idx);
-                    dKL_array = best_method_table.dKL_cm2min(idx);
-                    Pe_D0_array = best_method_table.Pe_upump_L_D0(idx);
-                    D0 = unique(best_method_table.D12_SI(idx));
-                    dD0 = unique(best_method_table.dD12_SI(idx));
-                    Dp_SI = unique(best_method_table.L_SI(idx));
-                    KL_vs_D0_array = best_method_table.KL_SI(idx)/D0;
-                    dKL_vs_D0_array = best_method_table.dKL_SI(idx)/D0+best_method_table.KL_SI(idx)*dD0/(D0^2);
-                
-                    % get alpha for this group
-                    idx_alpha = alpha_table.Fluid1 == Fluid1_unique(i) & ...
-                        alpha_table.Fluid2 == Fluid2_unique(j) & ...
-                        alpha_table.T_C == T_unique(k) & ...
-                        alpha_table.P_psig == P_unique(m) & ...
-                        alpha_table.L_in == L_unique(n) & ...
-                        alpha_table.Angle == theta_unique(theta);
-                
-                    alpha_SI = alpha_table.alpha_SI(idx_alpha);
-                    dalpha_SI = alpha_table.d_alpha_SI(idx_alpha);
-                    alpha_cm = alpha_SI * 100;
-                    dalpha_cm = dalpha_SI * 100;
-                    alpha_tau_SI = alpha_table.alpha_tau_SI(idx_alpha);
-                    dalpha_tau_SI = alpha_table.d_alpha_tau_SI(idx_alpha);
-                    alpha_tau_cm = alpha_tau_SI * 100;
-                    dalpha_tau_cm = dalpha_tau_SI * 100;
-                    tau = alpha_table.tau;
-                    d_tau = alpha_table.tau;
-                    Pe_D0_alpha = u_array_SI*alpha_SI/D0;
-                
-                    % model based on Pe numbers (Pe with D0 denominator)
-                    Pe_D0_array_plot = 0.1:0.1:6;
-                    % KL_Pe_alpha_only_model(Pe_fromD0,D0,p) % alpha = p * Dp; % Alpha (dispersivity) Dp is L
-                    KL_array_alpha_SI_plot = KL_Pe_alpha_only_model(Pe_D0_array_plot,D0,1);
-                    KL_array_tau_SI_plot = KL_Pe_alpha_tau_model(Pe_D0_array_plot,D0,[alpha_tau_SI/Dp_SI;tau]);
-                    KL_array_alpha_cm2min_plot = KL_array_alpha_SI_plot*(60*10^4);
-                    KL_array_tau_cm2min_plot = KL_array_tau_SI_plot*(60*10^4);
-                    u_array_cmmin_plot = (Pe_D0_array_plot*D0/Dp_SI)*(60*10^2);
-                
-                    % plot
-                    figure
-                    hold on
-                    plot(Pe_D0_array_plot, KL_array_alpha_SI_plot/D0, ...
-                        'k','LineWidth',2,...
-                        'DisplayName','K_L/D_0 \approx \alpha_Lu_x/D_0')
-                    hold on
-                    plot(Pe_D0_array_plot, KL_array_tau_SI_plot/D0, ...
-                        'k','LineWidth',2,'LineStyle', '--',...
-                        'DisplayName','K_L/D_0 \approx 1/\tau + \alpha_Lu_x/D_0') 
-                    % data
-                    for ii = 1:length(Pe_D0_alpha)
-                        errorbar(Pe_D0_alpha(ii), KL_vs_D0_array(ii), ...
-                            dKL_vs_D0_array(ii), dKL_vs_D0_array(ii), ...
-                            'Color','k','HandleVisibility','off')
-                        scatter(Pe_D0_alpha(ii), KL_vs_D0_array(ii), ...
-                            'filled', ...
-                            'Color',colors(ii,:), ...
-                            'DisplayName',"Q = " + best_method_table.Q_mlmin(ii) + " ml/min")            
+                    for theta = 1:length(theta_unique)   % FIX: theta loop added
+
+                        idx = best_method_table.Fluid1 == Fluid1_unique(i) & ...
+                            best_method_table.Fluid2 == Fluid2_unique(j) & ...
+                            best_method_table.T_C    == T_unique(k) & ...
+                            best_method_table.P_psig == P_unique(m) & ...
+                            best_method_table.L_in   == L_unique(n) & ...
+                            best_method_table.Angle  == theta_unique(theta);
+
+                        if ~any(idx), continue, end
+
+                        % extract data
+                        u_array_SI = best_method_table.u_SI(idx);
+                        Q_grp      = best_method_table.Q_mlmin(idx);
+                        model_grp  = best_method_table.model(idx);
+                        D0    = unique(best_method_table.D12_SI(idx));
+                        dD0   = unique(best_method_table.dD12_SI(idx));
+                        Dp_SI = unique(best_method_table.L_SI(idx));
+                        KL_vs_D0_array  = best_method_table.KL_SI(idx)/D0;
+                        dKL_vs_D0_array = best_method_table.dKL_SI(idx)/D0 + ...
+                                          best_method_table.KL_SI(idx)*dD0/(D0^2);
+
+                        idx_alpha = alpha_table.Fluid1 == Fluid1_unique(i) & ...
+                            alpha_table.Fluid2 == Fluid2_unique(j) & ...
+                            alpha_table.T_C    == T_unique(k) & ...
+                            alpha_table.P_psig == P_unique(m) & ...
+                            alpha_table.L_in   == L_unique(n) & ...
+                            alpha_table.Angle  == theta_unique(theta);
+
+                        if ~any(idx_alpha), continue, end
+
+                        alpha_SI     = alpha_table.alpha_SI(idx_alpha);
+                        dalpha_SI    = alpha_table.d_alpha_SI(idx_alpha);
+                        alpha_cm     = alpha_SI * 100;
+                        dalpha_cm    = dalpha_SI * 100;
+                        alpha_tau_SI = alpha_table.alpha_tau_SI(idx_alpha);
+                        tau   = alpha_table.tau(idx_alpha);     % FIX
+                        d_tau = alpha_table.d_tau(idx_alpha);   % FIX
+
+                        if ~isfinite(alpha_SI), continue, end
+                        Pe_D0_alpha = u_array_SI*alpha_SI/D0;
+
+                        % model curves
+                        Pe_D0_array_plot = 0.1:0.1:6;
+                        KL_array_alpha_SI_plot = KL_Pe_alpha_only_model(Pe_D0_array_plot,D0,1);
+
+                        figure
+                        hold on
+                        plot(Pe_D0_array_plot, KL_array_alpha_SI_plot/D0, ...
+                            'k','LineWidth',2, ...
+                            'DisplayName','K_L/D_0 \approx \alpha_Lu_x/D_0')
+                        if isfinite(tau)
+                            KL_array_tau_SI_plot = KL_Pe_alpha_tau_model(Pe_D0_array_plot,D0,[alpha_tau_SI/Dp_SI;tau]);
+                            plot(Pe_D0_array_plot, KL_array_tau_SI_plot/D0, ...
+                                'k','LineWidth',2,'LineStyle','--', ...
+                                'DisplayName','K_L/D_0 \approx 1/\tau + \alpha_Lu_x/D_0')
+                        end
+
+                        % data
+                        for ii = 1:length(Pe_D0_alpha)
+                            c = colors(mod(ii-1,nColors)+1,:);
+                            errorbar(Pe_D0_alpha(ii), KL_vs_D0_array(ii), ...
+                                dKL_vs_D0_array(ii), dKL_vs_D0_array(ii), ...
+                                'Color','k','HandleVisibility','off')
+                            scatter(Pe_D0_alpha(ii), KL_vs_D0_array(ii), 36, ...
+                                'filled','MarkerFaceColor',c,'MarkerEdgeColor',c, ...
+                                'DisplayName',"Q = " + Q_grp(ii) + " ml/min (" + model_grp(ii) + ")")
+                        end
+
+                        xlabel('Pe = u_x\alpha/D_0')
+                        ylabel('K_L/D_0')
+                        xlim([0.1,10])
+                        ylim([0.1,10])
+                        set(gca,'XScale','log','YScale','log')
+                        grid on
+
+                        save_name = "CF_" + Fluid1_unique(i) + "_" + Fluid2_unique(j) + ...
+                            "_T" + T_unique(k) + "_P" + P_unique(m) + "_L" + L_unique(n) + ...
+                            "_THETA" + theta_unique(theta) + "_" + fitData;
+                        title(save_name, 'Interpreter','none')
+                        annotation('textbox',[0.25 0.2 0.5 0.05], ...
+                            'String',sprintf('\\alpha = %.2f ± %.2f cm', alpha_cm, dalpha_cm), ...
+                            'EdgeColor','none')
+                        legend('Location','northwest')
+
+                        saveas(gcf, pathExportAll + "KLD0vsPe_all_" + save_name, 'png')
+                        savefig(gcf, pathExportAll + "KLD0vsPe_all_" + save_name)
                     end
-                    xlabel('Pe = u_x\alpha/D_0')
-                    ylabel('K_L/D_0');
-                    xlim([0,10])
-                    ylim([0,10])
-                    set(gca, 'XScale','log','YScale','log')
-                    grid on
-                    save_name = "CF_"+filedataExp.Fluid1(i)+"_"+filedataExp.Fluid2(j)+ ...
-                            "_T"+filedataExp.T(k)+"_P"+filedataExp.P(m)+"_L"+filedataExp.L(n)+"_THETA"+filedataExp.Angle(theta)+"_"+fitData;
-                    title(save_name, 'Interpreter','none')
-                    annotation('textbox',[0.25 0.2 0.5 0.05],...
-                        'String',sprintf('\\alpha = %.2f ± %.2f cm', alpha_cm, dalpha_cm),...
-                        'EdgeColor','none')
-                    legend('Location','northwest')
-                    % save figure
-                    saveas(gcf, pathExportAll + "KLD0vsPe_all_" + save_name, 'png')
-                    savefig(gcf, pathExportAll + "KLD0vsPe_all_" + save_name)
-                end            
+                end
             end
         end
     end
