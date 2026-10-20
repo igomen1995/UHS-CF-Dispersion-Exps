@@ -240,6 +240,95 @@ hold off
 
 save(pathExportAll + "virial_HeXe_Hurly1997.mat", 'virialResults');
 
+%% Compare REFPROP vs. Hurly virial: percent deviation (uncertainty estimate)
+%
+% For each He-Xe pressure, interpolate the REFPROP rho(x1) curve (the fine
+% x1 grid in `results`) onto the virial's coarser x1 grid, then compute the
+% percent difference. This quantifies how much REFPROP's He-Xe density
+% (computed with its default/unfitted combining rule - no departure
+% function exists for He-Xe in HMX.BNC) differs from the independent
+% Hurly et al. virial EOS - i.e., an empirical bound on the He-Xe
+% mixing-rule uncertainty, the same comparison your advisor's
+% recommendation was aimed at.
+%
+% Points where the virial Z falls outside [0.5, 1.5] (the Xe-rich,
+% near-critical breakdown flagged above) are marked unreliable and
+% excluded from the summary statistics, but still reported in the table
+% so you can see where they are.
+
+compareRows = table();
+
+for v = 1:numel(virialResults)
+    P_psig_v = virialResults(v).P_psig;
+
+    % find the matching REFPROP (results) case at the same P_psig
+    refIdx = find([results.P_psig] == P_psig_v & strcmp({results.label}, 'He-Xe'));
+    if isempty(refIdx)
+        warning('No matching REFPROP case found for P=%d psig - skipping comparison.', P_psig_v);
+        continue
+    end
+    refIdx = refIdx(1);
+
+    % interpolate REFPROP's fine-grid rho onto the virial's x1 grid
+    rho_REFPROP_interp = interp1(results(refIdx).x1, results(refIdx).rho, virialResults(v).x1, 'linear');
+
+    rho_virial = virialResults(v).rho;
+    pctDiff = 100*(rho_REFPROP_interp - rho_virial) ./ rho_REFPROP_interp;
+
+    reliable = virialResults(v).Z >= 0.5 & virialResults(v).Z <= 1.5;
+
+    compareRows = [compareRows; table( ...
+        repmat(P_psig_v, numel(virialResults(v).x1), 1), ...
+        repmat(virialResults(v).P_MPa, numel(virialResults(v).x1), 1), ...
+        repmat(virialResults(v).inRange, numel(virialResults(v).x1), 1), ...
+        virialResults(v).x1', rho_REFPROP_interp', rho_virial', pctDiff', ...
+        virialResults(v).Z', reliable', ...
+        'VariableNames', {'P_psig','P_MPa','inRange','x1', ...
+        'rho_REFPROP','rho_virial','pctDiff','Z_virial','reliable'})]; %#ok<AGROW>
+
+    relRows = reliable;
+    fprintf('\n--- REFPROP vs. Hurly virial, P = %d psig (%.2f MPa) ---\n', P_psig_v, virialResults(v).P_MPa);
+    if any(relRows)
+        fprintf('  reliable points (x1 in [%.2f, %.2f], Z in [0.5,1.5]): mean |%%diff| = %.2f%%, max |%%diff| = %.2f%%\n', ...
+            min(virialResults(v).x1(relRows)), max(virialResults(v).x1(relRows)), ...
+            mean(abs(pctDiff(relRows))), max(abs(pctDiff(relRows))));
+    end
+    if any(~relRows)
+        fprintf('  UNRELIABLE points (near-critical Xe breakdown), x1 in [%.2f, %.2f]: %%diff ranges %.1f%% to %.1f%% (not meaningful, shown for reference only)\n', ...
+            min(virialResults(v).x1(~relRows)), max(virialResults(v).x1(~relRows)), ...
+            min(pctDiff(~relRows)), max(pctDiff(~relRows)));
+    end
+end
+
+disp(compareRows)
+writetable(compareRows, pathExportAll + "REFPROP_vs_Hurly_pctDiff.xlsx");
+save(pathExportAll + "REFPROP_vs_Hurly_pctDiff.mat", 'compareRows');
+
+%% Plot: percent deviation REFPROP vs. Hurly virial, vs. composition
+
+figure; hold on
+pColours = {[0.466 0.674 0.188], [0 0.447 0.741]}; % match He-Xe colours above
+pLegend = cell(numel(virialResults),1);
+for v = 1:numel(virialResults)
+    rows_v = compareRows(compareRows.P_psig == virialResults(v).P_psig, :);
+    rel = rows_v.reliable;
+    unrel = ~rel;
+    plot(rows_v.x1(rel), rows_v.pctDiff(rel), '-o', 'Color', pColours{v}, ...
+        'MarkerFaceColor', pColours{v}, 'LineWidth', 1.3);
+    plot(rows_v.x1(unrel), rows_v.pctDiff(unrel), ':o', 'Color', pColours{v}, ...
+        'MarkerFaceColor', 'w', 'LineWidth', 1.0, 'HandleVisibility','off'); % dotted/hollow = unreliable, no separate legend entry
+    pLegend{v} = sprintf('He-Xe @ %.2f MPa%s', virialResults(v).P_MPa, ...
+        ternary_str(~virialResults(v).inRange, ' (extrapolated P)', ''));
+end
+yline(0, 'k-', 'HandleVisibility', 'off');
+hold off
+xlabel('x_1 (mole fraction He) [-]');
+ylabel('% difference: (\rho_{REFPROP} - \rho_{virial}) / \rho_{REFPROP} \times 100');
+title('REFPROP vs. Hurly (1997) virial EOS: density deviation (solid = reliable, dotted/hollow = near-critical breakdown)');
+legend(pLegend, 'Location', 'best');
+grid on
+saveas(gcf, pathExportAll + "REFPROP_vs_Hurly_pctDiff", 'png');
+
 %% Finish plot
 
 xlabel('x_1 (mole fraction H_2 or He) [-]');
@@ -264,6 +353,14 @@ function B = local_B22_Xe(T)
 b0 = 5.796870e-5; lam = 1.693962; epsk = 181.76386;
 Delta = exp(epsk./T) - 1;
 B = b0.*(1 - (lam.^3-1).*Delta);
+end
+
+function s = ternary_str(cond, strTrue, strFalse)
+if cond
+    s = strTrue;
+else
+    s = strFalse;
+end
 end
 
 function rho_m = local_solve_virial_rho(P, T, R, B, C)
