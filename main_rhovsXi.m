@@ -121,9 +121,160 @@ for c = 1:numel(results)
 end
 hold off
 
+%% Virial EOS overlay for He-Xe (Hurly, Schmidt, Boyes & Moldover 1997,
+%  Int. J. Thermophys. 18(3), 579-634) at 725 psig (within the paper's
+%  stated range) and 900 psig (EXTRAPOLATED beyond it)
+%
+% Density virial EOS: P = R*T*rho_m*(1 + B(T)*rho_m + C(T)*rho_m^2)
+% (Eq. 1), rho_m = molar density [mol/m^3].
+%
+% Mixing rules (Eq. 14), x1 = He, x2 = Xe:
+%   B_mix = x1^2*B11 + 2*x1*x2*B12 + x2^2*B22
+%   C_mix = x1^3*C111 + 3*x1^2*x2*C112 + 3*x1*x2^2*C122 + x2^3*C222
+%
+% Pure He,  Eq. 10-11 (ab initio, Aziz et al. potential), valid 210-400 K:
+%   B11(T)  [cm^3/mol] = 11.885370 + 6.6508722e-3*T - 3.205894e-5*T^2 + 3.1354694e-8*T^3
+%   C111(T) [cm^6/mol^2] = 44.2846 + 2.379099e4/T - 1.6689669e6/T^2
+%   (NOTE: the source PDF's OCR text shows the last term of C111 also as
+%    T^-1; given the paper's own 1/T-power-series convention (Eq. 15) and
+%    that two distinct T^-1 terms would be redundant, this is read as a
+%    typesetting artifact and coded here as T^-2 - flag this if you can
+%    check it against a clean copy of Eq. 11.)
+%
+% Pure Xe, Eq. 12-13 (hard-core square-well fit), valid 210-400 K:
+%   B22(T)  = b0*(1 - (lam^3-1)*Delta),  Delta = exp(eps/kB/T) - 1
+%     b0 = 5.796870e-5 m^3/mol, lam = 1.693962, eps/kB = 181.76386 K
+%   C222(T) = (1/8)*b0^2*(5 - c1*Delta - c2*Delta^2 - c3*Delta^3)
+%     c1 = lam^6 - 18*lam^4 + 32*lam^3 - 15
+%     c2 = 2*lam^6 - 36*lam^4 + 32*lam^3 + 18*lam^2 - 16
+%     c3 = 6*lam^6 - 18*lam^4 + 18*lam^2 - 6
+%     b0 = 7.573128e-5 m^6/mol^2, lam = 1.554699, eps/kB = 200.88133 K
+%
+% He-Xe interaction, Eq. 15, polynomial in 1/T, B,C in SI (m^3/mol, m^6/mol^2):
+%   B12(T)  = 2.756941e-5 + 4.617880e-3/T - 1.741538/T^2 + 1.364453e2/T^3
+%   C112(T) = -2.692605e-10 + 1.340259e-7/T
+%   C122(T) =  4.984636e-10 + 2.256122e-7/T
+%
+% VALIDITY: the paper states an overall range of 0.5-5 MPa and 210-400 K
+% for the He-Xe mixture fit (Burnett p(P,T) data went up to 5 MPa).
+% 725 psig = 5.10 MPa is right at/just past that edge; 900 psig = 6.31 MPa
+% is clearly beyond it - both are flagged in the plot (solid vs. dashed).
+
+R = 8.314462618; % J/(mol.K)
+MW_He = 4.002602e-3; % kg/mol
+MW_Xe = 131.293e-3;  % kg/mol
+
+B11_Hurly  = @(T) (11.885370 + 6.6508722e-3*T - 3.205894e-5*T.^2 + 3.1354694e-8*T.^3)*1e-6; % m3/mol
+C111_Hurly = @(T) (44.2846 + 2.379099e4./T - 1.6689669e6./T.^2)*1e-12; % m6/mol2
+
+B22_Hurly = @(T) local_B22_Xe(T);
+C222_Hurly = @(T) local_C222_Xe(T);
+
+B12_Hurly  = @(T) 2.756941e-5 + 4.617880e-3./T - 1.741538./T.^2 + 1.364453e2./T.^3;
+C112_Hurly = @(T) -2.692605e-10 + 1.340259e-7./T;
+C122_Hurly = @(T) 4.984636e-10 + 2.256122e-7./T;
+
+virialCases = struct( ...
+    'P_psig',   {725,        900}, ...
+    'inRange',  {true,       false}, ...   % 725 psig = 5.10 MPa (~paper's 5 MPa limit); 900 psig = 6.31 MPa (extrapolated)
+    'style',    {'-',        '--'}, ...
+    'marker',   {'d',        '^'});
+
+x1_virial = 0:0.05:1;   % coarser grid - a handful of overlay points, not the full density
+T_C_HeXe  = 20;
+T_K_HeXe  = T_C_HeXe + 273.15;
+
+virialResults = struct();
+hold on
+for v = 1:numel(virialCases)
+    P_MPa = psig2MPa(virialCases(v).P_psig);
+    P_Pa  = P_MPa*1e6;
+
+    rho_m = zeros(size(x1_virial));
+    for k = 1:numel(x1_virial)
+        x1v = x1_virial(k); x2v = 1 - x1v;
+        Bmix = x1v^2*B11_Hurly(T_K_HeXe) + 2*x1v*x2v*B12_Hurly(T_K_HeXe) + x2v^2*B22_Hurly(T_K_HeXe);
+        Cmix = x1v^3*C111_Hurly(T_K_HeXe) + 3*x1v^2*x2v*C112_Hurly(T_K_HeXe) ...
+             + 3*x1v*x2v^2*C122_Hurly(T_K_HeXe) + x2v^3*C222_Hurly(T_K_HeXe);
+        rho_m(k) = local_solve_virial_rho(P_Pa, T_K_HeXe, R, Bmix, Cmix);
+    end
+
+    MWmix = x1_virial*MW_He + (1-x1_virial)*MW_Xe;
+    rho_mass = rho_m.*MWmix; % kg/m3
+    Z_virial = P_Pa ./ (rho_m*R*T_K_HeXe); % compressibility, diagnostic only
+
+    rhoNorm_v = (rho_mass - rho_mass(1)) / (rho_mass(end) - rho_mass(1));
+
+    virialResults(v).P_psig   = virialCases(v).P_psig;
+    virialResults(v).P_MPa    = P_MPa;
+    virialResults(v).inRange  = virialCases(v).inRange;
+    virialResults(v).x1       = x1_virial;
+    virialResults(v).rho      = rho_mass;
+    virialResults(v).rhoNorm  = rhoNorm_v;
+    virialResults(v).Z        = Z_virial;
+
+    % DIAGNOSTIC: the virial series (truncated at B,C) breaks down badly
+    % near Xe's critical point (Tc=16.6 C, Pc=5.84 MPa), which sits right
+    % on top of these He-Xe conditions (20 C, 5.1-6.3 MPa) on the Xe-rich
+    % side (x1 -> 0). Z far from ~1 is the signature of that breakdown -
+    % flag it instead of silently trusting the curve there.
+    badIdx = find(Z_virial < 0.5 | Z_virial > 1.5);
+    if ~isempty(badIdx)
+        fprintf(['WARNING: virial EOS at P=%.0f psig gives Z outside [0.5,1.5] ' ...
+            'for x1 in [%.2f, %.2f] (Xe-rich / near-critical region). ' ...
+            'These points (and the x1=0 normalization endpoint they corrupt) ' ...
+            'are NOT reliable - Xe''s critical point (16.6 C, 5.84 MPa) sits ' ...
+            'right on top of this condition.\n'], ...
+            virialCases(v).P_psig, min(x1_virial(badIdx)), max(x1_virial(badIdx)));
+    end
+
+    tag = '';
+    if ~virialCases(v).inRange
+        tag = ' (extrapolated)';
+    end
+    plot(x1_virial, rhoNorm_v, ['k' virialCases(v).style virialCases(v).marker], ...
+        'MarkerFaceColor', 'k', 'MarkerSize', 5, 'LineWidth', 1);
+    legendStr{end+1} = sprintf('Virial (Hurly 1997) He-Xe @ %.2f MPa%s', P_MPa, tag); %#ok<SAGROW>
+end
+hold off
+
+save(pathExportAll + "virial_HeXe_Hurly1997.mat", 'virialResults');
+
+%% Finish plot
+
 xlabel('x_1 (mole fraction H_2 or He) [-]');
 ylabel('\rho_{norm} [-]  (normalized between x_1=0 and x_1=1)');
-title('Density vs. composition (REFPROP): H_2-CO_2, H_2-CH_4, He-Xe');
+title('Density vs. composition (REFPROP vs. Hurly 1997 virial): H_2-CO_2, H_2-CH_4, He-Xe');
 legend(legendStr, 'Location', 'southeast');
 grid on
 saveas(gcf, pathExportAll + "rhoNorm_vs_x1_4curves", 'png');
+
+%% local helpers
+
+function C = local_C222_Xe(T)
+b0 = 7.573128e-5; lam = 1.554699; epsk = 200.88133;
+Delta = exp(epsk./T) - 1;
+c1 = lam.^6 - 18*lam.^4 + 32*lam.^3 - 15;
+c2 = 2*lam.^6 - 36*lam.^4 + 32*lam.^3 + 18*lam.^2 - 16;
+c3 = 6*lam.^6 - 18*lam.^4 + 18*lam.^2 - 6;
+C = (1/8)*b0.^2.*(5 - c1.*Delta - c2.*Delta.^2 - c3.*Delta.^3);
+end
+
+function B = local_B22_Xe(T)
+b0 = 5.796870e-5; lam = 1.693962; epsk = 181.76386;
+Delta = exp(epsk./T) - 1;
+B = b0.*(1 - (lam.^3-1).*Delta);
+end
+
+function rho_m = local_solve_virial_rho(P, T, R, B, C)
+% Solve P = R*T*rho*(1 + B*rho + C*rho^2) for rho [mol/m3], i.e.
+% R*T*C*rho^3 + R*T*B*rho^2 + R*T*rho - P = 0, picking the real root
+% closest to the ideal-gas estimate.
+coeffs = [R*T*C, R*T*B, R*T, -P];
+r = roots(coeffs);
+r = r(abs(imag(r)) < 1e-8);
+r = real(r);
+rho_ideal = P/(R*T);
+[~, idx] = min(abs(r - rho_ideal));
+rho_m = r(idx);
+end
