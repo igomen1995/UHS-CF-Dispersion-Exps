@@ -22,6 +22,14 @@
 %   (psig -> psia: +14.696 psi, then x 0.00689476 to MPa) and the
 %   temperature in C.
 %
+%   On top of the He-Xe curves (725 and 900 psig), this also overlays the
+%   independent virial EOS of Hurly, Schmidt, Boyes & Moldover (1997),
+%   Int. J. Thermophys. 18(3), 579-634 - same colour as the matching
+%   REFPROP curve, different marker, with uncertainty bars from the
+%   paper's own quoted fit RMS deviation - and reports how much that
+%   mismatch would translate into mole-fraction (x_He) uncertainty for
+%   your REFPROP-based composition inversion.
+%
 % DEPENDENCIES
 %   initREFPROP, getMixtureProps_REFPROP, fluidNameREFPROP
 %
@@ -108,7 +116,7 @@ end
 writetable(allResults, pathExportAll + "rhoNorm_4curves.xlsx");
 save(pathExportAll + "rhoNorm_4curves.mat", 'results', 'allResults');
 
-%% Plot
+%% Plot (REFPROP curves)
 
 figure; hold on
 colours = {[0.850 0.325 0.098],[0.494 0.184 0.556],[0.466 0.674 0.188],[0 0.447 0.741]};
@@ -119,7 +127,6 @@ for c = 1:numel(results)
     scatter(results(c).x1, results(c).rhoNorm, 15, colours{c}, markers{c}, 'filled');
     legendStr{c} = sprintf('%s @ %.2f MPa, %d°C', results(c).label, results(c).P_MPa, results(c).T_C);
 end
-hold off
 
 %% Virial EOS overlay for He-Xe (Hurly, Schmidt, Boyes & Moldover 1997,
 %  Int. J. Thermophys. 18(3), 579-634) at 725 psig (within the paper's
@@ -158,34 +165,46 @@ hold off
 % VALIDITY: the paper states an overall range of 0.5-5 MPa and 210-400 K
 % for the He-Xe mixture fit (Burnett p(P,T) data went up to 5 MPa).
 % 725 psig = 5.10 MPa is right at/just past that edge; 900 psig = 6.31 MPa
-% is clearly beyond it - both are flagged in the plot (solid vs. dashed).
+% is clearly beyond it - both are flagged (solid vs. dashed, and in the
+% legend).
+%
+% UNCERTAINTY: the paper quotes (p.599, Fig. 9) that the Burnett p(P,T)
+% mixture data are fit with an RMS percentage deviation of 0.013%, and
+% "most of the data are bounded by ... +-0.02% of the pressure." We use
+% that stated +-0.02%-of-P figure as the virial density's uncertainty band
+% (error bars below) - it is the paper's own fit-quality bound on ITS
+% stated range, not a validated accuracy bound for extrapolated conditions,
+% so treat the 900 psig error bars as illustrative only.
 
 R = 8.314462618; % J/(mol.K)
 MW_He = 4.002602e-3; % kg/mol
 MW_Xe = 131.293e-3;  % kg/mol
+HURLY_RMS_PCT = 0.02; % % of P, Burnett p(P,T) mixture-data fit bound (paper, p.599)
 
 B11_Hurly  = @(T) (11.885370 + 6.6508722e-3*T - 3.205894e-5*T.^2 + 3.1354694e-8*T.^3)*1e-6; % m3/mol
 C111_Hurly = @(T) (44.2846 + 2.379099e4./T - 1.6689669e6./T.^2)*1e-12; % m6/mol2
 
-B22_Hurly = @(T) local_B22_Xe(T);
+B22_Hurly  = @(T) local_B22_Xe(T);
 C222_Hurly = @(T) local_C222_Xe(T);
 
 B12_Hurly  = @(T) 2.756941e-5 + 4.617880e-3./T - 1.741538./T.^2 + 1.364453e2./T.^3;
 C112_Hurly = @(T) -2.692605e-10 + 1.340259e-7./T;
 C122_Hurly = @(T) 4.984636e-10 + 2.256122e-7./T;
 
+% same colours as the matching REFPROP He-Xe curves (cases 3 and 4 above:
+% 725 psig = green, 900 psig = blue), different marker shape
 virialCases = struct( ...
-    'P_psig',   {725,        900}, ...
-    'inRange',  {true,       false}, ...   % 725 psig = 5.10 MPa (~paper's 5 MPa limit); 900 psig = 6.31 MPa (extrapolated)
-    'style',    {'-',        '--'}, ...
-    'marker',   {'d',        '^'});
+    'P_psig',   {725,                  900}, ...
+    'inRange',  {true,                 false}, ...  % 725 psig=5.10 MPa (~paper's 5 MPa limit); 900 psig=6.31 MPa (extrapolated)
+    'color',    {[0.466 0.674 0.188],  [0 0.447 0.741]}, ... % match REFPROP green/blue
+    'style',    {'-',                  '--'}, ...
+    'marker',   {'d',                  '^'});
 
 x1_virial = 0:0.05:1;   % coarser grid - a handful of overlay points, not the full density
 T_C_HeXe  = 20;
 T_K_HeXe  = T_C_HeXe + 273.15;
 
 virialResults = struct();
-hold on
 for v = 1:numel(virialCases)
     P_MPa = psig2MPa(virialCases(v).P_psig);
     P_Pa  = P_MPa*1e6;
@@ -205,13 +224,20 @@ for v = 1:numel(virialCases)
 
     rhoNorm_v = (rho_mass - rho_mass(1)) / (rho_mass(end) - rho_mass(1));
 
-    virialResults(v).P_psig   = virialCases(v).P_psig;
-    virialResults(v).P_MPa    = P_MPa;
-    virialResults(v).inRange  = virialCases(v).inRange;
-    virialResults(v).x1       = x1_virial;
-    virialResults(v).rho      = rho_mass;
-    virialResults(v).rhoNorm  = rhoNorm_v;
-    virialResults(v).Z        = Z_virial;
+    % uncertainty band: +-0.02% of P (paper's Burnett fit bound), converted
+    % from a density uncertainty into rhoNorm units
+    drho_mass = (HURLY_RMS_PCT/100) * rho_mass;
+    drhoNorm_v = drho_mass / (rho_mass(end) - rho_mass(1));
+
+    virialResults(v).P_psig    = virialCases(v).P_psig;
+    virialResults(v).P_MPa     = P_MPa;
+    virialResults(v).inRange   = virialCases(v).inRange;
+    virialResults(v).x1        = x1_virial;
+    virialResults(v).rho       = rho_mass;
+    virialResults(v).drho      = drho_mass;
+    virialResults(v).rhoNorm   = rhoNorm_v;
+    virialResults(v).drhoNorm  = drhoNorm_v;
+    virialResults(v).Z         = Z_virial;
 
     % DIAGNOSTIC: the virial series (truncated at B,C) breaks down badly
     % near Xe's critical point (Tc=16.6 C, Pc=5.84 MPa), which sits right
@@ -232,102 +258,15 @@ for v = 1:numel(virialCases)
     if ~virialCases(v).inRange
         tag = ' (extrapolated)';
     end
-    plot(x1_virial, rhoNorm_v, ['k' virialCases(v).style virialCases(v).marker], ...
-        'MarkerFaceColor', 'k', 'MarkerSize', 5, 'LineWidth', 1);
+    errorbar(x1_virial, rhoNorm_v, drhoNorm_v, ...
+        'Color', virialCases(v).color, 'LineStyle', virialCases(v).style, ...
+        'Marker', virialCases(v).marker, 'MarkerFaceColor', virialCases(v).color, ...
+        'MarkerSize', 5, 'LineWidth', 1, 'CapSize', 3);
     legendStr{end+1} = sprintf('Virial (Hurly 1997) He-Xe @ %.2f MPa%s', P_MPa, tag); %#ok<SAGROW>
 end
 hold off
 
 save(pathExportAll + "virial_HeXe_Hurly1997.mat", 'virialResults');
-
-%% Compare REFPROP vs. Hurly virial: percent deviation (uncertainty estimate)
-%
-% For each He-Xe pressure, interpolate the REFPROP rho(x1) curve (the fine
-% x1 grid in `results`) onto the virial's coarser x1 grid, then compute the
-% percent difference. This quantifies how much REFPROP's He-Xe density
-% (computed with its default/unfitted combining rule - no departure
-% function exists for He-Xe in HMX.BNC) differs from the independent
-% Hurly et al. virial EOS - i.e., an empirical bound on the He-Xe
-% mixing-rule uncertainty, the same comparison your advisor's
-% recommendation was aimed at.
-%
-% Points where the virial Z falls outside [0.5, 1.5] (the Xe-rich,
-% near-critical breakdown flagged above) are marked unreliable and
-% excluded from the summary statistics, but still reported in the table
-% so you can see where they are.
-
-compareRows = table();
-
-for v = 1:numel(virialResults)
-    P_psig_v = virialResults(v).P_psig;
-
-    % find the matching REFPROP (results) case at the same P_psig
-    refIdx = find([results.P_psig] == P_psig_v & strcmp({results.label}, 'He-Xe'));
-    if isempty(refIdx)
-        warning('No matching REFPROP case found for P=%d psig - skipping comparison.', P_psig_v);
-        continue
-    end
-    refIdx = refIdx(1);
-
-    % interpolate REFPROP's fine-grid rho onto the virial's x1 grid
-    rho_REFPROP_interp = interp1(results(refIdx).x1, results(refIdx).rho, virialResults(v).x1, 'linear');
-
-    rho_virial = virialResults(v).rho;
-    pctDiff = 100*(rho_REFPROP_interp - rho_virial) ./ rho_REFPROP_interp;
-
-    reliable = virialResults(v).Z >= 0.5 & virialResults(v).Z <= 1.5;
-
-    compareRows = [compareRows; table( ...
-        repmat(P_psig_v, numel(virialResults(v).x1), 1), ...
-        repmat(virialResults(v).P_MPa, numel(virialResults(v).x1), 1), ...
-        repmat(virialResults(v).inRange, numel(virialResults(v).x1), 1), ...
-        virialResults(v).x1', rho_REFPROP_interp', rho_virial', pctDiff', ...
-        virialResults(v).Z', reliable', ...
-        'VariableNames', {'P_psig','P_MPa','inRange','x1', ...
-        'rho_REFPROP','rho_virial','pctDiff','Z_virial','reliable'})]; %#ok<AGROW>
-
-    relRows = reliable;
-    fprintf('\n--- REFPROP vs. Hurly virial, P = %d psig (%.2f MPa) ---\n', P_psig_v, virialResults(v).P_MPa);
-    if any(relRows)
-        fprintf('  reliable points (x1 in [%.2f, %.2f], Z in [0.5,1.5]): mean |%%diff| = %.2f%%, max |%%diff| = %.2f%%\n', ...
-            min(virialResults(v).x1(relRows)), max(virialResults(v).x1(relRows)), ...
-            mean(abs(pctDiff(relRows))), max(abs(pctDiff(relRows))));
-    end
-    if any(~relRows)
-        fprintf('  UNRELIABLE points (near-critical Xe breakdown), x1 in [%.2f, %.2f]: %%diff ranges %.1f%% to %.1f%% (not meaningful, shown for reference only)\n', ...
-            min(virialResults(v).x1(~relRows)), max(virialResults(v).x1(~relRows)), ...
-            min(pctDiff(~relRows)), max(pctDiff(~relRows)));
-    end
-end
-
-disp(compareRows)
-writetable(compareRows, pathExportAll + "REFPROP_vs_Hurly_pctDiff.xlsx");
-save(pathExportAll + "REFPROP_vs_Hurly_pctDiff.mat", 'compareRows');
-
-%% Plot: percent deviation REFPROP vs. Hurly virial, vs. composition
-
-figure; hold on
-pColours = {[0.466 0.674 0.188], [0 0.447 0.741]}; % match He-Xe colours above
-pLegend = cell(numel(virialResults),1);
-for v = 1:numel(virialResults)
-    rows_v = compareRows(compareRows.P_psig == virialResults(v).P_psig, :);
-    rel = rows_v.reliable;
-    unrel = ~rel;
-    plot(rows_v.x1(rel), rows_v.pctDiff(rel), '-o', 'Color', pColours{v}, ...
-        'MarkerFaceColor', pColours{v}, 'LineWidth', 1.3);
-    plot(rows_v.x1(unrel), rows_v.pctDiff(unrel), ':o', 'Color', pColours{v}, ...
-        'MarkerFaceColor', 'w', 'LineWidth', 1.0, 'HandleVisibility','off'); % dotted/hollow = unreliable, no separate legend entry
-    pLegend{v} = sprintf('He-Xe @ %.2f MPa%s', virialResults(v).P_MPa, ...
-        ternary_str(~virialResults(v).inRange, ' (extrapolated P)', ''));
-end
-yline(0, 'k-', 'HandleVisibility', 'off');
-hold off
-xlabel('x_1 (mole fraction He) [-]');
-ylabel('% difference: (\rho_{REFPROP} - \rho_{virial}) / \rho_{REFPROP} \times 100');
-title('REFPROP vs. Hurly (1997) virial EOS: density deviation (solid = reliable, dotted/hollow = near-critical breakdown)');
-legend(pLegend, 'Location', 'best');
-grid on
-saveas(gcf, pathExportAll + "REFPROP_vs_Hurly_pctDiff", 'png');
 
 %% Finish plot
 
@@ -337,6 +276,80 @@ title('Density vs. composition (REFPROP vs. Hurly 1997 virial): H_2-CO_2, H_2-CH
 legend(legendStr, 'Location', 'southeast');
 grid on
 saveas(gcf, pathExportAll + "rhoNorm_vs_x1_4curves", 'png');
+
+%% Composition-space mismatch: uncertainty in REFPROP's x_He given Hurly virial
+%
+% Your workflow inverts a MEASURED density to mole fraction x_He the same
+% way main_DataExtract.m's scatteredInterpolant turns rho_corr into Ci. So
+% the uncertainty that matters is: for the same rho, how much does the
+% REFPROP-inferred x_He differ from the Hurly-virial-inferred x_He?
+%
+% Both rho(x1) curves are inverted to x1(rho) (rho decreases monotonically
+% with x1=x_He) and compared on a common rho grid, restricted to the
+% virial's reliable branch (Z in [0.5,1.5], excluding the Xe-rich
+% near-critical breakdown flagged above).
+
+compareRows = table();
+
+for v = 1:numel(virialResults)
+    P_psig_v = virialResults(v).P_psig;
+
+    refIdx = find([results.P_psig] == P_psig_v & strcmp({results.label}, 'He-Xe'));
+    if isempty(refIdx)
+        warning('No matching REFPROP case found for P=%d psig - skipping comparison.', P_psig_v);
+        continue
+    end
+    refIdx = refIdx(1);
+
+    rho_REFPROP = results(refIdx).rho;
+    x1_REFPROP  = results(refIdx).x1;
+    [rho_REFPROP_sorted, sortIdx] = sort(rho_REFPROP);
+    x1_REFPROP_sorted = x1_REFPROP(sortIdx);
+
+    reliableMask = virialResults(v).Z >= 0.5 & virialResults(v).Z <= 1.5;
+    rho_virial_rel = virialResults(v).rho(reliableMask);
+    x1_virial_rel  = virialResults(v).x1(reliableMask);
+    [rho_virial_sorted, sortIdx2] = sort(rho_virial_rel);
+    x1_virial_sorted = x1_virial_rel(sortIdx2);
+
+    if numel(rho_virial_sorted) < 2
+        warning('P=%d psig: fewer than 2 reliable virial points - skipping composition comparison.', P_psig_v);
+        continue
+    end
+
+    rho_lo = max(min(rho_REFPROP_sorted), min(rho_virial_sorted));
+    rho_hi = min(max(rho_REFPROP_sorted), max(rho_virial_sorted));
+    if rho_lo >= rho_hi
+        warning('P=%d psig: no overlapping reliable density range - skipping.', P_psig_v);
+        continue
+    end
+    rho_common = linspace(rho_lo, rho_hi, 40);
+
+    x1_REFPROP_at_rho = interp1(rho_REFPROP_sorted, x1_REFPROP_sorted, rho_common, 'linear');
+    x1_virial_at_rho  = interp1(rho_virial_sorted,  x1_virial_sorted,  rho_common, 'linear');
+
+    dx1_molpct = (x1_REFPROP_at_rho - x1_virial_at_rho)*100; % percentage points of mole fraction
+
+    compareRows = [compareRows; table( ...
+        repmat(P_psig_v, numel(rho_common), 1), ...
+        repmat(virialResults(v).P_MPa, numel(rho_common), 1), ...
+        repmat(virialResults(v).inRange, numel(rho_common), 1), ...
+        rho_common', x1_REFPROP_at_rho', x1_virial_at_rho', dx1_molpct', ...
+        'VariableNames', {'P_psig','P_MPa','inRange','rho', ...
+        'x_He_REFPROP','x_He_virial','dx_He_molpct'})]; %#ok<AGROW>
+
+    fprintf('\n--- REFPROP x_He uncertainty vs. Hurly virial, P = %d psig (%.2f MPa) ---\n', P_psig_v, virialResults(v).P_MPa);
+    fprintf('  rho overlap range: %.3f to %.3f kg/m3\n', rho_lo, rho_hi);
+    fprintf('  mean |dx_He| = %.3f mol%%, max |dx_He| = %.3f mol%%\n', ...
+        mean(abs(dx1_molpct)), max(abs(dx1_molpct)));
+    if ~virialResults(v).inRange
+        fprintf('  NOTE: extrapolated-pressure case (beyond Hurly''s 5 MPa Burnett limit) - treat as a looser bound.\n');
+    end
+end
+
+disp(compareRows)
+writetable(compareRows, pathExportAll + "REFPROP_vs_Hurly_compositionDiff.xlsx");
+save(pathExportAll + "REFPROP_vs_Hurly_compositionDiff.mat", 'compareRows');
 
 %% local helpers
 
@@ -353,14 +366,6 @@ function B = local_B22_Xe(T)
 b0 = 5.796870e-5; lam = 1.693962; epsk = 181.76386;
 Delta = exp(epsk./T) - 1;
 B = b0.*(1 - (lam.^3-1).*Delta);
-end
-
-function s = ternary_str(cond, strTrue, strFalse)
-if cond
-    s = strTrue;
-else
-    s = strFalse;
-end
 end
 
 function rho_m = local_solve_virial_rho(P, T, R, B, C)
