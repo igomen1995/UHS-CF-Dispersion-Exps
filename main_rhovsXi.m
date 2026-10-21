@@ -258,10 +258,7 @@ for v = 1:numel(virialCases)
     if ~virialCases(v).inRange
         tag = ' (extrapolated)';
     end
-    errorbar(x1_virial, rhoNorm_v, drhoNorm_v, ...
-        'Color', virialCases(v).color, 'LineStyle', virialCases(v).style, ...
-        'Marker', virialCases(v).marker, 'MarkerFaceColor', virialCases(v).color, ...
-        'MarkerSize', 5, 'LineWidth', 1, 'CapSize', 3);
+    scatter(x1_virial, rhoNorm_v, 30, virialCases(v).color, virialCases(v).marker, 'filled');
     legendStr{end+1} = sprintf('Virial (Hurly 1997) He-Xe @ %.2f MPa%s', P_MPa, tag); %#ok<SAGROW>
 end
 hold off
