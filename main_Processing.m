@@ -1503,8 +1503,15 @@ for j = 1:length(method_names)
 end
 
 % save processed data
-expProcFullData = expProcData;
-save(pathExportAll + "expProcFullData.mat",'expProcFullData')
+fullDataFile = pathExportAll + "expProcFullData.mat";
+if isfile(fullDataFile)
+    tmp = load(fullDataFile, 'expProcFullData');
+    expProcFullData = tmp.expProcFullData;      % e.g. already has .woEOS
+else
+    expProcFullData = struct();
+end
+expProcFullData.(fitData) = expProcData;        % add/replace only this variant
+save(fullDataFile, 'expProcFullData', '-v7.3')
 
 %% Plot KL vs u and KL/D0 vs Pe: per case and all cases together
 
