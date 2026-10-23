@@ -636,7 +636,31 @@ for i = 1:nExp
     end
 
     if isempty(best_row)
-        error("No valid fitting method found for %s", key)
+        warning("No valid fitting method for %s -> KL set to NaN", key)
+
+        % template: this key's own row from any method (keeps its exp params)
+        for m = 1:nCand
+            Tm = method_results.(candidate_methods{m});
+            if isempty(Tm), continue, end
+            r = find(Tm.Key == string(key), 1);
+            if ~isempty(r), best_row = Tm(r,:); break, end
+        end
+        if isempty(best_row)
+            error("%s was not fitted by any method (not CF?)", key)
+        end
+
+        % blank the fitted quantities
+        fitVars = {'KL_SI','dKL_SI','KL_cm2min','dKL_cm2min', ...
+                   'dt_SI','d_dt_SI','dt_min','d_dt_min','dtD','d_dtD', ...
+                   'R2','RMSE', ...
+                   'Pe_upump_L_KL','dPe_upump_L_KL','Pe_uMFM_L_KL','dPe_uMFM_L_KL'};
+        for v = fitVars
+            if ismember(v{1}, best_row.Properties.VariableNames)
+                best_row.(v{1})(1) = NaN;
+            end
+        end
+        best_row.model = "none";
+        best_row.C_fit = {nan(height(expProcData.(key).BT),1)};
     end
     best_rows = [best_rows; best_row]; %#ok<AGROW>
 end
@@ -1502,15 +1526,34 @@ for j = 1:length(method_names)
 
 end
 
-% save processed data
+% save processed data: exp_params once per key, fit results per fitData
 fullDataFile = pathExportAll + "expProcFullData.mat";
 if isfile(fullDataFile)
     tmp = load(fullDataFile, 'expProcFullData');
-    expProcFullData = tmp.expProcFullData;      % e.g. already has .woEOS
+    expProcFullData = tmp.expProcFullData;      % keeps the other fitData variant
 else
     expProcFullData = struct();
 end
-expProcFullData.(fitData) = expProcData;        % add/replace only this variant
+
+for i = 1:nExp
+    key = filedataExp.Key(i);
+    expProcFullData.(key).exp_params = expProcData.(key).exp_params;   % shared
+
+    expProcFullData.(key).(fitData).BT             = expProcData.(key).BT;
+    expProcFullData.(key).(fitData).results        = expProcData.(key).results;
+    expProcFullData.(key).(fitData).method_results = expProcData.(key).method_results;
+    expProcFullData.(key).(fitData).alphaGroupID   = expProcData.(key).alphaGroupID;
+    if isfield(expProcData.(key), 'BTC_Metrics')                       % only CF experiments
+        expProcFullData.(key).(fitData).BTC_Metrics = expProcData.(key).BTC_Metrics;
+    end
+end
+
+% group-level tables (not per key)
+expProcFullData.fitSummary.(fitData).dt_groups        = expProcData.dt_groups;
+expProcFullData.fitSummary.(fitData).alpha_table_best = expProcData.alpha_table_best;
+expProcFullData.fitSummary.(fitData).alpha_results    = expProcData.alpha_results;
+expProcFullData.fitSummary.(fitData).alpha_pooled     = expProcData.alpha_pooled;
+
 save(fullDataFile, 'expProcFullData', '-v7.3')
 
 %% Plot KL vs u and KL/D0 vs Pe: per case and all cases together
