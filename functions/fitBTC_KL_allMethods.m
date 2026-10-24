@@ -56,22 +56,40 @@ function [method_results, best_method, best_row] = fitBTC_KL_allMethods(t_vals, 
     end
 
     method_names = fieldnames(method_results);
-    best_score = -Inf;
+    best_score  = -Inf;
     best_method = "";
+    SStot = sum((C1_vals - mean(C1_vals,'omitnan')).^2, 'omitnan');
+
     for m = 1:length(method_names)
         r = method_results.(method_names{m});
-        if isfinite(r.KL) && isfinite(r.R2) && isfinite(r.RMSE) && r.RMSE > 0
-            score = r.R2 / r.RMSE;
-            if score > best_score
-                best_score = score;
-                best_method = method_names{m};
+        r.RMSE_all = NaN;  r.R2_all = NaN;
+
+        yhat = [];
+        if isfield(r,'C_pred') && numel(r.C_pred) == numel(C1_vals), yhat = r.C_pred; end
+        if (isempty(yhat) || all(isnan(yhat))) && isfield(r,'C_fit') && numel(r.C_fit) == numel(C1_vals)
+            yhat = r.C_fit;
+        end
+
+        if isfinite(r.KL) && ~isempty(yhat)
+            ok  = isfinite(yhat(:)) & isfinite(C1_vals(:));
+            if nnz(ok) >= 5
+                res = C1_vals(ok) - yhat(ok);
+                r.RMSE_all = sqrt(mean(res.^2));
+                r.R2_all   = 1 - sum(res.^2)/SStot;
+                score = r.R2_all / r.RMSE_all;
+                if score > best_score
+                    best_score  = score;
+                    best_method = method_names{m};
+                end
             end
         end
+        method_results.(method_names{m}) = r;
     end
 
     if best_method ~= ""
         best_row = method_results.(best_method);
     else
-        best_row = nanTemplate;   % same fix here — was the old 7-field struct
+        best_row = nanTemplate;
+        best_row.RMSE_all = NaN;  best_row.R2_all = NaN;
     end
 end
