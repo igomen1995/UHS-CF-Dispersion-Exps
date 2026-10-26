@@ -257,6 +257,70 @@ for g = groupsToPlot
         if closeAfterSave, close(fig); end
     end
 end
+
+%% Plots: XCT by method (one panel each) vs UHS MFM (in every panel)
+
+xctMethods = srcNames([1 3 2]);          % MFM, CT width, CT BTC
+xctExps    = startsWith([exps.label], "He-Xe");
+uhsExps    = startsWith([exps.label], ["H2-CO2","H2-CH4"]);
+uhsSource  = srcNames(1);                % UHS cases only have MFM
+
+for g = groupsToPlot
+    Tg = T(T.group == g & isfinite(T.KLD0) & T.KLD0 > 0, :);
+    if isempty(Tg), warning('No KL entries for group %s', g); continue, end
+
+    for p = 1:size(xPanels,1)
+        fig = figure('Position',[60 80 1600 600]);
+        tl  = tiledlayout(fig, 1, numel(xctMethods), 'TileSpacing','compact');
+        axs = gobjects(1, numel(xctMethods));
+
+        for s = 1:numel(xctMethods)
+            ax = nexttile(tl);  hold(ax,'on');  axs(s) = ax;
+            mkXCT = srcMk(find(srcNames == xctMethods(s), 1));
+            mkUHS = srcMk(find(srcNames == uhsSource, 1));
+
+            % UHS reference (MFM) in every panel, then XCT with this panel's method
+            plotSet(ax, Tg, exps(uhsExps), uhsSource,      mkUHS, xPanels(p,:));
+            plotSet(ax, Tg, exps(xctExps), xctMethods(s),  mkXCT, xPanels(p,:));
+
+            yline(ax, 1, ':k', 'HandleVisibility','off')
+            set(ax, 'YScale','log', 'FontSize',11)
+            if xPanels{p,4}, set(ax, 'XScale','log'), end
+            xlabel(ax, xPanels{p,3}, 'FontSize',12)
+            if s == 1, ylabel(ax, 'K_L / D_0 [-]', 'FontSize',12), end
+            title(ax, "XCT: " + xctMethods(s) + "  |  UHS: " + uhsSource, ...
+                'Interpreter','none', 'FontSize',11)
+            grid(ax,'on')
+        end
+
+        linkaxes(axs, 'xy')                       % same scales -> panels directly comparable
+
+        % shared legend: experiments (colour + keys) and markers
+        axL = axs(1);  hLeg = gobjects(0);
+        for e = find(uhsExps | xctExps)
+            if ~any(Tg.experiment == exps(e).label), continue, end
+            hLeg(end+1) = plot(axL, NaN, NaN, 's', 'MarkerSize',10, ...
+                'MarkerFaceColor',exps(e).color, 'MarkerEdgeColor','none', ...
+                'DisplayName', legendKeys(exps(e))); %#ok<SAGROW>
+        end
+        for s = 1:numel(srcNames)
+            if ~ismember(srcNames(s), [xctMethods uhsSource]), continue, end
+            hLeg(end+1) = plot(axL, NaN, NaN, srcMk(s), 'MarkerSize',9, 'LineStyle','none', ...
+                'Color',[0.3 0.3 0.3], 'MarkerFaceColor',[0.6 0.6 0.6], ...
+                'DisplayName', srcNames(s)); %#ok<SAGROW>
+        end
+        lgd = legend(axL, hLeg, 'Interpreter','none', 'FontSize',8, 'NumColumns',2);
+        lgd.Layout.Tile = 'south';
+
+        title(tl, sprintf('K_L/D_0 vs %s: XCT (He-Xe) by method vs UHS (MFM) -- %s', ...
+            xPanels{p,5}, groupTitle.(g)), 'Interpreter','none')
+
+        fname = "XCTvsUHS_KLD0_vs_" + xPanels{p,5} + "_byMethod_" + g;
+        saveas(fig, fullfile(pathExport, fname), 'png');
+        saveas(fig, fullfile(pathExport, fname), 'fig');
+        if closeAfterSave, close(fig); end
+    end
+end
  
 %% Local functions
  
@@ -430,4 +494,20 @@ end
 function n = fieldOrVarNames(r)
 if istable(r), n = r.Properties.VariableNames; else, n = fieldnames(r); end
 end
- 
+
+function plotSet(ax, Tg, exSet, source, mk, xp)
+% one source for a set of experiments, coloured per experiment, with x/y error bars
+for e = 1:numel(exSet)
+    sel = Tg.experiment == exSet(e).label & Tg.source == source;
+    if ~any(sel), continue, end
+    x  = Tg.(xp{1})(sel);   dx = Tg.(xp{2})(sel);
+    y  = Tg.KLD0(sel);      dy = Tg.dKLD0(sel);
+    dx(~isfinite(dx)) = 0;  dy(~isfinite(dy)) = 0;
+    dyLow = min(dy, 0.99*y);
+    dxLow = dx;  if xp{4}, dxLow = min(dx, 0.99*x); end
+    errorbar(ax, x, y, dyLow, dy, dxLow, dx, mk, ...
+        'Color',exSet(e).color, 'MarkerFaceColor',exSet(e).color, ...
+        'MarkerEdgeColor',0.5*exSet(e).color, 'MarkerSize',9, ...
+        'LineStyle','none', 'CapSize',4, 'HandleVisibility','off')
+end
+end
