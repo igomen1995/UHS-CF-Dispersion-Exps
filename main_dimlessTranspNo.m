@@ -419,6 +419,71 @@ for g = groupsToPlot
     if closeAfterSave, close(fig); end
 end
 
+%% KL/D0 vs Pe, marker colour = M
+
+pmSources  = srcNames(1);          % MFM; add srcNames(2:3) to include the XCT CT values
+pmGroups   = ["theory"];           % nominal conditions (all experiments, incl. horizontal ones)
+pmLogM     = true;                 % log colour scale for M
+pmLabels   = true;                 % experiment label next to each marker
+
+for g = pmGroups
+    Tg = T(T.group == g & ismember(T.source, pmSources) & isfinite(T.KLD0) & T.KLD0 > 0, :);
+    if isempty(Tg), warning('No entries for group %s', g); continue, end
+
+    cM = Tg.M;  if pmLogM, cM = log10(cM); end
+    isH = Tg.Ng == 0;                                     % horizontal runs (Ng = 0)
+
+    fig = figure('Position',[80 80 1150 750]);
+    ax = axes(fig);  hold(ax,'on')
+
+    % uncertainty bars (grey, behind)
+    dyLow = min(Tg.dKLD0, 0.99*Tg.KLD0);  dxLow = min(Tg.dPe, 0.99*Tg.Pe);
+    errorbar(ax, Tg.Pe, Tg.KLD0, dyLow, Tg.dKLD0, dxLow, Tg.dPe, 'LineStyle','none', ...
+        'Color',[0.75 0.75 0.75], 'CapSize',3, 'HandleVisibility','off')
+
+    % markers: circle = vertical (Ng ~= 0), square = horizontal (Ng = 0); edge style per source
+    srcEdge = struct();  srcEdge.(matlab.lang.makeValidName(srcNames(1))) = 'k';
+    for s = 1:numel(pmSources)
+        selS = Tg.source == pmSources(s);
+        lw = 0.8;  if s > 1, lw = 2; end                  % CT sources: thick edge
+        if any(selS & ~isH)
+            scatter(ax, Tg.Pe(selS & ~isH), Tg.KLD0(selS & ~isH), 120, cM(selS & ~isH), 'o', ...
+                'filled', 'MarkerEdgeColor','k', 'LineWidth',lw, ...
+                'DisplayName', pmSources(s) + ", vertical (N_g \neq 0)")
+        end
+        if any(selS & isH)
+            scatter(ax, Tg.Pe(selS & isH), Tg.KLD0(selS & isH), 140, cM(selS & isH), 's', ...
+                'filled', 'MarkerEdgeColor','k', 'LineWidth',lw, ...
+                'DisplayName', pmSources(s) + ", horizontal (N_g = 0)")
+        end
+    end
+
+    if pmLabels
+        text(ax, Tg.Pe, Tg.KLD0, "  " + Tg.experiment, 'FontSize',7, 'Interpreter','none')
+    end
+
+    yline(ax, 1, ':k', 'K_L = D_0', 'HandleVisibility','off', 'LabelHorizontalAlignment','left')
+    set(ax, 'XScale','log', 'YScale','log', 'FontSize',12);  grid(ax,'on')
+    xlabel(ax, 'Pe = uL/D_0 [-]', 'FontSize',13)
+    ylabel(ax, 'K_L / D_0 [-]', 'FontSize',13)
+
+    colormap(ax, turbo)
+    cb = colorbar(ax);
+    if pmLogM
+        tk = linspace(min(cM), max(cM), 6);
+        cb.Ticks = tk;  cb.TickLabels = compose('%.2f', 10.^tk);
+    end
+    cb.Label.String = 'M = \mu_2/\mu_1 [-]';
+
+    legend(ax, 'Location','northwest', 'FontSize',9)
+    title(ax, sprintf('K_L/D_0 vs Pe, colour = M -- %s', groupTitle.(g)), 'Interpreter','tex')
+
+    fname = "KLD0_vs_Pe_colorM_" + g;
+    saveas(fig, fullfile(pathExport, fname), 'png');
+    saveas(fig, fullfile(pathExport, fname), 'fig');
+    if closeAfterSave, close(fig); end
+end
+
 %% Which dimensionless number controls KL? correlation, partial correlation, regression, PCA
 % Works on log10(KL/D0) vs log10(Pe), log10(M), log10(|Ng|), Nrho.
 % One analysis per (group, data set); each experiment counted once per data set.
