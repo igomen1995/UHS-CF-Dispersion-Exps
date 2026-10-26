@@ -93,7 +93,8 @@ exps = struct( ...
                "CF_He_Xe_T20_P725_V_Q1_R1", "CF_He_Xe_T20_P725_V_Q5_R1", ...
                "CF_He_Xe_T20_P900_V_Q1_R1", "CF_He_Xe_T20_P900_V_Q5_R1"}, ...
     'KL',     {NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN}, ...
-    'dKL',    {NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN});
+    'dKL',    {NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN}, ...
+    'main',   {true, true, true, true, true, true, true, true, true});
 
 shade   = @(cL,cD,n) cL + (cD - cL).*linspace(0,1,n)';
 orangeH = shade([1.00 0.78 0.55], [0.80 0.35 0.00], 3);     % H2-CO2 32C 1500 H: Q1, Q2, Q5
@@ -111,7 +112,7 @@ newExps = { ...
  "He-CO2 H Q10",   34, redHe(5,:),   "CF_He_CO2_T40_P1500_H_Q10_R1"};
 for k = 1:size(newExps,1)
     exps(end+1) = struct('label',newExps{k,1}, 'idx',newExps{k,2}, 'color',newExps{k,3}, ...
-        'mfmKey',newExps{k,4}, 'mfmRun',1, 'ctKey',"", 'KL',NaN, 'dKL',NaN); %#ok<SAGROW>
+        'mfmKey',newExps{k,4}, 'mfmRun',1, 'ctKey',"", 'KL',NaN, 'dKL',NaN, 'main',false); %#ok<SAGROW>
 end
  
 % other experiments later, e.g. (row 27 added in main_fluidProps_errorProp.m):
@@ -210,6 +211,9 @@ if isempty(rows), error('No valid KL entries -- check the MFM index and keys in 
 T = vertcat(rows{:});
 disp(T(:, {'caseIdx','group','experiment','source','sourceKey','KL_cm2min','KLD0','Pe','M','Ng'}))
 writetable(T, fullfile(pathExport, 'KL_dimless_all.xlsx'));
+% all experiments are kept for the PCA; every plot below uses the main (vertical) ones only
+Tall = T;
+T    = T(ismember(T.experiment, [exps([exps.main]).label]), :);
  
 %% Plots: one figure per (group, x-axis)
  
@@ -488,20 +492,28 @@ end
 % Works on log10(KL/D0) vs log10(Pe), log10(M), log10(|Ng|), Nrho.
 % One analysis per (group, data set); each experiment counted once per data set.
 
-anaGroups = ["theory"];                                  % nominal conditions
-anaSets   = struct('name',"MFM, UHS + XCT", 'source',srcNames(1), 'expFilt',"");
+anaGroups = ["theory"];                                  % nominal conditions (only group for the new runs)
 
-minN      = 5;                                           % fewer points -> analysis skipped
+% data sets: main vertical runs with Ng; all runs without Ng (Ng = 0 for horizontal runs)
+anaSets = struct( ...
+    'name',      {"MFM, main (vertical)",                   "MFM, all experiments"}, ...
+    'source',    {srcNames(1),                              srcNames(1)}, ...
+    'expFilt',   {"",                                       ""}, ...
+    'useAll',    {false,                                    true}, ...
+    'predNames', {["log_{10}Pe","log_{10}M","log_{10}|N_g|"], ["log_{10}Pe","log_{10}M"]}, ...
+    'predFun',   {@(Ts) [log10(Ts.Pe), log10(Ts.M), log10(abs(Ts.Ng))], ...
+                  @(Ts) [log10(Ts.Pe), log10(Ts.M)]});
 
-predNames = ["log_{10}Pe", "log_{10}M", "log_{10}|N_g|"];
-predFun   = @(Ts) [log10(Ts.Pe), log10(Ts.M), log10(abs(Ts.Ng))];
+minN = 5;                                                % fewer points -> analysis skipped
 
 anaSummary = table();
 
 for g = anaGroups
     for a = 1:numel(anaSets)
         sa = anaSets(a);
-        Ts = T(T.group == g & T.source == sa.source & isfinite(T.KLD0) & T.KLD0 > 0, :);
+        predNames = sa.predNames;   predFun = sa.predFun;
+        if sa.useAll, Tsrc = Tall; else, Tsrc = T; end
+        Ts = Tsrc(Tsrc.group == g & Tsrc.source == sa.source & isfinite(Tsrc.KLD0) & Tsrc.KLD0 > 0, :);
         if sa.expFilt ~= "", Ts = Ts(startsWith(Ts.experiment, sa.expFilt), :); end
         [~, iu] = unique(Ts.experiment, 'stable');   Ts = Ts(iu,:);     % one row per experiment
         n = height(Ts);
