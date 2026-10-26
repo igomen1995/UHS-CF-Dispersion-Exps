@@ -114,6 +114,26 @@ cases = struct( ...
                  6, 6, 6, 6, 6, 6, 6, 6, 6, ...
                  6, 6, 6, 6, 6, 6, 6, 6, 6} );
 
+% additional experiments, nominal conditions -- horizontal core (theta = 0) -> Ng = 0
+% {label, fluids, T_C, P_psig, u_cmmin, theta_deg, K_mD, L_in}   <-- check K and L for these cores
+extraCases = { ...
+    'H2-CO2', {"H2","CO2"}, 32, 1500, 0.25564, 0, 202, 6; ...   % row 27  Q1
+    'H2-CO2', {"H2","CO2"}, 32, 1500, 0.51128, 0, 202, 6; ...   % row 28  Q2
+    'H2-CO2', {"H2","CO2"}, 32, 1500, 1.2782,  0, 202, 6; ...   % row 29  Q5
+    'He-CO2', {"He","CO2"}, 40, 1500, 0.12782, 0, 202, 6; ...   % row 30  Q05
+    'He-CO2', {"He","CO2"}, 40, 1500, 0.25564, 0, 202, 6; ...   % row 31  Q1 (R1 and R2)
+    'He-CO2', {"He","CO2"}, 40, 1500, 0.51128, 0, 202, 6; ...   % row 32  Q2
+    'He-CO2', {"He","CO2"}, 40, 1500, 1.2782,  0, 202, 6; ...   % row 33  Q5
+    'He-CO2', {"He","CO2"}, 40, 1500, 2.5564,  0, 202, 6};      % row 34  Q10
+for k = 1:size(extraCases,1)
+    ec = extraCases(k,:);
+    cases(end+1) = struct('label',ec{1}, 'fl',{ec{2}}, ...
+        'T1_C',ec{3}, 'dT1_C',0, 'P1_psig',ec{4}, 'dP1_psig',0, ...
+        'T2_C',ec{3}, 'dT2_C',0, 'P2_psig',ec{4}, 'dP2_psig',0, ...
+        'u_cmmin',ec{5}, 'du_cmmin',0, 'K_mD',ec{7}, 'dK_mD',0, ...
+        'theta_deg',ec{6}, 'L_in',ec{8}); %#ok<SAGROW>
+end
+
 mkdir('results/combined_rhoNorm_4curves');
 pathExportAll = 'results/combined_rhoNorm_4curves/';
 
