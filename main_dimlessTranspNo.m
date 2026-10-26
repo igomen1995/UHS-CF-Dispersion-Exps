@@ -321,6 +321,345 @@ for g = groupsToPlot
         if closeAfterSave, close(fig); end
     end
 end
+
+%% Maps: M vs Pe and M vs Ng, marker colour = KL (one column per method)
+
+mapColorVar = 'KL_cm2min';      % 'KL_cm2min' or 'KLD0'
+mapColorLbl = struct('KL_cm2min','K_L [cm^2/min]', 'KLD0','K_L/D_0 [-]');
+mapLogColor = true;             % log colour scale
+mapMethods  = srcNames([1 3 2]);                  % MFM, CT width, CT BTC
+mapRows     = {'Pe', 'Pe = uL/D_0 [-]', true; ...
+               'Ng', 'N_g [-]',         false};   % {y column, y label, log y}
+labelPoints = true;             % write the experiment label next to each marker
+
+cAll = T.(mapColorVar)(isfinite(T.(mapColorVar)) & T.(mapColorVar) > 0);
+cLim = [min(cAll) max(cAll)];
+if mapLogColor, cLim = log10(cLim); end
+cmap = parula(256);
+
+for g = groupsToPlot
+    Tg = T(T.group == g & isfinite(T.(mapColorVar)) & T.(mapColorVar) > 0, :);
+    if isempty(Tg), continue, end
+    meth = mapMethods(ismember(mapMethods, unique(Tg.source)));
+
+    fig = figure('Position',[50 50 520*numel(meth)+150 950]);
+    tl  = tiledlayout(fig, size(mapRows,1), numel(meth), 'TileSpacing','compact');
+
+    for r = 1:size(mapRows,1)
+        for s = 1:numel(meth)
+            ax = nexttile(tl);  hold(ax,'on')
+
+            % this column's method + UHS MFM as reference (UHS has no CT)
+            isUHS = startsWith(Tg.experiment, ["H2-CO2","H2-CH4"]);
+            Ts = Tg(Tg.source == meth(s) | (isUHS & Tg.source == srcNames(1)), :);
+            Ts = unique(Ts, 'rows', 'stable');            % MFM column would list UHS twice
+
+            yv = Ts.(mapRows{r,1});
+            errorbar(ax, Ts.M, yv, Ts.("d" + mapRows{r,1}), Ts.("d" + mapRows{r,1}), ...
+                Ts.dM, Ts.dM, 'LineStyle','none', 'Color',[0.75 0.75 0.75], 'CapSize',3, ...
+                'HandleVisibility','off')
+
+            cVal = Ts.(mapColorVar);
+            if mapLogColor, cVal = log10(cVal); end
+            for sIdx = 1:numel(srcNames)                  % marker per source
+                sel = Ts.source == srcNames(sIdx);
+                if ~any(sel), continue, end
+                scatter(ax, Ts.M(sel), yv(sel), 110, cVal(sel), srcMk(sIdx), 'filled', ...
+                    'MarkerEdgeColor','k', 'LineWidth',0.6)
+            end
+
+            if labelPoints
+                text(ax, Ts.M, yv, "  " + Ts.experiment + " (" + Ts.source + ")", ...
+                    'FontSize',7, 'Interpreter','none', 'VerticalAlignment','middle')
+            end
+
+            colormap(ax, cmap);  clim(ax, cLim)
+            if mapRows{r,3}, set(ax, 'YScale','log'), end
+            set(ax, 'FontSize',11);  grid(ax,'on')
+            xlabel(ax, 'M = \mu_2/\mu_1 [-]', 'FontSize',12)
+            if s == 1, ylabel(ax, mapRows{r,2}, 'FontSize',12), end
+            if r == 1, title(ax, "XCT: " + meth(s) + "  |  UHS: " + srcNames(1), ...
+                    'Interpreter','none', 'FontSize',11), 
+            end
+        end
+    end
+
+    cb = colorbar(ax);  cb.Layout.Tile = 'east';
+    if mapLogColor
+        tk = floor(cLim(1)):0.25:ceil(cLim(2));
+        cb.Ticks = tk;  cb.TickLabels = compose('%.3g', 10.^tk);
+    end
+    cb.Label.String = mapColorLbl.(mapColorVar);
+
+    title(tl, sprintf('M vs Pe and M vs N_g, colour = %s -- %s', ...
+        mapColorLbl.(mapColorVar), groupTitle.(g)), 'Interpreter','tex')
+
+    fname = "map_M_Pe_Ng_" + mapColorVar + "_" + g;
+    saveas(fig, fullfile(pathExport, fname), 'png');
+    saveas(fig, fullfile(pathExport, fname), 'fig');
+    if closeAfterSave, close(fig); end
+end
+
+%% Which dimensionless number controls KL? correlation, partial correlation, regression, PCA
+% Works on log10(KL/D0) vs log10(Pe), log10(M), log10(|Ng|), Nrho.
+% One analysis per (group, data set); each experiment counted once per data set.
+
+anaGroups = ["measBegEnd"];                              % per-fluid measured conditions
+anaSets   = struct( ...
+    'name',    {"MFM, UHS + XCT", "CT width, XCT", "CT BTC, XCT"}, ...
+    'source',  {srcNames(1),      srcNames(3),      srcNames(2)}, ...
+    'expFilt', {"",               "He-Xe",          "He-Xe"});
+minN      = 5;                                           % fewer points -> analysis skipped
+
+predNames = ["log_{10}Pe", "log_{10}M", "log_{10}|N_g|", "N_\rho"];
+predFun   = @(Ts) [log10(Ts.Pe), log10(Ts.M), log10(abs(Ts.Ng)), Ts.Nrho];
+
+anaSummary = table();
+
+for g = anaGroups
+    for a = 1:numel(anaSets)
+        sa = anaSets(a);
+        Ts = T(T.group == g & T.source == sa.source & isfinite(T.KLD0) & T.KLD0 > 0, :);
+        if sa.expFilt ~= "", Ts = Ts(startsWith(Ts.experiment, sa.expFilt), :); end
+        [~, iu] = unique(Ts.experiment, 'stable');   Ts = Ts(iu,:);     % one row per experiment
+        n = height(Ts);
+        if n < minN
+            warning('%s / %s: only %d experiments (< %d), analysis skipped', g, sa.name, n, minN);
+            continue
+        end
+
+        y = log10(Ts.KLD0);
+        X = predFun(Ts);
+        ok = all(isfinite([y X]), 2);   y = y(ok);  X = X(ok,:);  Ts = Ts(ok,:);  n = numel(y);
+        nP = size(X,2);
+
+        % ---- 1) correlations of each number with KL/D0
+        rP  = corr(X, y, 'Type','Pearson');
+        rS  = corr(X, y, 'Type','Spearman');
+        rPart = nan(nP,1);  pPart = nan(nP,1);
+        if n - nP - 1 >= 2                               % enough dof for partial correlation
+            for k = 1:nP
+                others = setdiff(1:nP, k);
+                [rPart(k), pPart(k)] = partialcorr(X(:,k), y, X(:,others));
+            end
+        end
+
+        % ---- 2) single-predictor R2 and standardized multiple regression
+        R2single = rP.^2;
+        Z  = zscore(X);   zy = zscore(y);
+        mdl = fitlm(Z, zy, 'VarNames', [cellstr(matlab.lang.makeValidName(predNames)) {'logKLD0'}]);
+        beta = mdl.Coefficients.Estimate(2:end);
+        ci   = coefCI(mdl);   ciB = ci(2:end,:);
+        Rx   = corrcoef(X);   VIF = diag(inv(Rx));       % variance inflation factor (collinearity)
+
+        anaSummary = [anaSummary; table(repmat(g,nP,1), repmat(sa.name,nP,1), repmat(n,nP,1), ...
+            predNames', rP, rS, rPart, pPart, R2single, beta, ciB(:,1), ciB(:,2), VIF, ...
+            repmat(mdl.Rsquared.Adjusted,nP,1), ...
+            'VariableNames', {'group','dataSet','n','predictor','r_Pearson','r_Spearman', ...
+            'r_partial','p_partial','R2_single','beta_std','beta_CI_lo','beta_CI_hi','VIF','R2adj_full'})]; %#ok<AGROW>
+
+        % ---- 3) PCA of the predictors, KL as supplementary variable
+        [coeff, score, ~, ~, expl] = pca(Z);
+        rKLpc = corr(score(:,1:2), y);                   % where KL points in PC1-PC2
+
+        % ---- figure: correlation matrix | correlations with KL | std. coefficients | PCA biplot
+        fig = figure('Position',[40 60 1700 900]);
+        tl  = tiledlayout(fig, 2, 2, 'TileSpacing','compact');
+
+        % (a) Spearman correlation matrix, KL included
+        ax = nexttile(tl);
+        allNames = ["log_{10}K_L/D_0", predNames];
+        C = corr([y X], 'Type','Spearman');
+        imagesc(ax, C);  colormap(ax, redblue(256));  clim(ax, [-1 1]);  colorbar(ax)
+        set(ax, 'XTick',1:numel(allNames), 'XTickLabel',allNames, ...
+                'YTick',1:numel(allNames), 'YTickLabel',allNames, 'FontSize',10)
+        axis(ax,'square')
+        for i1 = 1:size(C,1)
+            for i2 = 1:size(C,2)
+                text(ax, i2, i1, sprintf('%.2f', C(i1,i2)), 'HorizontalAlignment','center', ...
+                    'FontSize',9, 'Color', ternColor(abs(C(i1,i2)) > 0.6))
+            end
+        end
+        title(ax, 'Spearman correlation matrix', 'FontSize',11)
+
+        % (b) correlation of each number with KL/D0
+        ax = nexttile(tl);
+        bar(ax, categorical(predNames, predNames), [rP rS rPart]);
+        yline(ax, 0, 'k');  ylim(ax, [-1 1]);  grid(ax,'on')
+        legend(ax, {'Pearson','Spearman','partial (others fixed)'}, 'Location','best', 'FontSize',9)
+        ylabel(ax, 'correlation with log_{10}K_L/D_0')
+        title(ax, 'Correlation with K_L/D_0', 'FontSize',11)
+
+        % (c) standardized regression coefficients with 95% CI, VIF on top
+        ax = nexttile(tl);  hold(ax,'on')
+        xb = 1:nP;
+        bar(ax, xb, beta, 'FaceColor',[0.3 0.5 0.8]);
+        errorbar(ax, xb, beta, beta - ciB(:,1), ciB(:,2) - beta, 'k.', 'LineWidth',1)
+        for k = 1:nP
+            text(ax, xb(k), max(ciB(k,2), beta(k)) + 0.05, sprintf('VIF %.1f', VIF(k)), ...
+                'HorizontalAlignment','center', 'FontSize',8)
+        end
+        set(ax, 'XTick',xb, 'XTickLabel',predNames);  yline(ax, 0, 'k');  grid(ax,'on')
+        ylabel(ax, '\beta (standardized)')
+        title(ax, sprintf('log_{10}K_L/D_0 = \\Sigma \\beta_i z_i   (R^2_{adj} = %.2f, n = %d)', ...
+            mdl.Rsquared.Adjusted, n), 'FontSize',11)
+
+        % (d) PCA biplot, points coloured by KL/D0, KL drawn as supplementary arrow
+        ax = nexttile(tl);  hold(ax,'on')
+        sc = max(abs(score(:,1:2)), [], 'all');
+        scatter(ax, score(:,1), score(:,2), 90, y, 'filled', 'MarkerEdgeColor','k')
+        colormap(ax, parula);  cb = colorbar(ax);  cb.Label.String = 'log_{10}K_L/D_0';
+        text(ax, score(:,1), score(:,2), "  " + Ts.experiment, 'FontSize',7, 'Interpreter','none')
+        for k = 1:nP
+            quiver(ax, 0, 0, coeff(k,1)*sc, coeff(k,2)*sc, 0, 'Color',[0.2 0.2 0.2], ...
+                'LineWidth',1.2, 'MaxHeadSize',0.4)
+            text(ax, coeff(k,1)*sc*1.1, coeff(k,2)*sc*1.1, predNames(k), 'FontSize',10)
+        end
+        quiver(ax, 0, 0, rKLpc(1)*sc, rKLpc(2)*sc, 0, 'Color',[0.85 0.1 0.1], ...
+            'LineWidth',2, 'MaxHeadSize',0.4)
+        text(ax, rKLpc(1)*sc*1.1, rKLpc(2)*sc*1.1, 'K_L/D_0', 'Color',[0.85 0.1 0.1], 'FontWeight','bold')
+        xlabel(ax, sprintf('PC1 (%.0f%%)', expl(1)));  ylabel(ax, sprintf('PC2 (%.0f%%)', expl(2)))
+        axis(ax,'equal');  grid(ax,'on')
+        title(ax, 'PCA of the dimensionless numbers (arrows = loadings)', 'FontSize',11)
+
+        title(tl, sprintf('What controls K_L/D_0? -- %s, %s', sa.name, groupTitle.(g)), 'Interpreter','tex')
+        fname = "drivers_KLD0_" + matlab.lang.makeValidName(sa.name) + "_" + g;
+        saveas(fig, fullfile(pathExport, fname), 'png');
+        saveas(fig, fullfile(pathExport, fname), 'fig');
+        if closeAfterSave, close(fig); end
+    end
+end
+
+disp(anaSummary)
+writetable(anaSummary, fullfile(pathExport, 'drivers_KLD0_summary.xlsx'));
+
+%% Rose diagrams: importance of each dimensionless number for KL/D0
+
+roseMetrics = {'r_Spearman', '|r| Spearman (raw)'; ...
+               'r_partial',  '|r| partial (others fixed)'; ...
+               'beta_std',   '|\beta| standardized'};
+posCol = [0.85 0.33 0.10];      % KL/D0 increases with the number
+negCol = [0.00 0.45 0.74];      % KL/D0 decreases with the number
+
+for g = unique(anaSummary.group)'
+    for ds = unique(anaSummary.dataSet(anaSummary.group == g), 'stable')'
+        A  = anaSummary(anaSummary.group == g & anaSummary.dataSet == ds, :);
+        nP = height(A);
+        w  = 2*pi/nP;                                    % one sector per number
+        centers = (0:nP-1)*w;
+
+        fig = figure('Position',[60 80 1500 560]);
+        tl  = tiledlayout(fig, 1, size(roseMetrics,1), 'TileSpacing','compact');
+
+        for m = 1:size(roseMetrics,1)
+            vals = A.(roseMetrics{m,1});
+            rMax = max(1, max(abs(vals), [], 'omitnan'));    % correlations on 0-1, beta may exceed 1
+
+            pax = polaraxes(tl);  pax.Layout.Tile = m;  hold(pax,'on')
+            for k = 1:nP
+                if ~isfinite(vals(k)), continue, end
+                col = posCol;  if vals(k) < 0, col = negCol; end
+                polarhistogram(pax, 'BinEdges', centers(k) + [-0.45 0.45]*w, ...
+                    'BinCounts', abs(vals(k)), 'FaceColor', col, 'FaceAlpha', 0.85, ...
+                    'EdgeColor', 'k')
+            end
+            pax.ThetaTick      = rad2deg(centers);
+            pax.ThetaTickLabel = A.predictor;
+            pax.RLim           = [0 rMax];
+            pax.FontSize       = 10;
+            title(pax, roseMetrics{m,2}, 'FontSize',11)
+        end
+
+        % sign legend
+        axL = axes(fig, 'Position',[0 0 1 1], 'Visible','off');  hold(axL,'on')
+        patch(axL, NaN, NaN, posCol, 'DisplayName','K_L/D_0 increases with the number')
+        patch(axL, NaN, NaN, negCol, 'DisplayName','K_L/D_0 decreases with the number')
+        lgd = legend(axL, 'Location','south', 'Orientation','horizontal', 'FontSize',10);
+
+        n = A.n(1);
+        title(tl, sprintf('Importance of each number for K_L/D_0 -- %s, %s (n = %d)', ...
+            ds, groupTitle.(g), n), 'Interpreter','tex')
+
+        fname = "rose_drivers_" + matlab.lang.makeValidName(ds) + "_" + g;
+        saveas(fig, fullfile(pathExport, fname), 'png');
+        saveas(fig, fullfile(pathExport, fname), 'fig');
+        if closeAfterSave, close(fig); end
+    end
+end
+
+%% Radar chart: dimensionless numbers and KL/D0 (MFM), all experiments
+
+radarGroup = "measBegEnd";              % per-fluid measured conditions
+radarLog   = struct('Pe',true, 'M',false, 'absNg',true, 'Nrho',false, 'KLD0',true);
+rMin       = 0.15;                      % radius of the axis minimum (keeps polygons off the centre)
+
+Tr = T(T.group == radarGroup & T.source == srcNames(1) & isfinite(T.KLD0) & T.KLD0 > 0, :);
+Tr.absNg = abs(Tr.Ng);
+
+% axes: {column, label}
+axDef = {'Pe','Pe';  'M','M';  'absNg','|N_g|';  'KLD0','K_L/D_0 (MFM)'};
+nA = size(axDef,1);
+th = pi/2 - (0:nA-1)*2*pi/nA;           % first axis at the top, clockwise
+
+expSel = find(ismember([exps.label], Tr.experiment));
+V = nan(numel(expSel), nA);
+for ie = 1:numel(expSel)
+    rr = Tr(Tr.experiment == exps(expSel(ie)).label, :);
+    for a = 1:nA, V(ie,a) = rr.(axDef{a,1})(1); end
+end
+
+% min-max normalisation per axis (log where set)
+R = nan(size(V));  lo = nan(1,nA);  hi = nan(1,nA);
+for a = 1:nA
+    v = V(:,a);  isLog = radarLog.(axDef{a,1});
+    if isLog, v(v <= 0) = NaN; v = log10(v); end
+    lo(a) = min(v, [], 'omitnan');  hi(a) = max(v, [], 'omitnan');
+    if hi(a) > lo(a)
+        R(:,a) = rMin + (1-rMin)*(v - lo(a))/(hi(a) - lo(a));
+    else
+        R(:,a) = 0.5*(1+rMin);
+    end
+    if isLog, lo(a) = 10^lo(a); hi(a) = 10^hi(a); end
+end
+
+fig = figure('Position',[80 60 1000 900]);
+ax = axes(fig);  hold(ax,'on');  axis(ax,'equal','off')
+
+% grid: rings and spokes, with min / max printed at each spoke
+for ring = linspace(rMin, 1, 4)
+    plot(ax, ring*cos([th th(1)]), ring*sin([th th(1)]), '-', 'Color',[0.85 0.85 0.85], ...
+        'HandleVisibility','off')
+end
+for a = 1:nA
+    plot(ax, [0 cos(th(a))], [0 sin(th(a))], '-', 'Color',[0.6 0.6 0.6], 'HandleVisibility','off')
+    text(ax, 1.17*cos(th(a)), 1.17*sin(th(a)), axDef{a,2}, 'FontSize',13, ...
+        'FontWeight','bold', 'HorizontalAlignment','center')
+    text(ax, 1.04*cos(th(a)), 1.04*sin(th(a)) - 0.05, sprintf('%.3g', hi(a)), ...
+        'FontSize',8, 'Color',[0.4 0.4 0.4], 'HorizontalAlignment','center')
+    text(ax, rMin*cos(th(a)), rMin*sin(th(a)) - 0.05, sprintf('%.3g', lo(a)), ...
+        'FontSize',8, 'Color',[0.4 0.4 0.4], 'HorizontalAlignment','center')
+end
+
+% one polygon per experiment
+for ie = 1:numel(expSel)
+    ex = exps(expSel(ie));
+    okA = isfinite(R(ie,:));
+    if nnz(okA) < 3, continue, end
+    x = R(ie,okA).*cos(th(okA));  y = R(ie,okA).*sin(th(okA));
+    patch(ax, x, y, ex.color, 'FaceAlpha',0.10, 'EdgeColor',ex.color, 'LineWidth',2.2, ...
+        'DisplayName', legendKeys(ex))
+    plot(ax, x, y, 'o', 'MarkerFaceColor',ex.color, 'MarkerEdgeColor','k', ...
+        'MarkerSize',6, 'HandleVisibility','off')
+end
+
+xlim(ax, [-1.35 1.35]);  ylim(ax, [-1.3 1.3])
+legend(ax, 'Location','southoutside', 'Interpreter','none', 'FontSize',9, 'NumColumns',2)
+title(ax, sprintf('Dimensionless numbers and K_L/D_0 (MFM) per experiment -- %s', ...
+    groupTitle.(radarGroup)), 'Interpreter','tex', 'FontSize',12)
+
+fname = "radar_dimless_KLD0_MFM_" + radarGroup;
+saveas(fig, fullfile(pathExport, fname), 'png');
+saveas(fig, fullfile(pathExport, fname), 'fig');
  
 %% Local functions
  
@@ -510,4 +849,15 @@ for e = 1:numel(exSet)
         'MarkerEdgeColor',0.5*exSet(e).color, 'MarkerSize',9, ...
         'LineStyle','none', 'CapSize',4, 'HandleVisibility','off')
 end
+end
+
+function c = redblue(n)
+% diverging blue-white-red colormap
+h = floor(n/2);
+c = [[linspace(0.15,1,h)' linspace(0.3,1,h)' ones(h,1)]; ...
+     [ones(n-h,1) linspace(1,0.3,n-h)' linspace(1,0.15,n-h)']];
+end
+
+function c = ternColor(dark)
+if dark, c = [1 1 1]; else, c = [0 0 0]; end
 end
