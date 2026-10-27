@@ -17,6 +17,10 @@
 %   props_summary_pure_and_mix_errProp.mat   from main_fluidProps_errorProp.m
 %       cases, dimlessRows (M, Nrho, Ng, Pe +/- uncertainty), summaryRows (D0)
 %
+% MFM breakthrough-curve moments (tmean, sigma, sigma/tmean, skewness, excess
+% kurtosis) from expProcFullData.(key).(wEOS|woEOS).BT, used in the moment plots,
+% as an extra PCA variable ("+ skewness" data sets) and as supplementary arrows.
+%
 % KL sources per experiment
 %   MFM     expProcFullData.(key).(wEOS|woEOS).results.KL_cm2min (+ totUncertKL_cm2min)
 %   CT BTC  resultsAll.(ds).(variant).KL_BTC_CT_byZD.zD0p8.best
@@ -73,7 +77,17 @@ tolU = 0.15;    % relative, on interstitial velocity
 % (dimlessRows.Pep); these values are used only for an older .mat without it
 dpore_um  = 70;    % mean pore diameter of Gray Berea sandstone [um]
 ddpore_um = 0;     % uncertainty of d_pore [um] (0 = not propagated)
- 
+
+% moments of the MFM breakthrough curve (step injection, E(t) = dC/dt)
+%   tmeanBTC  first moment (mean arrival)            [tD]
+%   sigmaBTC  sqrt of the second central moment       [tD]
+%   cvBTC     sigma / tmean                           [-]
+%   skewBTC   third standardized moment (skewness)    [-]   (0 = symmetric, >0 = long late tail)
+%   kurtBTC   excess kurtosis                         [-]
+momTimeVar = "tD";     % column of expProcFullData.(key).(fitData).BT used as time
+momSmooth  = 5;        % points, moving median on C before cummax (noise in E = dC/dt)
+momCendMin = 0.95;     % warn if the curve ends below this C (tail missing -> skew biased)
+
 groupsToPlot   = ["theory","measAvg","measBegEnd"];
 closeAfterSave = false;
  
@@ -211,10 +225,17 @@ rows = cell(0,1);
 for e = 1:numel(exps)
     ex = exps(e);
     KLlist = struct('src',{},'KL',{},'dKL',{},'key',{});
- 
+    mom = momNaN();                               % BTC moments (MFM curve only)
+
     if ex.mfmKeyUsed ~= ""
         [KL, dKL, note] = getMFM(ex.mfmFileUsed, ex.mfmKeyUsed, mfmFitData, cache);
         KLlist = addKL(KLlist, srcNames(1), KL, dKL, ex.mfmKeyUsed, note, ex.label);
+        [mom, noteM] = getMFMMoments(ex.mfmFileUsed, ex.mfmKeyUsed, mfmFitData, cache, momTimeVar, momSmooth);
+        if noteM ~= "", warning('%s, MFM moments: %s', ex.label, noteM); end
+        if isfinite(mom.Cend) && mom.Cend < momCendMin
+            warning('%s: MFM BTC ends at C = %.2f -- sigma and skewness are biased (truncated tail)', ...
+                ex.label, mom.Cend);
+        end
     end
     if ex.ctKey ~= ""
         ctFile = findPostproc(ctRoot, ex.ctKey);
@@ -243,21 +264,31 @@ for e = 1:numel(exps)
                 relU = 0;  if d.u_cmmin > 0, relU = d.du_cmmin/d.u_cmmin; end
                 dPep = Pep*sqrt(relU^2 + (dD0(c)/D0(c))^2 + (ddpore_um/dpore_um)^2);
             end
+            if q.src == srcNames(1), mq = mom; else, mq = momNaN(); end   % moments: MFM rows only
             rows{end+1,1} = table(c, groupOfCase(c), ex.label, string(d.Pair), ...
                 d.Pmix_psig, d.Tmix_C, d.u_cmmin, q.src, q.key, ...
                 q.KL, q.dKL, D0(c), dD0(c), KLD0, dKLD0, ...
                 d.Pe, d.dPe, Pep, dPep, d.M, d.dM, d.Ng, d.dNg, d.Nrho, d.dNrho, PeKL, PeKL*q.dKL/q.KL, ...
+                mq.tmean, mq.sigma, mq.cv, mq.skew, mq.kurt, mq.Cend, ...
                 'VariableNames', {'caseIdx','group','experiment','pair', ...
                 'Pmix_psig','Tmix_C','u_cmmin','source','sourceKey', ...
                 'KL_cm2min','dKL_cm2min','D0_cm2min','dD0_cm2min','KLD0','dKLD0', ...
-                'Pe','dPe','Pep','dPep','M','dM','Ng','dNg','Nrho','dNrho','PeKL','dPeKL'}); %#ok<SAGROW>
+                'Pe','dPe','Pep','dPep','M','dM','Ng','dNg','Nrho','dNrho','PeKL','dPeKL', ...
+                'tmeanBTC','sigmaBTC','cvBTC','skewBTC','kurtBTC','CendBTC'}); %#ok<SAGROW>
         end
     end
 end
  
 if isempty(rows), error('No valid KL entries -- check the MFM index and keys in `exps`'); end
 T = vertcat(rows{:});
-disp(T(:, {'caseIdx','group','experiment','source','sourceKey','KL_cm2min','KLD0','Pe','M','Ng'}))
+
+% skewness expected from the ADE itself (inverse-Gaussian residence time, Pe_KL = uL/KL):
+% skew_ADE = 3*sqrt(2/Pe_KL). The excess skew_BTC - skew_ADE is the part of the tail
+% that the fitted KL does not explain (non-Fickian / late-time tailing).
+T.skewADE    = 3*sqrt(2./T.PeKL);
+T.skewExcess = T.skewBTC - T.skewADE;
+disp(T(:, {'caseIdx','group','experiment','source','sourceKey','KL_cm2min','KLD0','Pe','M','Ng', ...
+    'sigmaBTC','skewBTC'}))
 writetable(T, fullfile(pathExport, 'KL_dimless_all.xlsx'));
 % all experiments are kept for the PCA; every plot below uses the main (vertical) ones only
 Tall = T;
@@ -539,21 +570,104 @@ for g = pmGroups
     if closeAfterSave, close(fig); end
 end
 
+%% MFM BTC moments (sigma, skewness) vs the dimensionless numbers, and KL/D0 vs moments
+% main (vertical) experiments, MFM rows only; moments are a property of the curve,
+% so they are the same in every group -- only the x values (conditions) change
+
+momRows = {'sigmaBTC',   '\sigma (BTC) [t_D]', false; ...
+           'skewBTC',    'skewness (BTC) [-]',  false; ...
+           'skewExcess', 'skew_{BTC} - skew_{ADE} [-]', false; ...
+           'kurtBTC',    'excess kurtosis (BTC) [-]', false};     % {column, label, log y}
+momCols = xPanels([1 2 3 4], :);                                % Pe, Pe_p, M, Ng
+
+for g = groupsToPlot
+    Tg = T(T.group == g & T.source == srcNames(1) & isfinite(T.skewBTC), :);
+    if isempty(Tg), warning('No MFM moments for group %s', g); continue, end
+
+    % (1) moments vs dimensionless numbers
+    fig = figure('Position',[40 60 1700 950]);
+    tl  = tiledlayout(fig, size(momRows,1), size(momCols,1), 'TileSpacing','compact');
+    for r = 1:size(momRows,1)
+        for p = 1:size(momCols,1)
+            ax = nexttile(tl);  hold(ax,'on')
+            for e = 1:numel(exps)
+                sel = Tg.experiment == exps(e).label;
+                if ~any(sel), continue, end
+                scatter(ax, Tg.(momCols{p,1})(sel), Tg.(momRows{r,1})(sel), 80, exps(e).color, 'o', ...
+                    'filled', 'MarkerEdgeColor', 0.5*exps(e).color, 'DisplayName', exps(e).label)
+            end
+            if momRows{r,1} ~= "sigmaBTC", yline(ax, 0, ':k', 'HandleVisibility','off'); end
+            if momCols{p,4}, set(ax, 'XScale','log'), end
+            if momRows{r,3}, set(ax, 'YScale','log'), end
+            set(ax, 'FontSize',10);  grid(ax,'on')
+            if r == size(momRows,1), xlabel(ax, momCols{p,3}, 'FontSize',11), end
+            if p == 1, ylabel(ax, momRows{r,2}, 'FontSize',11), end
+        end
+    end
+    lgd = legend(nexttile(tl,1), 'Interpreter','none', 'FontSize',8, 'NumColumns',5);
+    lgd.Layout.Tile = 'south';
+    title(tl, sprintf('MFM breakthrough-curve moments vs dimensionless numbers -- %s', groupTitle.(g)), ...
+        'Interpreter','tex')
+    fname = "BTCmoments_vs_dimless_" + g;
+    saveas(fig, fullfile(pathExport, fname), 'png');  saveas(fig, fullfile(pathExport, fname), 'fig');
+    if closeAfterSave, close(fig); end
+end
+
+% (2) KL/D0 vs sigma and vs skewness (independent of group -> nominal rows)
+Tm = T(T.group == "theory" & T.source == srcNames(1) & isfinite(T.skewBTC) & T.KLD0 > 0, :);
+if ~isempty(Tm)
+    fig = figure('Position',[60 80 1300 520]);
+    tl  = tiledlayout(fig, 1, 3, 'TileSpacing','compact');
+    mv  = {'sigmaBTC','\sigma (BTC) [t_D]'; 'skewBTC','skewness (BTC) [-]'; ...
+           'skewExcess','skew_{BTC} - skew_{ADE} [-]'};
+    for p = 1:size(mv,1)
+        ax = nexttile(tl);  hold(ax,'on')
+        for e = 1:numel(exps)
+            sel = Tm.experiment == exps(e).label;
+            if ~any(sel), continue, end
+            scatter(ax, Tm.(mv{p,1})(sel), Tm.KLD0(sel), 90, exps(e).color, 'o', 'filled', ...
+                'MarkerEdgeColor', 0.5*exps(e).color, 'DisplayName', exps(e).label)
+        end
+        rs = corr(Tm.(mv{p,1}), log10(Tm.KLD0), 'Type','Spearman', 'Rows','complete');
+        if mv{p,1} == "skewExcess", xline(ax, 0, ':k', 'ADE', 'HandleVisibility','off'); end
+        set(ax, 'YScale','log', 'FontSize',11);  grid(ax,'on')
+        xlabel(ax, mv{p,2}, 'FontSize',12);  if p == 1, ylabel(ax, 'K_L / D_0 [-]', 'FontSize',12), end
+        title(ax, sprintf('Spearman r = %.2f', rs), 'FontSize',11)
+    end
+    lgd = legend(nexttile(tl,1), 'Interpreter','none', 'FontSize',8, 'NumColumns',5);
+    lgd.Layout.Tile = 'south';
+    title(tl, 'K_L/D_0 (MFM) vs breakthrough-curve moments', 'Interpreter','tex')
+    fname = "KLD0_vs_BTCmoments";
+    saveas(fig, fullfile(pathExport, fname), 'png');  saveas(fig, fullfile(pathExport, fname), 'fig');
+    if closeAfterSave, close(fig); end
+end
+
 %% Which dimensionless number controls KL? correlation, partial correlation, regression, PCA
 % Works on log10(KL/D0) vs log10(Pe), log10(M), log10(|Ng|), Nrho.
 % One analysis per (group, data set); each experiment counted once per data set.
 
 anaGroups = ["theory","measBegEnd"];                     % nominal, and per-fluid measured (init/final)
 
-% data sets: main vertical runs with Ng; all runs without Ng (Ng = 0 for horizontal runs)
+% data sets: main vertical runs with Ng; all runs without Ng (Ng = 0 for horizontal runs);
+% the same two again with the skewness of the MFM BTC added as a variable
 anaSets = struct( ...
-    'name',      {"MFM, main (vertical)",                   "MFM, all experiments"}, ...
-    'source',    {srcNames(1),                              srcNames(1)}, ...
-    'expFilt',   {"",                                       ""}, ...
-    'useAll',    {false,                                    true}, ...
-    'predNames', {["log_{10}Pe","log_{10}M","log_{10}|N_g|"], ["log_{10}Pe","log_{10}M"]}, ...
+    'name',      {"MFM, main (vertical)", "MFM, all experiments", ...
+                  "MFM, main (vertical) + skewness", "MFM, all experiments + skewness"}, ...
+    'source',    {srcNames(1), srcNames(1), srcNames(1), srcNames(1)}, ...
+    'expFilt',   {"", "", "", ""}, ...
+    'useAll',    {false, true, false, true}, ...
+    'predNames', {["log_{10}Pe","log_{10}M","log_{10}|N_g|"], ["log_{10}Pe","log_{10}M"], ...
+                  ["log_{10}Pe","log_{10}M","log_{10}|N_g|","skew"], ["log_{10}Pe","log_{10}M","skew"]}, ...
     'predFun',   {@(Ts) [log10(Ts.Pe), log10(Ts.M), log10(abs(Ts.Ng))], ...
-                  @(Ts) [log10(Ts.Pe), log10(Ts.M)]});
+                  @(Ts) [log10(Ts.Pe), log10(Ts.M)], ...
+                  @(Ts) [log10(Ts.Pe), log10(Ts.M), log10(abs(Ts.Ng)), Ts.skewBTC], ...
+                  @(Ts) [log10(Ts.Pe), log10(Ts.M), Ts.skewBTC]});
+
+% supplementary variables projected on the PCA biplot (not used to build the PCs):
+% {column, label, colour}
+pcaSupp = {'skewBTC',    'skew',             [0.95 0.55 0.10]; ...
+           'skewExcess', 'skew - skew_{ADE}', [0.10 0.60 0.30]; ...
+           'cvBTC',      '\sigma/t_{mean}',  [0.45 0.20 0.70]};
 
 minN = 5;                                                % fewer points -> analysis skipped
 
@@ -663,6 +777,18 @@ for g = anaGroups
         quiver(ax, 0, 0, rKLpc(1)*sc, rKLpc(2)*sc, 0, 'Color',[0.85 0.1 0.1], ...
             'LineWidth',2, 'MaxHeadSize',0.4)
         text(ax, rKLpc(1)*sc*1.1, rKLpc(2)*sc*1.1, 'K_L/D_0', 'Color',[0.85 0.1 0.1], 'FontWeight','bold')
+
+        % supplementary BTC-moment arrows (dashed), skipped if the variable is a predictor
+        for sv = 1:size(pcaSupp,1)
+            if any(strcmp(pcaSupp{sv,2}, predNames)), continue, end
+            v = Ts.(pcaSupp{sv,1});
+            if ~all(isfinite(v)) || std(v) == 0, continue, end
+            rV = corr(score(:,1:2), v);
+            quiver(ax, 0, 0, rV(1)*sc, rV(2)*sc, 0, 'Color',pcaSupp{sv,3}, 'LineStyle','--', ...
+                'LineWidth',1.8, 'MaxHeadSize',0.4)
+            text(ax, rV(1)*sc*1.1, rV(2)*sc*1.1, pcaSupp{sv,2} + " (supp.)", ...
+                'Color',pcaSupp{sv,3}, 'FontWeight','bold', 'FontSize',9)
+        end
         xlabel(ax, sprintf('PC1 (%.0f%%)', expl(1)));  ylabel(ax, sprintf('PC2 (%.0f%%)', expl(2)))
         axis(ax,'equal');  grid(ax,'on')
         title(ax, 'PCA of the dimensionless numbers (arrows = loadings)', 'FontSize',11)
@@ -735,14 +861,14 @@ end
 %% Radar chart: dimensionless numbers and KL/D0 (MFM), all experiments
 
 radarGroup = "measBegEnd";              % per-fluid measured conditions
-radarLog   = struct('Pe',true, 'M',false, 'absNg',true, 'Nrho',false, 'KLD0',true);
+radarLog   = struct('Pe',true, 'M',false, 'absNg',true, 'Nrho',false, 'KLD0',true, 'skewBTC',false);
 rMin       = 0.15;                      % radius of the axis minimum (keeps polygons off the centre)
 
 Tr = T(T.group == radarGroup & T.source == srcNames(1) & isfinite(T.KLD0) & T.KLD0 > 0, :);
 Tr.absNg = abs(Tr.Ng);
 
 % axes: {column, label}
-axDef = {'Pe','Pe';  'M','M';  'absNg','|N_g|';  'KLD0','K_L/D_0 (MFM)'};
+axDef = {'Pe','Pe';  'M','M';  'absNg','|N_g|';  'KLD0','K_L/D_0 (MFM)';  'skewBTC','skew (MFM BTC)'};
 nA = size(axDef,1);
 th = pi/2 - (0:nA-1)*2*pi/nA;           % first axis at the top, clockwise
 
@@ -900,6 +1026,52 @@ if ~isfield(e, fitData), note = fitData + " not processed"; return, end
 [KL, dKL] = mfmKL(e.(fitData).results);
 end
  
+function m = momNaN()
+m = struct('tmean',NaN, 'sigma',NaN, 'cv',NaN, 'skew',NaN, 'kurt',NaN, 'Cend',NaN);
+end
+
+function [m, note] = getMFMMoments(file, key, fitData, cache, tVar, nSmooth)
+% moments of the MFM breakthrough curve stored in expProcFullData.(key).(fitData).BT
+m = momNaN();  note = "";
+S = loadCached(file, cache);
+if isempty(S), note = "file not found"; return, end
+if ~isfield(S.expProcFullData, key), note = "key not in file"; return, end
+e = S.expProcFullData.(key);
+if ~isfield(e, fitData) || ~isfield(e.(fitData), 'BT'), note = fitData + ".BT not stored"; return, end
+BT = e.(fitData).BT;
+n  = fieldOrVarNames(BT);
+if ~ismember(char(tVar), n) || ~ismember('Ci', n)
+    note = "BT has no " + tVar + " or Ci column";  return
+end
+t = double(BT.(char(tVar)));  C = double(BT.Ci)/100;       % Ci stored in %
+m = btcMoments(t(:), C(:), nSmooth);
+end
+
+function m = btcMoments(t, C, nSmooth)
+% moments of E = dC/dt for a step-injection BTC, from the increments of a
+% cleaned (sorted, 0..1, monotonic) curve: weights w = dC at mid-interval times
+m = momNaN();
+ok = isfinite(t) & isfinite(C);
+t = t(ok);  C = C(ok);
+if numel(t) < 5, return, end
+[t, o] = sort(t);  C = C(o);
+[t, iu] = unique(t);  C = C(iu);
+C = min(max(C, 0), 1);
+C = cummax(movmedian(C, nSmooth));
+w  = diff(C);   tm = 0.5*(t(1:end-1) + t(2:end));
+W  = sum(w);
+if W <= 0, return, end
+mu  = sum(tm.*w)/W;
+v   = sum((tm - mu).^2.*w)/W;   s = sqrt(v);
+if s <= 0, return, end
+m.tmean = mu;
+m.sigma = s;
+m.cv    = s/mu;
+m.skew  = sum((tm - mu).^3.*w)/W / s^3;
+m.kurt  = sum((tm - mu).^4.*w)/W / s^4 - 3;
+m.Cend  = C(end);
+end
+
 function [KL, dKL] = mfmKL(r)
 n = fieldOrVarNames(r);
 KL = r.KL_cm2min(1);  dKL = NaN;
