@@ -1,7 +1,8 @@
 %% main_dimlessTranspNo.m
 % Relates the measured dispersion coefficient KL (scaled by the molecular
 % diffusion coefficient D0) to the dimensionless numbers of each case:
-%       KL/D0  vs  Pe, M, Ng, Nrho      (one figure per x-axis)
+%       KL/D0  vs  Pe, Pe_p, M, Ng, Nrho      (one figure per x-axis)
+% Pe = uL/D0 (core length), Pe_p = u d_pore/D0 (pore diameter, Gray Berea d_pore = 70 um)
 % for the UHS cases (H2-CO2, H2-CH4, MFM) and the XCT analog cases (He-Xe,
 % MFM analog + CT), and for any other experiment added later.
 %
@@ -34,14 +35,14 @@
 % Plots use the original (vertical) experiments only; the horizontal runs
 % enter only the driver analysis / PCA ("all experiments" set, without Ng).
 %
-% Colours: He-Xe 725 blue, He-Xe 900 green, H2-CH4 yellow, H2-CO2 purple,
+% Colours: He-Xe 725 green, He-Xe 900 blue, H2-CH4 yellow, H2-CO2 purple,
 %          lighter = lower Q, darker = higher Q.
 % Markers: MFM o, CT BTC square, CT width triangle, manual diamond.
 %
 % Outputs (pathExport)
 %   MFM_index.xlsx                        all MFM experiments found in this repo
 %   KL_dimless_all.xlsx                   one row per (case, KL source)
-%   KLD0_vs_<Pe|M|Ng|Nrho>_<group>.png/.fig
+%   KLD0_vs_<Pe|Pep|M|Ng|Nrho>_<group>.png/.fig
  
 %% SETTINGS
  
@@ -67,6 +68,11 @@ ctWidthStat  = "fit";                % "fit" (regression +/- SE) or "mean" (poin
 % tolerances for matching an MFM experiment to a case ("auto" keys)
 tolP = 0.05;    % relative, on nominal pressure
 tolU = 0.15;    % relative, on interstitial velocity
+
+% pore Peclet number Pe_p = u*d_pore/D0 -- normally read from main_fluidProps_errorProp
+% (dimlessRows.Pep); these values are used only for an older .mat without it
+dpore_um  = 70;    % mean pore diameter of Gray Berea sandstone [um]
+ddpore_um = 0;     % uncertainty of d_pore [um] (0 = not propagated)
  
 groupsToPlot   = ["theory","measAvg","measBegEnd"];
 closeAfterSave = false;
@@ -230,14 +236,21 @@ for e = 1:numel(exps)
             KLD0  = q.KL/D0(c);
             dKLD0 = KLD0*sqrt((q.dKL/q.KL)^2 + (dD0(c)/D0(c))^2);
             PeKL  = d.u_cmmin*L_cm/q.KL;
+            if ismember('Pep', dimless.Properties.VariableNames)  % from main_fluidProps_errorProp
+                Pep = d.Pep;  dPep = d.dPep;
+            else                                                  % older .mat: compute here
+                Pep  = d.u_cmmin*(dpore_um*1e-4)/D0(c);           % u*d_pore/D0, d_pore in cm
+                relU = 0;  if d.u_cmmin > 0, relU = d.du_cmmin/d.u_cmmin; end
+                dPep = Pep*sqrt(relU^2 + (dD0(c)/D0(c))^2 + (ddpore_um/dpore_um)^2);
+            end
             rows{end+1,1} = table(c, groupOfCase(c), ex.label, string(d.Pair), ...
                 d.Pmix_psig, d.Tmix_C, d.u_cmmin, q.src, q.key, ...
                 q.KL, q.dKL, D0(c), dD0(c), KLD0, dKLD0, ...
-                d.Pe, d.dPe, d.M, d.dM, d.Ng, d.dNg, d.Nrho, d.dNrho, PeKL, PeKL*q.dKL/q.KL, ...
+                d.Pe, d.dPe, Pep, dPep, d.M, d.dM, d.Ng, d.dNg, d.Nrho, d.dNrho, PeKL, PeKL*q.dKL/q.KL, ...
                 'VariableNames', {'caseIdx','group','experiment','pair', ...
                 'Pmix_psig','Tmix_C','u_cmmin','source','sourceKey', ...
                 'KL_cm2min','dKL_cm2min','D0_cm2min','dD0_cm2min','KLD0','dKLD0', ...
-                'Pe','dPe','M','dM','Ng','dNg','Nrho','dNrho','PeKL','dPeKL'}); %#ok<SAGROW>
+                'Pe','dPe','Pep','dPep','M','dM','Ng','dNg','Nrho','dNrho','PeKL','dPeKL'}); %#ok<SAGROW>
         end
     end
 end
@@ -254,6 +267,7 @@ T    = T(ismember(T.experiment, [exps([exps.main]).label]), :);
  
 % {x column, dx column, x label, log x, file tag}
 xPanels = {'Pe',   'dPe',   'Pe = uL/D_0 [-]',                     true,  'Pe'; ...
+           'Pep',  'dPep',  'Pe_p = u d_{pore}/D_0 [-]',           true,  'Pep'; ...
            'M',    'dM',    'M = \mu_2/\mu_1 [-]',                 false, 'M'; ...
            'Ng',   'dNg',   'N_g [-]',                             false, 'Ng'; ...
            'Nrho', 'dNrho', 'N_\rho = (\rho_1-\rho_2)/\rho_2 [-]', false, 'Nrho'};

@@ -32,7 +32,9 @@
 %   M    = mu2/mu1                           viscosity ratio (displaced/displacing)
 %   Nrho = (rho1-rho2)/rho2                   density number
 %   Ng   = K*(rho1-rho2)*g*sin(theta)/(mu2*u) gravity number
-%   Pe   = u*L/D12                            Peclet number
+%   Pe   = u*L/D12                            Peclet number (core length)
+%   Pep  = u*d_pore/D12                       pore Peclet number (pore diameter,
+%                                             Gray Berea d_pore = 70 um, see INPUT)
 %   fluid "1" = fl{1} (injected/displacing) at (T1,P1),
 %   fluid "2" = fl{2} (displaced)           at (T2,P2),
 %   D12 at the 50/50 mixture point (Tmix,Pmix).
@@ -57,6 +59,10 @@ addpath('functions/');
 psig2MPa = @(psig) (psig + 14.696) * 0.00689476;
 
 includeSpreadInMix = false;   % see header: add |T1-T2|/2, |P1-P2|/2 to mix uncertainty
+
+% pore Peclet number Pe_p = u*d_pore/D12
+dpore_um  = 70;    % mean pore diameter of Gray Berea sandstone [um]
+ddpore_um = 0;     % uncertainty of d_pore [um] (0 = not propagated)
 
 % ======================================================================
 % CASE TABLE -- one row per case
@@ -291,6 +297,11 @@ for c = 1:numel(cases)
     Pe  = u_SI*L_SI/D12_SI;
     dPe = Pe*sqrt( (du_SI/u_SI)^2 + (dD12_SI/D12_SI)^2 );
 
+    % pore Peclet number Pe_p = u*d_pore/D12 (same D12)
+    dpore_SI = dpore_um*1e-6;              % um -> m
+    Pep  = u_SI*dpore_SI/D12_SI;
+    dPep = Pep*sqrt( (du_SI/u_SI)^2 + (dD12_SI/D12_SI)^2 + (ddpore_um/dpore_um)^2 );
+
     dimlessRows = [dimlessRows; table( ...
         {cases(c).label}, c, cases(c).group, cases(c).key, ...
         T1_C, dT1_C, P1_psig, dP1_psig, ...
@@ -299,14 +310,14 @@ for c = 1:numel(cases)
         cases(c).u_cmmin, cases(c).du_cmmin, cases(c).K_mD, cases(c).dK_mD, ...
         cases(c).theta_deg, cases(c).L_in, ...
         mu1, dmu1, mu2, dmu2, ...
-        M, dM, Nrho, dNrho, Ng, dNg, Pe, dPe, ...
+        M, dM, Nrho, dNrho, Ng, dNg, Pe, dPe, Pep, dPep, dpore_um, ...
         'VariableNames', {'Pair','caseRow','group','key', ...
         'T1_C','dT1_C','P1_psig','dP1_psig', ...
         'T2_C','dT2_C','P2_psig','dP2_psig', ...
         'Tmix_C','dTmix_C','Pmix_psig','dPmix_psig', ...
         'u_cmmin','du_cmmin','K_mD','dK_mD','theta_deg','L_in', ...
         'mu1_Pas','dmu1_Pas','mu2_Pas','dmu2_Pas', ...
-        'M','dM','Nrho','dNrho','Ng','dNg','Pe','dPe'})]; %#ok<AGROW>
+        'M','dM','Nrho','dNrho','Ng','dNg','Pe','dPe','Pep','dPep','dpore_um'})]; %#ok<AGROW>
 end
 
 disp(summaryRows)
@@ -316,7 +327,8 @@ disp(dimlessRows)
 writetable(dimlessRows, pathExportAll + "dimless_numbers_errProp.xlsx");
 
 save(pathExportAll + "props_summary_pure_and_mix_errProp.mat", ...
-    'summaryRows', 'dimlessRows', 'filedataDiff', 'cases', 'includeSpreadInMix');
+    'summaryRows', 'dimlessRows', 'filedataDiff', 'cases', 'includeSpreadInMix', ...
+    'dpore_um', 'ddpore_um');
 
 %% local helpers
 
