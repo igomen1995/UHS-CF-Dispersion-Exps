@@ -22,10 +22,17 @@
 %   CT W    resultsAll.(ds).(variant).KL_front_CT.width_C20_80_int0
 %   manual  KL +/- dKL typed in (experiments without a .mat file)
 %
-% Rows of `cases` (same order as main_fluidProps_errorProp.m):
-%    1- 8  theory      nominal conditions (scaling analysis)
-%    9-17  measAvg     average measured conditions
-%   18-26  measBegEnd  per-fluid conditions (beginning / end of the run)
+% Rows of `cases` (same order as caseTable in main_fluidProps_errorProp.m;
+% the group of every row is read from cases(c).group):
+%    1- 8  theory      original (vertical) runs, nominal conditions
+%    9-17  measAvg     original runs, average measured conditions
+%   18-26  measBegEnd  original runs, per-fluid conditions (beginning / end)
+%   27-34  theory      horizontal runs (H2-CO2 32C, He-CO2 40C, 1500 psig), nominal
+%   35-43  measAvg     horizontal runs, average measured conditions
+%   44-52  measBegEnd  horizontal runs, per-fluid conditions (beginning / end)
+%
+% Plots use the original (vertical) experiments only; the horizontal runs
+% enter only the driver analysis / PCA ("all experiments" set, without Ng).
 %
 % Colours: He-Xe 725 blue, He-Xe 900 green, H2-CH4 yellow, H2-CO2 purple,
 %          lighter = lower Q, darker = higher Q.
@@ -100,25 +107,27 @@ shade   = @(cL,cD,n) cL + (cD - cL).*linspace(0,1,n)';
 orangeH = shade([1.00 0.78 0.55], [0.80 0.35 0.00], 3);     % H2-CO2 32C 1500 H: Q1, Q2, Q5
 redHe   = shade([0.98 0.72 0.72], [0.50 0.00 0.05], 5);     % He-CO2 40C 1500 H: Q05 ... Q10
 
+% horizontal runs: idx = [theory measAvg measBegEnd] rows of `cases`
 newExps = { ...
- "H2-CO2 H Q1",    27, orangeH(1,:), "CF_H2_CO2_T32_P1500_H_Q1_R1"; ...
- "H2-CO2 H Q2",    28, orangeH(2,:), "CF_H2_CO2_T32_P1500_H_Q2_R1"; ...
- "H2-CO2 H Q5",    29, orangeH(3,:), "CF_H2_CO2_T32_P1500_H_Q5_R1"; ...
- "He-CO2 H Q05",   30, redHe(1,:),   "CF_He_CO2_T40_P1500_H_Q05_R1"; ...
- "He-CO2 H Q1",    31, redHe(2,:),   "CF_He_CO2_T40_P1500_H_Q1_R1"; ...
- "He-CO2 H Q1 R2", 31, redHe(2,:),   "CF_He_CO2_T40_P1500_H_Q1_R2"; ...
- "He-CO2 H Q2",    32, redHe(3,:),   "CF_He_CO2_T40_P1500_H_Q2_R1"; ...
- "He-CO2 H Q5",    33, redHe(4,:),   "CF_He_CO2_T40_P1500_H_Q5_R1"; ...
- "He-CO2 H Q10",   34, redHe(5,:),   "CF_He_CO2_T40_P1500_H_Q10_R1"};
+ "H2-CO2 H Q1",    [27 35 44], orangeH(1,:), "CF_H2_CO2_T32_P1500_H_Q1_R1"; ...
+ "H2-CO2 H Q2",    [28 36 45], orangeH(2,:), "CF_H2_CO2_T32_P1500_H_Q2_R1"; ...
+ "H2-CO2 H Q5",    [29 37 46], orangeH(3,:), "CF_H2_CO2_T32_P1500_H_Q5_R1"; ...
+ "He-CO2 H Q05",   [30 38 47], redHe(1,:),   "CF_He_CO2_T40_P1500_H_Q05_R1"; ...
+ "He-CO2 H Q1",    [31 39 48], redHe(2,:),   "CF_He_CO2_T40_P1500_H_Q1_R1"; ...
+ "He-CO2 H Q1 R2", [31 40 49], redHe(2,:),   "CF_He_CO2_T40_P1500_H_Q1_R2"; ...
+ "He-CO2 H Q2",    [32 41 50], redHe(3,:),   "CF_He_CO2_T40_P1500_H_Q2_R1"; ...
+ "He-CO2 H Q5",    [33 42 51], redHe(4,:),   "CF_He_CO2_T40_P1500_H_Q5_R1"; ...
+ "He-CO2 H Q10",   [34 43 52], redHe(5,:),   "CF_He_CO2_T40_P1500_H_Q10_R1"};
 for k = 1:size(newExps,1)
     exps(end+1) = struct('label',newExps{k,1}, 'idx',newExps{k,2}, 'color',newExps{k,3}, ...
         'mfmKey',newExps{k,4}, 'mfmRun',1, 'ctKey',"", 'KL',NaN, 'dKL',NaN, 'main',false); %#ok<SAGROW>
 end
- 
-% other experiments later, e.g. (row 27 added in main_fluidProps_errorProp.m):
-% exps(end+1) = struct('label',"He-CO2 1500 Q05",'idx',27,'color',[0.85 0.33 0.10], ...
-%     'mfmKey',"CF_He_CO2_T40_P1500_H_Q05_R1",'mfmRun',1,'ctKey',"",'KL',NaN,'dKL',NaN);
- 
+
+% other experiments later: add a row to caseTable in main_fluidProps_errorProp.m,
+% then append here with its row numbers, e.g.
+% exps(end+1) = struct('label',"New exp",'idx',[53 54 55],'color',[0.85 0.33 0.10], ...
+%     'mfmKey',"CF_...",'mfmRun',1,'ctKey',"",'KL',NaN,'dKL',NaN,'main',false);
+
 srcNames = ["MFM", "CT BTC zD=" + strrep(extractAfter(ctBTCtag,"zD"),"p","."), ...
             "CT width " + regexprep(ctWidthTag, '^width_C(\d+)_(\d+).*$', '$1-$2'), "manual"];
 srcMk    = ["o", "s", "^", "d"];
@@ -136,9 +145,35 @@ end
 D0  = mixRows.D12_cm2min;
 dD0 = mixRows.dD12_cm2min;
  
-groupOfCase = [repmat("theory",1,8), repmat("measAvg",1,9), repmat("measBegEnd",1,9)];
-groupOfCase(end+1:nCase) = "theory";       % rows added later are nominal conditions
-groupOfCase = groupOfCase(1:nCase);
+% group of every row, as stored by main_fluidProps_errorProp.m
+if isfield(cases, 'group')
+    groupOfCase = string({cases.group});
+else                                       % older .mat without the group field
+    groupOfCase = [repmat("theory",1,8), repmat("measAvg",1,9), repmat("measBegEnd",1,9)];
+    groupOfCase(end+1:nCase) = "theory";
+    groupOfCase = groupOfCase(1:nCase);
+    warning('cases has no group field -- re-run main_fluidProps_errorProp.m');
+end
+if isfield(cases, 'key'), keyOfCase = string({cases.key}); else, keyOfCase = strings(1,nCase); end
+
+% check: rows of every experiment exist, one per group, and the key matches (when set)
+for e = 1:numel(exps)
+    ix = exps(e).idx(:)';
+    if any(ix > nCase)
+        warning('%s: rows %s beyond the %d cases -- re-run main_fluidProps_errorProp.m', ...
+            exps(e).label, mat2str(ix(ix > nCase)), nCase);
+        continue
+    end
+    if numel(unique(groupOfCase(ix))) < numel(ix)
+        warning('%s: rows %s repeat a group (%s)', exps(e).label, mat2str(ix), strjoin(groupOfCase(ix), ', '));
+    end
+    k = keyOfCase(ix(groupOfCase(ix) ~= "theory"));   % theory rows may be shared (Q1 R1/R2)
+    k = k(k ~= "");
+    if exps(e).mfmKey ~= "auto" && exps(e).mfmKey ~= "" && any(k ~= exps(e).mfmKey)
+        warning('%s: rows %s carry key(s) %s, expected %s', exps(e).label, mat2str(ix), ...
+            strjoin(unique(k), ', '), exps(e).mfmKey);
+    end
+end
  
 %% MFM index: every experiment processed by main_Processing.m in this repo
  
@@ -426,12 +461,14 @@ end
 %% KL/D0 vs Pe, marker colour = M
 
 pmSources  = srcNames(1);          % MFM; add srcNames(2:3) to include the XCT CT values
-pmGroups   = ["theory"];           % nominal conditions (all experiments, incl. horizontal ones)
+pmGroups   = ["theory","measBegEnd"];   % nominal and per-fluid measured conditions
+pmUseAll   = false;                % true: include the horizontal runs (squares, Ng = 0)
 pmLogM     = true;                 % log colour scale for M
 pmLabels   = true;                 % experiment label next to each marker
 
+if pmUseAll, Tpm = Tall; else, Tpm = T; end
 for g = pmGroups
-    Tg = T(T.group == g & ismember(T.source, pmSources) & isfinite(T.KLD0) & T.KLD0 > 0, :);
+    Tg = Tpm(Tpm.group == g & ismember(Tpm.source, pmSources) & isfinite(Tpm.KLD0) & Tpm.KLD0 > 0, :);
     if isempty(Tg), warning('No entries for group %s', g); continue, end
 
     cM = Tg.M;  if pmLogM, cM = log10(cM); end
@@ -482,7 +519,7 @@ for g = pmGroups
     legend(ax, 'Location','northwest', 'FontSize',9)
     title(ax, sprintf('K_L/D_0 vs Pe, colour = M -- %s', groupTitle.(g)), 'Interpreter','tex')
 
-    fname = "KLD0_vs_Pe_colorM_" + g;
+    fname = "KLD0_vs_Pe_colorM_" + g + ternStr(pmUseAll, "_allExp", "");
     saveas(fig, fullfile(pathExport, fname), 'png');
     saveas(fig, fullfile(pathExport, fname), 'fig');
     if closeAfterSave, close(fig); end
@@ -492,7 +529,7 @@ end
 % Works on log10(KL/D0) vs log10(Pe), log10(M), log10(|Ng|), Nrho.
 % One analysis per (group, data set); each experiment counted once per data set.
 
-anaGroups = ["theory"];                                  % nominal conditions (only group for the new runs)
+anaGroups = ["theory","measBegEnd"];                     % nominal, and per-fluid measured (init/final)
 
 % data sets: main vertical runs with Ng; all runs without Ng (Ng = 0 for horizontal runs)
 anaSets = struct( ...
@@ -954,4 +991,8 @@ end
 
 function c = ternColor(dark)
 if dark, c = [1 1 1]; else, c = [0 0 0]; end
+end
+
+function s = ternStr(cond, a, b)
+if cond, s = a; else, s = b; end
 end
