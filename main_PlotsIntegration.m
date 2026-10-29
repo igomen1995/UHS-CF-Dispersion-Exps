@@ -273,7 +273,13 @@
 %
 %       allAuthors_KLD0_vs_Pe_colorNg.png/.fig
 %
-%       KL_allAuthors_used.xlsx      (every value used, incl. D0 source)
+%       allAuthors_KLD0_vs_Pe_color<M|Ng>_<Rock>.png/.fig   (same, one rock type)
+%
+%       KL_allAuthors_results.xlsx   (input sheets completed: filled KL, D0,
+%                                     alpha, tau, mu, rho + M, Ng, Nrho, Pe,
+%                                     KL/D0 and uncertainties, D0 source,
+%                                     plotted flag; one sheet per input sheet
+%                                     + "all")
 %
 % -------------------------------------------------------------------------
 % SCIENTIFIC APPLICATIONS
@@ -491,6 +497,7 @@ aaD0Mode       = "thorne";        % "thorne": Thorne-Enskog D12 for every row | 
 aaDiffConfig   = fullfile(thisRepo, 'inputDiffConfig.xlsx');   % LJ parameters (as main_fluidProps_errorProp)
 aaNgColour     = "signedlog";     % "signedlog" (sign*log10(1+|Ng|)) | "linear"
 aaMarkers      = {'o','s','^','d','v','p','h','<','>'};
+aaResultsFile  = fullfile(pathExport, 'KL_allAuthors_results.xlsx');   % completed input sheets
 
 if ~isfile(allAuthorsFile)
     warning('All-authors file not found (%s) -- figures 3-4 skipped', allAuthorsFile);
@@ -607,9 +614,13 @@ else
         end
     end
 
-    % ---- viscosity / density from REFPROP where empty (and no M/Ng from the props file)
-    needP = (~isfinite(A.mu1_Pas) | ~isfinite(A.mu2_Pas) | ~isfinite(A.rho1_kgm3) | ~isfinite(A.rho2_kgm3)) ...
-            & ~isfinite(Mown);
+    % ---- pressure in both units (for the results sheet and REFPROP)
+    A.P_MPa(~isfinite(A.P_MPa))   = (A.P_psig(~isfinite(A.P_MPa)) + 14.696)*0.00689476;
+    A.P_psig(~isfinite(A.P_psig)) = A.P_MPa(~isfinite(A.P_psig))/0.00689476 - 14.696;
+
+    % ---- viscosity / density from REFPROP where empty (own rows too, for the results sheet;
+    %      their M and Ng still come from the props file, see below)
+    needP = ~isfinite(A.mu1_Pas) | ~isfinite(A.mu2_Pas) | ~isfinite(A.rho1_kgm3) | ~isfinite(A.rho2_kgm3);
     if any(needP)
         try
             if isfolder(fullfile(thisRepo,'functions')), addpath(fullfile(thisRepo,'functions')); end
@@ -641,8 +652,12 @@ else
     A.M  = A.mu2_Pas ./ A.mu1_Pas;
     A.Ng = A.K_mD*9.869e-16 .* (A.rho1_kgm3 - A.rho2_kgm3) * 9.81 .* sind(A.theta_deg) ...
            ./ (A.mu2_Pas .* A.u_cmmin/6000);
-    A.M(~isfinite(A.M))   = Mown(~isfinite(A.M));               % own rows: props file values
-    A.Ng(~isfinite(A.Ng)) = Ngown(~isfinite(A.Ng));
+    A.Nrho = (A.rho1_kgm3 - A.rho2_kgm3) ./ A.rho2_kgm3;
+    A.M_source  = repmat("REFPROP (sheet T, P)", nA, 1);
+    A.M_source(~isfinite(A.M)) = "";
+    A.M(isfinite(Mown))   = Mown(isfinite(Mown));               % own rows: props file values
+    A.Ng(isfinite(Ngown)) = Ngown(isfinite(Ngown));
+    A.M_source(isfinite(Mown)) = "props file (" + aaOwnGroup + ")";
     if aaPeAlpha == "alphaTau"
         aUse = A.alpha_tau_cm;  daUse = A.d_alpha_tau_cm;  peLbl = 'Pe = u \alpha_\tau / D_0';
     else
@@ -657,26 +672,74 @@ else
     A.dKLD0 = A.KLD0 .* sqrt(relKL.^2 + relD0.^2);
 
     ok = isfinite(A.Pe) & A.Pe > 0 & isfinite(A.KLD0) & A.KLD0 > 0;
+    A.plotted = ok;
     if any(~ok)
         warning('All authors: %d rows without KL, D0 or alpha are not plotted (%s)', nnz(~ok), ...
             strjoin(unique(A.Experiment(~ok)), ', '));
     end
+
+    % ---- results workbook: the input sheets completed with every value used and computed
+    outVars = ["Author","Ref","Dataset","Experiment","Rock","Fluid1","Fluid2", ...
+               "T_C","P_MPa","P_psig","L_cm","porosity","K_mD","theta_deg","u_cmmin", ...
+               "KL_cm2min","dKL_cm2min","D0_cm2min","dD0_cm2min","D0_reported_cm2min","D0_source", ...
+               "alpha_cm","d_alpha_cm","alpha_tau_cm","d_alpha_tau_cm","tau","d_tau", ...
+               "mu1_Pas","mu2_Pas","rho1_kgm3","rho2_kgm3", ...
+               "M","M_source","Ng","Nrho","Pe","dPe","KLD0","dKLD0","plotted","notes"];
+    if isfile(aaResultsFile), delete(aaResultsFile); end
+    for s = 1:numel(aaSheets)
+        writetable(A(A.sheet == s, cellstr(outVars)), aaResultsFile, 'Sheet', char(aaSheets(s)));
+    end
+    writetable(A(:, cellstr(outVars)), aaResultsFile, 'Sheet', 'all');
+    fprintf('All authors: results written to %s\n', aaResultsFile);
+
     A = A(ok, :);
-    writetable(A, fullfile(pathExport, 'KL_allAuthors_used.xlsx'));
+    aaAuthAll = unique(A.Author, 'stable');      % fixed author -> marker map for every figure
 
     if ~isempty(A)
         plotAllAuthors(A, A.M,  'M = \mu_2/\mu_1 [-]', "log", aaMarkers, peLbl, ...
-            'K_L/D_0 vs Pe, all authors -- colour = M', "allAuthors_KLD0_vs_Pe_colorM", pathExport, closeAfterSave);
+            'K_L/D_0 vs Pe, all authors -- colour = M', "allAuthors_KLD0_vs_Pe_colorM", ...
+            pathExport, closeAfterSave, aaAuthAll);
         plotAllAuthors(A, A.Ng, 'N_g [-]', aaNgColour, aaMarkers, peLbl, ...
-            'K_L/D_0 vs Pe, all authors -- colour = N_g', "allAuthors_KLD0_vs_Pe_colorNg", pathExport, closeAfterSave);
+            'K_L/D_0 vs Pe, all authors -- colour = N_g', "allAuthors_KLD0_vs_Pe_colorNg", ...
+            pathExport, closeAfterSave, aaAuthAll);
+    end
+end
+
+%% Same rock type: figures 3-4 again for one rock at a time
+% Rock names are matched as case-insensitive substrings of the Rock column,
+% so "Berea" groups "Berea" and "Gray Berea". Markers keep the same author map
+% as the all-authors figures; colour limits follow the points of each rock.
+
+%aaRockSets = ["Berea"];   % add rock types here
+aaRockSets = ["Berea", "Fontainebleau", "Bentheimer"];   % add rock types here
+aaRockMinN = 0;                                           % fewer plotted points -> skipped
+
+if exist('A', 'var') && istable(A) && ~isempty(A) && ismember('Pe', A.Properties.VariableNames)
+    for rk = aaRockSets
+        sel = contains(lower(A.Rock), lower(rk));
+        if nnz(sel) < aaRockMinN
+            fprintf('Rock %s: %d plotted points (< %d) -- figures skipped\n', rk, nnz(sel), aaRockMinN);
+            continue
+        end
+        Ar  = A(sel, :);
+        tag = matlab.lang.makeValidName(rk);
+        fprintf('Rock %s: %d points (%s)\n', rk, height(Ar), strjoin(unique(Ar.Author, 'stable'), ', '));
+        plotAllAuthors(Ar, Ar.M,  'M = \mu_2/\mu_1 [-]', "log", aaMarkers, peLbl, ...
+            sprintf('K_L/D_0 vs Pe, %s -- colour = M', rk), "allAuthors_KLD0_vs_Pe_colorM_" + tag, ...
+            pathExport, closeAfterSave, aaAuthAll);
+        plotAllAuthors(Ar, Ar.Ng, 'N_g [-]', aaNgColour, aaMarkers, peLbl, ...
+            sprintf('K_L/D_0 vs Pe, %s -- colour = N_g', rk), "allAuthors_KLD0_vs_Pe_colorNg_" + tag, ...
+            pathExport, closeAfterSave, aaAuthAll);
     end
 end
 
 
 %% Local functions
 
-function plotAllAuthors(A, cv, cLabel, cMode, mk, peLbl, ttl, fname, pathExport, closeAfterSave)
-% KL/D0 vs Pe, marker = author, colour = cv (M or Ng); rows with NaN colour drawn open grey
+function plotAllAuthors(A, cv, cLabel, cMode, mk, peLbl, ttl, fname, pathExport, closeAfterSave, authAll)
+% KL/D0 vs Pe, marker = author, colour = cv (M or Ng); rows with NaN colour drawn open grey.
+% authAll (optional): full author list -> the same marker per author in every figure
+if nargin < 11 || isempty(authAll), authAll = unique(A.Author, 'stable'); end
 fig = figure('Position',[80 80 1150 760]);
 ax  = axes(fig);  hold(ax,'on')
 
@@ -695,7 +758,8 @@ errorbar(ax, A.Pe, A.KLD0, dyLow, dy, dxLow, dx, 'LineStyle','none', 'Color',[0.
 auth = unique(A.Author, 'stable');
 for k = 1:numel(auth)
     s   = A.Author == auth(k);
-    m   = mk{mod(k-1, numel(mk)) + 1};
+    ka  = find(authAll == auth(k), 1);  if isempty(ka), ka = k; end
+    m   = mk{mod(ka-1, numel(mk)) + 1};
     own = any(A.sheet(s) <= 2);
     lw  = 0.6;  sz = 60;
     if own, lw = 1.4; sz = 95; end
@@ -709,9 +773,9 @@ for k = 1:numel(auth)
     end
 end
 
-xr = logspace(floor(log10(min(A.Pe))) - 0.2, ceil(log10(max(A.Pe))) + 0.2, 200);
-plot(ax, xr, xr,     'k--', 'LineWidth',1, 'DisplayName','K_L/D_0 = Pe')
-plot(ax, xr, 1 + xr, 'k:',  'LineWidth',1, 'DisplayName','K_L/D_0 = 1 + Pe  (\tau = 1)')
+% xr = logspace(floor(log10(min(A.Pe))) - 0.2, ceil(log10(max(A.Pe))) + 0.2, 200);
+% plot(ax, xr, xr,     'k--', 'LineWidth',1, 'DisplayName','K_L/D_0 = Pe')
+% plot(ax, xr, 1 + xr, 'k:',  'LineWidth',1, 'DisplayName','K_L/D_0 = 1 + Pe  (\tau = 1)')
 
 set(ax, 'XScale','log', 'YScale','log', 'FontSize',12);  grid(ax,'on')
 xlabel(ax, peLbl, 'FontSize',13);  ylabel(ax, 'K_L / D_0 [-]', 'FontSize',13)
