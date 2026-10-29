@@ -344,7 +344,7 @@ dtD_valid_min = 0;     % dimensionless delay (pore volumes)
 dtD_valid_max = 5;
 min_exp_dtfixed = 0; 
 
-beta_tau = 1.0;   % exponent of the dispersive term in KL = D0*(1/tau + C2*Pe^beta); 1 = linear
+beta_tau = 1.2;   % exponent of the dispersive term in KL = D0*(1/tau + C2*Pe^beta); 1 = linear
 
 %% IMPORT variables
 
