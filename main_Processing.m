@@ -1708,8 +1708,8 @@ if nCases > 0
     saveas(gcf, pathExportAll + "KLvsVel_" + save_all, 'png')
     savefig(gcf, pathExportAll + "KLvsVel_" + save_all)
 
-    % ---------- KL/D0 vs Pe, all cases (collapse onto one curve with pooled alpha)
-    figure('Position', [100 100 1000 700]); hold on      % [left bottom width height] in pixels
+        % ---------- (1) KL/D0 vs Pe, alpha-only fit: Pe = u*alpha/D0
+    figure('Position', [100 100 1000 700]); hold on
     xall = [];  yall = [];
     for c = 1:nCases
         g   = cases(c);
@@ -1717,14 +1717,14 @@ if nCases > 0
         col = caseColors(c,:);  mk = markers{mod(c-1,nMark)+1};
 
         if usePooled
-            alpha_x = pooled.alpha_cm/100;                       % m
+            alpha_x = pooled.alpha_cm/100;                         % m
         else
             ga = find(alpha_table.GroupID == g, 1);
             if isempty(ga) || ~isfinite(alpha_table.alpha_SI(ga)), continue, end
             alpha_x = alpha_table.alpha_SI(ga);
         end
 
-        x  = Tg.u_SI.*alpha_x./Tg.D12_SI;                       % each experiment its own D0
+        x  = Tg.u_SI.*alpha_x./Tg.D12_SI;                         % each experiment its own D0
         y  = Tg.KL_SI./Tg.D12_SI;
         dy = Tg.errKL_SI./Tg.D12_SI + Tg.KL_SI.*Tg.dD12_SI./Tg.D12_SI.^2;
 
@@ -1736,35 +1736,91 @@ if nCases > 0
 
     if ~isempty(xall)
         Pe_line = logspace(log10(min(xall)/3), log10(max(xall)*3), 200);
-        D0ref = 1;   % model is proportional to D0, so KL/D0 does not depend on it
         if usePooled
-            plot(Pe_line, KL_Pe_alpha_only_model(Pe_line, D0ref, 1)/D0ref, ...
-                'k-', 'LineWidth', 2, 'DisplayName', ...
-                sprintf('Pooled: KL/D0 = alpha*u/D0  (alpha = %.3f +/- %.3f cm)', ...
-                pooled.alpha_cm, pooled.d_alpha_cm))
-            if isfinite(pooled.tau)
-                Lref = median(T_plot.L_SI(ok_plot));      % one curve needs one L when beta ~= 1
-                plot(Pe_line, KL_Pe_alpha_tau_model(Pe_line*Lref/(pooled.alpha_cm/100), 1, ...
-                    [(pooled.alpha_tau_cm/100)/Lref; pooled.tau], beta_tau), ...
-                    'k--', 'LineWidth', 2, 'DisplayName', ...
-                    sprintf(['Pooled: KL/D0 = 1/tau + C2*Pe_L^%.1f  ' ...
-                             '(alpha = %.3f +/- %.3f cm, tau = %.2f +/- %.2f)'], ...
-                    beta_tau, pooled.alpha_tau_cm, pooled.d_alpha_tau_cm, pooled.tau, pooled.d_tau))
-            end
+            lblA = sprintf('Pooled: KL/D0 = alpha*u/D0  (alpha = %.3f +/- %.3f cm)', ...
+                pooled.alpha_cm, pooled.d_alpha_cm);
             xlabel('Pe = u_x \alpha_{pooled} / D_0')
         else
-            plot(Pe_line, KL_Pe_alpha_only_model(Pe_line, D0ref, 1)/D0ref, ...
-                'k-', 'LineWidth', 2, 'DisplayName', 'KL/D0 = alpha*u/D0 (alpha per case)')
+            lblA = 'KL/D0 = alpha*u/D0 (alpha per case)';
             xlabel('Pe = u_x \alpha_{case} / D_0')
+        end
+        plot(Pe_line, KL_Pe_alpha_only_model(Pe_line, 1, 1), 'k-', 'LineWidth', 2, 'DisplayName', lblA)
+        set(gca,'XScale','log','YScale','log')
+        xlim([min(xall)/3, max(xall)*3])
+        ylabel('K_L / D_0')
+        grid on
+        title(save_all + " -- alpha only", 'Interpreter','none')
+        legend('Location','northwest','Interpreter','none')
+        exportgraphics(gcf, pathExportAll + "KLD0vsPe_alpha_" + save_all + ".png", 'Resolution', 300)
+        savefig(gcf, pathExportAll + "KLD0vsPe_alpha_" + save_all)
+    end
+
+    % ---------- (2) KL/D0 vs Pe, alpha + tau fit: Pe = u*alpha_tau/D0
+    useTauPooled = isfinite(pooled.tau) && isfinite(pooled.alpha_tau_cm) && pooled.alpha_tau_cm > 0;
+    figure('Position', [120 120 1000 700]); hold on
+    xall = [];  yall = [];
+    for c = 1:nCases
+        g   = cases(c);
+        Tg  = T_plot(ok_plot & T_plot.GroupID == g, :);
+        col = caseColors(c,:);  mk = markers{mod(c-1,nMark)+1};
+
+        if useTauPooled
+            aT = pooled.alpha_tau_cm/100;                          % m
+        else
+            ga = find(alpha_table.GroupID == g, 1);
+            if isempty(ga) || ~isfinite(alpha_table.tau(ga)) || ~isfinite(alpha_table.alpha_tau_SI(ga))
+                continue                                           % no alpha+tau fit for this case
+            end
+            aT = alpha_table.alpha_tau_SI(ga);
+        end
+
+        x  = Tg.u_SI.*aT./Tg.D12_SI;                              % Pe with alpha_tau
+        y  = Tg.KL_SI./Tg.D12_SI;
+        dy = Tg.errKL_SI./Tg.D12_SI + Tg.KL_SI.*Tg.dD12_SI./Tg.D12_SI.^2;
+
+        errorbar(x, y, dy, 'LineStyle','none', 'Color', col, 'HandleVisibility','off')
+        scatter(x, y, 45, 'filled', 'Marker', mk, ...
+            'MarkerFaceColor', col, 'MarkerEdgeColor', 'k', 'DisplayName', g)
+        xall = [xall; x];  yall = [yall; y + dy]; %#ok<AGROW>
+
+        if ~useTauPooled                                           % this case's own curve
+            Lc   = Tg.L_SI(1);
+            Pe_c = logspace(log10(min(x)/3), log10(max(x)*3), 100);
+            plot(Pe_c, KL_Pe_alpha_tau_model(Pe_c*Lc/aT, 1, ...
+                [alpha_table.C2_tau(ga); alpha_table.tau(ga)], beta_tau), '--', ...
+                'Color', col, 'LineWidth', 1.5, 'DisplayName', ...
+                sprintf('%s: 1/tau + C2*Pe_L^%.1f (alpha = %.3f cm, tau = %.2f)', ...
+                g, beta_tau, alpha_table.alpha_tau_cm(ga), alpha_table.tau(ga)))
+        end
+    end
+
+    if ~isempty(xall)
+        Pe_line = logspace(log10(min(xall)/3), log10(max(xall)*3), 200);
+        if useTauPooled
+            Lref = median(T_plot.L_SI(ok_plot));                   % one curve needs one L when beta ~= 1
+            aT   = pooled.alpha_tau_cm/100;
+            plot(Pe_line, KL_Pe_alpha_tau_model(Pe_line*Lref/aT, 1, [aT/Lref; pooled.tau], beta_tau), ...
+                'k--', 'LineWidth', 2, 'DisplayName', ...
+                sprintf(['Pooled: KL/D0 = 1/tau + C2*Pe_L^%.1f  ' ...
+                         '(alpha = %.3f +/- %.3f cm, tau = %.2f +/- %.2f)'], ...
+                beta_tau, pooled.alpha_tau_cm, pooled.d_alpha_tau_cm, pooled.tau, pooled.d_tau))
+            yline(1/pooled.tau, ':k', '1/\tau', 'LineWidth', 1, 'HandleVisibility','off', ...
+                'LabelHorizontalAlignment','left')
+            xlabel('Pe_\tau = u_x \alpha_{\tau,pooled} / D_0')
+        else
+            xlabel('Pe_\tau = u_x \alpha_{\tau,case} / D_0')
         end
         set(gca,'XScale','log','YScale','log')
         xlim([min(xall)/3, max(xall)*3])
         ylabel('K_L / D_0')
         grid on
-        title(save_all, 'Interpreter','none')
+        title(save_all + " -- alpha + tau", 'Interpreter','none')
         legend('Location','northwest','Interpreter','none')
-        exportgraphics(gcf, pathExportAll + "KLD0vsPe_" + save_all + ".png", 'Resolution', 300)
-        savefig(gcf, pathExportAll + "KLD0vsPe_" + save_all)
+        exportgraphics(gcf, pathExportAll + "KLD0vsPe_alphaTau_" + save_all + ".png", 'Resolution', 300)
+        savefig(gcf, pathExportAll + "KLD0vsPe_alphaTau_" + save_all)
+    else
+        close(gcf)
+        warning('No alpha+tau fit (pooled or per case) -- KL/D0 vs Pe_tau plot skipped')
     end
 end
 
