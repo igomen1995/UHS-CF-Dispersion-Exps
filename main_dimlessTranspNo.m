@@ -185,8 +185,18 @@ expNames = {"H2-CO2",    "UHS hiM";   "He-Xe 900", "XCT hiM"; ...
             "H2-CH4",    "UHS loM";   "He-Xe 725", "XCT loM"};
 qPeTag   = {"Q1", "loPe";  "Q5", "hiPe"};     % flow-rate tag -> Peclet tag
 legendShowKeys = false;                        % true: append the MFM / CT keys in the legends
+
+% experiments left out of every plot and analysis (labels as in `exps`)
+excludeExps = ["H2-CH4 Q1"];                   % H2-CH4 Q1 R1 (UHS loM loPe) -- R2 is used instead
+exps = exps(~ismember([exps.label], excludeExps));
+
 for e = 1:numel(exps)
     exps(e).name = displayName(exps(e).label, expNames, qPeTag);
+end
+% drop the run tag when that run is the only one left with its name ("UHS loM loPe (R2)" -> "UHS loM loPe")
+base = regexprep([exps.name], '\s*\(R\d+\)$', '');
+for e = 1:numel(exps)
+    if base(e) ~= exps(e).name && nnz(base == base(e)) == 1, exps(e).name = base(e); end
 end
 
 srcNames = ["MFM", "CT BTC zD=" + strrep(extractAfter(ctBTCtag,"zD"),"p","."), ...
