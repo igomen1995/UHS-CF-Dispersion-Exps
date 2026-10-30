@@ -93,16 +93,16 @@ momCendMin = 0.95;     % warn if the curve ends below this C (tail missing -> sk
 
 % dispersivity-based Peclet number Pe_alpha = u*alpha/D0, alpha read from the alpha table
 % written by main_Processing for the selected (most suitable) experiments:
-%   sheet best_method (one row per case GroupID, best per-key method):
-%       alpha_tau_cm +/- totUncertAlpha_tau_cm, tau +/- totUncertTau   (alpha + tau fit)
-%       if that case has no tau fit -> alpha_cm +/- totUncertAlpha_cm  (alpha-only fit)
-%   case not in the table (or no alpha) -> pooled fit of all those experiments
-%       (sheet pooled_all, row best_per_key), same tau / alpha-only order
-% An experiment is matched to its case by MFM key (column Keys), then by fluids, T, P, L, angle.
-% alpha is a property of the case, so it is used for all KL sources and groups of that experiment.
+%   alphaMode "pooled" (default): sheet pooled_all, row best_per_key = one alpha for the rock,
+%       used for EVERY experiment
+%   alphaMode "case": sheet best_method, the experiment's own case (matched by MFM key in
+%       column Keys, then by fluids, T, P, L, angle); no value -> pooled (alphaUsePooled)
+%   in both: alpha_tau_cm +/- totUncertAlpha_tau_cm with tau +/- totUncertTau (alpha + tau fit),
+%       if no tau fit -> alpha_cm +/- totUncertAlpha_cm (alpha-only fit)
 alphaFile         = fullfile('results', 'exp_verticalStable_CFCT_REFPROP', 'alpha_results_wEOS.xlsx');
-alphaPreferTau    = true;   % true: alpha_tau (+ tau) when fitted | false: always alpha_cm
-alphaUsePooled    = true;   % case without alpha in the table -> pooled best_per_key value
+alphaMode         = "pooled";   % "pooled" (pooled_all, best_per_key) | "case" (best_method per case)
+alphaPreferTau    = true;       % true: alpha_tau (+ tau) when fitted | false: always alpha_cm
+alphaUsePooled    = true;       % alphaMode "case": case without alpha -> pooled value
 peMain        = "Pea";     % Pe used in the KL/D0-vs-Pe colour plot, maps, PCA and radar:
                            % "Pea" = u*alpha/D0 | "Pe" = u*L/D0
 
@@ -241,7 +241,7 @@ disp(table(string({exps.label})', [exps.mfmKey]', [exps.mfmKeyUsed]', [exps.ctKe
 %% Alpha table (main_Processing, selected experiments)
 
 alphaTab = readAlphaTable(alphaFile);
-if ~isempty(alphaTab.group)
+if alphaMode == "case" && ~isempty(alphaTab.group)
     fprintf('Alpha table %s:\n', alphaFile);
     disp(alphaTab.group(:, intersect({'GroupID','n_points','alpha_cm','totUncertAlpha_cm', ...
         'alpha_tau_cm','totUncertAlpha_tau_cm','tau','totUncertTau'}, ...
@@ -260,7 +260,7 @@ for e = 1:numel(exps)
     ex = exps(e);
     KLlist = struct('src',{},'KL',{},'dKL',{},'key',{});
     mom = momNaN();                               % BTC moments (MFM curve only)
-    alEx = alphaForExp(alphaTab, ex, cases, alphaPreferTau, alphaUsePooled);   % alpha of this experiment [cm]
+    alEx = alphaForExp(alphaTab, ex, cases, alphaMode, alphaPreferTau, alphaUsePooled);   % alpha [cm]
     if ~isfinite(alEx.a), warning('%s: no alpha in %s -- Pe_alpha = NaN', ex.label, alphaFile); end
 
     if ex.mfmKeyUsed ~= ""
@@ -1144,11 +1144,19 @@ if any(strcmp(sh, 'pooled_all'))
 end
 end
 
-function al = alphaForExp(A, ex, cases, preferTau, usePooled)
+function al = alphaForExp(A, ex, cases, mode, preferTau, usePooled)
 % alpha [cm] (+ uncertainty) and tau of one experiment from the alpha table:
-% case row (matched by MFM key, else by fluids/T/P/L/angle) -> alpha_tau + tau, else alpha_cm;
-% no value for the case -> pooled best_per_key row (same order)
+% mode "pooled": pooled_all best_per_key row for every experiment;
+% mode "case": case row (matched by MFM key, else by fluids/T/P/L/angle), no value -> pooled.
+% In both: alpha_tau + tau when available, else alpha_cm.
 al = struct('a',NaN, 'da',NaN, 'tau',NaN, 'dtau',NaN, 'src',"");
+if mode == "pooled"
+    if ~isempty(A.pooled)
+        al = pickAlpha(A.pooled, preferTau);
+        if isfinite(al.a), al.src = "pooled (" + al.src + ")"; end
+    end
+    return
+end
 G = A.group;
 r = [];
 if ~isempty(G) && ismember('Keys', G.Properties.VariableNames) && ex.mfmKeyUsed ~= ""
