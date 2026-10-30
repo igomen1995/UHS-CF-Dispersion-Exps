@@ -138,7 +138,7 @@ purpleL = [0.760 0.620 0.920];  purpleD = [0.400 0.150 0.600];
 exps = struct( ...
     'label',  {"H2-CO2 Q1", "H2-CO2 Q5", "H2-CH4 Q1", "H2-CH4 Q5", "H2-CH4 Q1 R2", ...
                "He-Xe 725 Q1", "He-Xe 725 Q5", "He-Xe 900 Q1", "He-Xe 900 Q5"}, ...
-    'idx',    {[1 9 18], [2 10 19], [3 11 20], [4 12 21], [13 22], ...
+    'idx',    {[1 9 18], [2 10 19], [3 11 20], [4 12 21], [3 13 22], ...
                [5 14 23], [6 15 24], [7 16 25], [8 17 26]}, ...
     'color',  {purpleL, purpleD, yellowL, yellowD, yellowL, ...
                greenL, greenD, blueL, blueD}, ...
@@ -1029,6 +1029,7 @@ radarLog     = struct('Pe',true, 'Pea',true, 'Pep',true, 'M',false, 'Ng',false, 
 rMin         = 0.15;                    % radius of the axis minimum (keeps polygons off the centre)
 radarFillA   = 0.10;                    % fill transparency
 radarMkEdgeW = 0.4;                     % marker edge line width (thin black outline)
+radarLegRows = ["hiM loPe"; "hiM hiPe"; "loM loPe"; "loM hiPe"];   % legend rows (top -> bottom)
 radarColOver = struct('H2_CO2', {{blueL, blueD}}, ...     % radar only: {Q1 light, Q5 dark}
                       'H2_CH4', {{greenL, greenD}});
 
@@ -1090,6 +1091,7 @@ for radarGroup = analysisGroups
     end
 
     % one polygon per experiment: experiment colour, marker = UHS (circle) / XCT (square)
+    hLeg = gobjects(0);
     for ie = 1:numel(expSel)
         ex  = exps(expSel(ie));
         col = radarColour(ex, radarColOver);
@@ -1104,12 +1106,31 @@ for radarGroup = analysisGroups
             'LineWidth',radarMkEdgeW, 'LineStyle','none', 'HandleVisibility','off')
         % legend entry: the marker only, so its edge stays as thin as on the plot
         % (a line + marker entry would draw the marker edge with the 2.2 line width)
-        plot(ax, NaN, NaN, mk, 'MarkerFaceColor',col, 'MarkerEdgeColor','k', 'MarkerSize',10, ...
-            'LineWidth',radarMkEdgeW, 'LineStyle','none', 'DisplayName', ex.name)
+        hLeg(end+1) = plot(ax, NaN, NaN, mk, 'MarkerFaceColor',col, 'MarkerEdgeColor','k', 'MarkerSize',10, ...
+            'LineWidth',radarMkEdgeW, 'LineStyle','none', 'DisplayName', ex.name); %#ok<SAGROW>
     end
 
-    xlim(ax, [-1.35 1.35]);  ylim(ax, [-1.3 1.3])
-    legend(ax, 'Location','southoutside', 'Interpreter','none', 'FontSize',9, 'NumColumns',2)
+    % legend: always 2 columns x 4 rows, XCT left / UHS right, rows = blue light, blue dark,
+    % green light, green dark. Fixed slots, so every group gets the same layout; a slot with
+    % no experiment in this group is shown as an empty marker with "(n/a)".
+    legNames = string(arrayfun(@(h) h.DisplayName, hLeg, 'UniformOutput', false));
+    hOrd = gobjects(0);
+    for r = 1:size(radarLegRows,1)
+        for side = ["XCT","UHS"]
+            nm = side + " " + radarLegRows(r);
+            k  = find(startsWith(legNames, nm), 1);
+            if ~isempty(k)
+                hOrd(end+1) = hLeg(k);                                             %#ok<SAGROW>
+            else
+                mkE = 's';  if side == "UHS", mkE = 'o'; end
+                hOrd(end+1) = plot(ax, NaN, NaN, mkE, 'MarkerFaceColor','none', ...
+                    'MarkerEdgeColor',[0.7 0.7 0.7], 'MarkerSize',10, 'LineWidth',radarMkEdgeW, ...
+                    'LineStyle','none', 'DisplayName', nm + " (n/a)");            %#ok<SAGROW>
+            end
+        end
+    end
+    lg = legend(ax, hOrd, 'Location','southoutside', 'Interpreter','none', 'FontSize',9, ...
+        'Orientation','horizontal', 'NumColumns',2);
     title(ax, {sprintf('Dimensionless numbers and K_L/D_0 (MFM) per experiment -- %s', ...
         groupTitle.(radarGroup)), 'circle = UHS, square = XCT (MFM K_L); blue = high M, green = low M; lighter = Q1 (loPe), darker = Q5 (hiPe)'}, ...
         'Interpreter','tex', 'FontSize',12)
