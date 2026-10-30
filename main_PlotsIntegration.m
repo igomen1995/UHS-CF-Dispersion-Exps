@@ -484,7 +484,7 @@ thisRepo       = pwd;                                          % run from the re
 pathExport     = pathExportAll;
 closeAfterSave = false;
 
-allAuthorsFile = fullfile(thisRepo, 'input', 'input_KL_allAuthorsSelected.xlsx');
+allAuthorsFile = fullfile(thisRepo, 'input', 'input_KL_allAuthorsSelected_noDabrowski.xlsx');
 aaSheets       = ["1_CF_CT_main", "2_extra_own", "3_other_authors"];
 aaOwnFile      = fullfile(thisRepo, 'results', 'dimlessKL', 'KL_dimless_all.xlsx');  % main_dimlessTranspNo
 aaOwnSource    = "MFM";           % KL source used for the own rows
@@ -710,8 +710,8 @@ end
 % so "Berea" groups "Berea" and "Gray Berea". Markers keep the same author map
 % as the all-authors figures; colour limits follow the points of each rock.
 
-aaRockSets = ["Berea"];   % add rock types here
-%aaRockSets = ["Berea", "Fontainebleau", "Bentheimer"];   % add rock types here
+%aaRockSets = ["Berea"];   % add rock types here
+aaRockSets = ["Berea", "Fontainebleau", "Bentheimer"];   % add rock types here
 aaRockMinN = 0;                                           % fewer plotted points -> skipped
 
 if exist('A', 'var') && istable(A) && ~isempty(A) && ismember('Pe', A.Properties.VariableNames)
