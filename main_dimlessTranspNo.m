@@ -1,8 +1,10 @@
 %% main_dimlessTranspNo.m
 % Relates the measured dispersion coefficient KL (scaled by the molecular
 % diffusion coefficient D0) to the dimensionless numbers of each case:
-%       KL/D0  vs  Pe, Pe_p, M, Ng, Nrho      (one figure per x-axis)
-% Pe = uL/D0 (core length), Pe_p = u d_pore/D0 (pore diameter, Gray Berea d_pore = 70 um)
+%       KL/D0  vs  Pe, Pe_p, M, Ng, Nrho, Pe_alpha      (one figure per x-axis)
+% Pe = uL/D0 (core length), Pe_p = u d_pore/D0 (pore diameter, Gray Berea d_pore = 70 um),
+% Pe_alpha = u alpha/D0 (dispersivity alpha from main_Processing, see SETTINGS: alphaSource,
+% alphaKind, peMain = Pe used in the maps, colour plot, PCA and radar)
 % for the UHS cases (H2-CO2, H2-CH4, MFM) and the XCT analog cases (He-Xe,
 % MFM analog + CT), and for any other experiment added later.
 %
@@ -46,7 +48,7 @@
 % Outputs (pathExport)
 %   MFM_index.xlsx                        all MFM experiments found in this repo
 %   KL_dimless_all.xlsx                   one row per (case, KL source)
-%   KLD0_vs_<Pe|Pep|M|Ng|Nrho>_<group>.png/.fig
+%   KLD0_vs_<Pe|Pep|M|Ng|Nrho|Pea>_<group>.png/.fig
  
 %% SETTINGS
  
@@ -87,6 +89,16 @@ ddpore_um = 0;     % uncertainty of d_pore [um] (0 = not propagated)
 momTimeVar = "tD";     % column of expProcFullData.(key).(fitData).BT used as time
 momSmooth  = 5;        % points, moving median on C before cummax (noise in E = dC/dt)
 momCendMin = 0.95;     % warn if the curve ends below this C (tail missing -> skew biased)
+
+% dispersivity-based Peclet number Pe_alpha = u*alpha/D0, alpha from main_Processing
+% (expProcFullData.(key).(fitData).results = per-case fit, or fitSummary alpha_pooled).
+% alpha is a property of the case (fluids, T, P, rock), so the MFM alpha of an
+% experiment is used for all its KL sources (MFM, CT BTC, CT width) and groups.
+alphaSource   = "group";   % "group" (fit of KL vs u per case) | "pooled" (one alpha for all experiments)
+alphaFallback = true;      % group alpha missing (case with < 2 points) -> use the pooled alpha
+alphaKind     = "alpha";   % "alpha" (KL = D0 + alpha*u) | "alphaTau" (KL = D0/tau + alpha_tau*u)
+peMain        = "Pea";     % Pe used in the KL/D0-vs-Pe colour plot, maps, PCA and radar:
+                           % "Pea" = u*alpha/D0 | "Pe" = u*L/D0
 
 groupsToPlot   = ["theory","measAvg","measBegEnd"];
 closeAfterSave = false;
@@ -226,6 +238,11 @@ for e = 1:numel(exps)
     ex = exps(e);
     KLlist = struct('src',{},'KL',{},'dKL',{},'key',{});
     mom = momNaN();                               % BTC moments (MFM curve only)
+    alEx = struct('a',NaN,'da',NaN,'src',"");     % dispersivity of this experiment [cm]
+    if ex.mfmKeyUsed ~= ""
+        alEx = getAlphaPe(ex.mfmFileUsed, ex.mfmKeyUsed, mfmFitData, cache, alphaSource, alphaFallback, alphaKind);
+        if ~isfinite(alEx.a), warning('%s: no alpha in main_Processing results -- Pe_alpha = NaN', ex.label); end
+    end
 
     if ex.mfmKeyUsed ~= ""
         [KL, dKL, note] = getMFM(ex.mfmFileUsed, ex.mfmKeyUsed, mfmFitData, cache);
@@ -265,15 +282,22 @@ for e = 1:numel(exps)
                 dPep = Pep*sqrt(relU^2 + (dD0(c)/D0(c))^2 + (ddpore_um/dpore_um)^2);
             end
             if q.src == srcNames(1), mq = mom; else, mq = momNaN(); end   % moments: MFM rows only
+            % Pe_alpha = u*alpha/D0 (alpha in cm, u in cm/min, D0 in cm2/min)
+            Pea  = d.u_cmmin*alEx.a/D0(c);
+            relU = 0;  if d.u_cmmin > 0, relU = d.du_cmmin/d.u_cmmin; end
+            relA = 0;  if isfinite(alEx.da) && alEx.a > 0, relA = alEx.da/alEx.a; end
+            dPea = Pea*sqrt(relU^2 + relA^2 + (dD0(c)/D0(c))^2);
             rows{end+1,1} = table(c, groupOfCase(c), ex.label, string(d.Pair), ...
                 d.Pmix_psig, d.Tmix_C, d.u_cmmin, q.src, q.key, ...
                 q.KL, q.dKL, D0(c), dD0(c), KLD0, dKLD0, ...
-                d.Pe, d.dPe, Pep, dPep, d.M, d.dM, d.Ng, d.dNg, d.Nrho, d.dNrho, PeKL, PeKL*q.dKL/q.KL, ...
+                d.Pe, d.dPe, Pep, dPep, alEx.a, alEx.da, alEx.src, Pea, dPea, ...
+                d.M, d.dM, d.Ng, d.dNg, d.Nrho, d.dNrho, PeKL, PeKL*q.dKL/q.KL, ...
                 mq.tmean, mq.sigma, mq.cv, mq.skew, mq.kurt, mq.Cend, ...
                 'VariableNames', {'caseIdx','group','experiment','pair', ...
                 'Pmix_psig','Tmix_C','u_cmmin','source','sourceKey', ...
                 'KL_cm2min','dKL_cm2min','D0_cm2min','dD0_cm2min','KLD0','dKLD0', ...
-                'Pe','dPe','Pep','dPep','M','dM','Ng','dNg','Nrho','dNrho','PeKL','dPeKL', ...
+                'Pe','dPe','Pep','dPep','alpha_cm','d_alpha_cm','alphaSrc','Pea','dPea', ...
+                'M','dM','Ng','dNg','Nrho','dNrho','PeKL','dPeKL', ...
                 'tmeanBTC','sigmaBTC','cvBTC','skewBTC','kurtBTC','CendBTC'}); %#ok<SAGROW>
         end
     end
@@ -287,8 +311,8 @@ T = vertcat(rows{:});
 % that the fitted KL does not explain (non-Fickian / late-time tailing).
 T.skewADE    = 3*sqrt(2./T.PeKL);
 T.skewExcess = T.skewBTC - T.skewADE;
-disp(T(:, {'caseIdx','group','experiment','source','sourceKey','KL_cm2min','KLD0','Pe','M','Ng', ...
-    'sigmaBTC','skewBTC'}))
+disp(T(:, {'caseIdx','group','experiment','source','sourceKey','KL_cm2min','KLD0','Pe', ...
+    'alpha_cm','alphaSrc','Pea','M','Ng','sigmaBTC','skewBTC'}))
 writetable(T, fullfile(pathExport, 'KL_dimless_all.xlsx'));
 % all experiments are kept for the PCA; every plot below uses the main (vertical) ones only
 Tall = T;
@@ -301,7 +325,13 @@ xPanels = {'Pe',   'dPe',   'Pe = uL/D_0 [-]',                     true,  'Pe'; 
            'Pep',  'dPep',  'Pe_p = u d_{pore}/D_0 [-]',           true,  'Pep'; ...
            'M',    'dM',    'M = \mu_2/\mu_1 [-]',                 false, 'M'; ...
            'Ng',   'dNg',   'N_g [-]',                             false, 'Ng'; ...
-           'Nrho', 'dNrho', 'N_\rho = (\rho_1-\rho_2)/\rho_2 [-]', false, 'Nrho'};
+           'Nrho', 'dNrho', 'N_\rho = (\rho_1-\rho_2)/\rho_2 [-]', false, 'Nrho'; ...
+           'Pea',  'dPea',  'Pe_\alpha = u\alpha/D_0 [-]',          true,  'Pea'};
+
+% Pe used in the maps, the KL/D0-vs-Pe colour plot, moments, PCA and radar (setting peMain)
+iPeMain  = find(strcmp(xPanels(:,1), peMain), 1);
+peLblMain = xPanels{iPeMain,3};
+if peMain == "Pea", peTag = "log_{10}Pe_\alpha"; peShort = 'Pe_\alpha'; else, peTag = "log_{10}Pe"; peShort = 'Pe'; end
  
 groupTitle = struct('theory',"nominal conditions (scaling analysis)", ...
                     'measAvg',"average measured conditions", ...
@@ -431,7 +461,7 @@ mapColorVar = 'KL_cm2min';      % 'KL_cm2min' or 'KLD0'
 mapColorLbl = struct('KL_cm2min','K_L [cm^2/min]', 'KLD0','K_L/D_0 [-]');
 mapLogColor = true;             % log colour scale
 mapMethods  = srcNames([1 3 2]);                  % MFM, CT width, CT BTC
-mapRows     = {'Pe', 'Pe = uL/D_0 [-]', true; ...
+mapRows     = {char(peMain), peLblMain, true; ...
                'Ng', 'N_g [-]',         false};   % {y column, y label, log y}
 labelPoints = true;             % write the experiment label next to each marker
 
@@ -523,8 +553,9 @@ for g = pmGroups
     ax = axes(fig);  hold(ax,'on')
 
     % uncertainty bars (grey, behind)
-    dyLow = min(Tg.dKLD0, 0.99*Tg.KLD0);  dxLow = min(Tg.dPe, 0.99*Tg.Pe);
-    errorbar(ax, Tg.Pe, Tg.KLD0, dyLow, Tg.dKLD0, dxLow, Tg.dPe, 'LineStyle','none', ...
+    xPm = Tg.(peMain);  dxPm = Tg.("d" + peMain);  dxPm(~isfinite(dxPm)) = 0;
+    dyLow = min(Tg.dKLD0, 0.99*Tg.KLD0);  dxLow = min(dxPm, 0.99*xPm);
+    errorbar(ax, xPm, Tg.KLD0, dyLow, Tg.dKLD0, dxLow, dxPm, 'LineStyle','none', ...
         'Color',[0.75 0.75 0.75], 'CapSize',3, 'HandleVisibility','off')
 
     % markers: circle = vertical (Ng ~= 0), square = horizontal (Ng = 0); edge style per source
@@ -533,24 +564,24 @@ for g = pmGroups
         selS = Tg.source == pmSources(s);
         lw = 0.8;  if s > 1, lw = 2; end                  % CT sources: thick edge
         if any(selS & ~isH)
-            scatter(ax, Tg.Pe(selS & ~isH), Tg.KLD0(selS & ~isH), 120, cM(selS & ~isH), 'o', ...
+            scatter(ax, xPm(selS & ~isH), Tg.KLD0(selS & ~isH), 120, cM(selS & ~isH), 'o', ...
                 'filled', 'MarkerEdgeColor','k', 'LineWidth',lw, ...
                 'DisplayName', pmSources(s) + ", vertical (N_g \neq 0)")
         end
         if any(selS & isH)
-            scatter(ax, Tg.Pe(selS & isH), Tg.KLD0(selS & isH), 140, cM(selS & isH), 's', ...
+            scatter(ax, xPm(selS & isH), Tg.KLD0(selS & isH), 140, cM(selS & isH), 's', ...
                 'filled', 'MarkerEdgeColor','k', 'LineWidth',lw, ...
                 'DisplayName', pmSources(s) + ", horizontal (N_g = 0)")
         end
     end
 
     if pmLabels
-        text(ax, Tg.Pe, Tg.KLD0, "  " + Tg.experiment, 'FontSize',7, 'Interpreter','none')
+        text(ax, xPm, Tg.KLD0, "  " + Tg.experiment, 'FontSize',7, 'Interpreter','none')
     end
 
     yline(ax, 1, ':k', 'K_L = D_0', 'HandleVisibility','off', 'LabelHorizontalAlignment','left')
     set(ax, 'XScale','log', 'YScale','log', 'FontSize',12);  grid(ax,'on')
-    xlabel(ax, 'Pe = uL/D_0 [-]', 'FontSize',13)
+    xlabel(ax, peLblMain, 'FontSize',13)
     ylabel(ax, 'K_L / D_0 [-]', 'FontSize',13)
 
     colormap(ax, turbo)
@@ -562,9 +593,9 @@ for g = pmGroups
     cb.Label.String = 'M = \mu_2/\mu_1 [-]';
 
     legend(ax, 'Location','northwest', 'FontSize',9)
-    title(ax, sprintf('K_L/D_0 vs Pe, colour = M -- %s', groupTitle.(g)), 'Interpreter','tex')
+    title(ax, sprintf('K_L/D_0 vs %s, colour = M -- %s', peShort, groupTitle.(g)), 'Interpreter','tex')
 
-    fname = "KLD0_vs_Pe_colorM_" + g + ternStr(pmUseAll, "_allExp", "");
+    fname = "KLD0_vs_" + peMain + "_colorM_" + g + ternStr(pmUseAll, "_allExp", "");
     saveas(fig, fullfile(pathExport, fname), 'png');
     saveas(fig, fullfile(pathExport, fname), 'fig');
     if closeAfterSave, close(fig); end
@@ -578,7 +609,7 @@ momRows = {'sigmaBTC',   '\sigma (BTC) [t_D]', false; ...
            'skewBTC',    'skewness (BTC) [-]',  false; ...
            'skewExcess', 'skew_{BTC} - skew_{ADE} [-]', false; ...
            'kurtBTC',    'excess kurtosis (BTC) [-]', false};     % {column, label, log y}
-momCols = xPanels([1 2 3 4], :);                                % Pe, Pe_p, M, Ng
+momCols = xPanels(unique([iPeMain 1 2 3 4], 'stable'), :);    % Pe used (peMain), Pe, Pe_p, M, Ng
 
 for g = groupsToPlot
     Tg = T(T.group == g & T.source == srcNames(1) & isfinite(T.skewBTC), :);
@@ -643,7 +674,9 @@ if ~isempty(Tm)
 end
 
 %% Which dimensionless number controls KL? correlation, partial correlation, regression, PCA
-% Works on log10(KL/D0) vs log10(Pe), log10(M), log10(|Ng|), Nrho.
+% Works on log10(KL/D0) vs log10(Pe) (Pe = peMain: u*alpha/D0 or u*L/D0), log10(M), log10(|Ng|).
+% Note: with Pe = u*alpha/D0 and alpha fitted from the same KL, KL/D0 ~ Pe_alpha by
+% construction, so Pe_alpha is expected to dominate the correlations.
 % One analysis per (group, data set); each experiment counted once per data set.
 
 anaGroups = ["theory","measBegEnd"];                     % nominal, and per-fluid measured (init/final)
@@ -656,12 +689,12 @@ anaSets = struct( ...
     'source',    {srcNames(1), srcNames(1), srcNames(1), srcNames(1)}, ...
     'expFilt',   {"", "", "", ""}, ...
     'useAll',    {false, true, false, true}, ...
-    'predNames', {["log_{10}Pe","log_{10}M","log_{10}|N_g|"], ["log_{10}Pe","log_{10}M"], ...
-                  ["log_{10}Pe","log_{10}M","log_{10}|N_g|","skew"], ["log_{10}Pe","log_{10}M","skew"]}, ...
-    'predFun',   {@(Ts) [log10(Ts.Pe), log10(Ts.M), log10(abs(Ts.Ng))], ...
-                  @(Ts) [log10(Ts.Pe), log10(Ts.M)], ...
-                  @(Ts) [log10(Ts.Pe), log10(Ts.M), log10(abs(Ts.Ng)), Ts.skewBTC], ...
-                  @(Ts) [log10(Ts.Pe), log10(Ts.M), Ts.skewBTC]});
+    'predNames', {[peTag,"log_{10}M","log_{10}|N_g|"], [peTag,"log_{10}M"], ...
+                  [peTag,"log_{10}M","log_{10}|N_g|","skew"], [peTag,"log_{10}M","skew"]}, ...
+    'predFun',   {@(Ts) [log10(Ts.(peMain)), log10(Ts.M), log10(abs(Ts.Ng))], ...
+                  @(Ts) [log10(Ts.(peMain)), log10(Ts.M)], ...
+                  @(Ts) [log10(Ts.(peMain)), log10(Ts.M), log10(abs(Ts.Ng)), Ts.skewBTC], ...
+                  @(Ts) [log10(Ts.(peMain)), log10(Ts.M), Ts.skewBTC]});
 
 % supplementary variables projected on the PCA biplot (not used to build the PCs):
 % {column, label, colour}
@@ -861,14 +894,14 @@ end
 %% Radar chart: dimensionless numbers and KL/D0 (MFM), all experiments
 
 radarGroup = "measBegEnd";              % per-fluid measured conditions
-radarLog   = struct('Pe',true, 'M',false, 'absNg',true, 'Nrho',false, 'KLD0',true, 'skewBTC',false);
+radarLog   = struct('Pe',true, 'Pea',true, 'M',false, 'absNg',true, 'Nrho',false, 'KLD0',true, 'skewBTC',false);
 rMin       = 0.15;                      % radius of the axis minimum (keeps polygons off the centre)
 
 Tr = T(T.group == radarGroup & T.source == srcNames(1) & isfinite(T.KLD0) & T.KLD0 > 0, :);
 Tr.absNg = abs(Tr.Ng);
 
 % axes: {column, label}
-axDef = {'Pe','Pe';  'M','M';  'absNg','|N_g|';  'KLD0','K_L/D_0 (MFM)';  'skewBTC','skew (MFM BTC)'};
+axDef = {char(peMain), peShort;  'M','M';  'absNg','|N_g|';  'KLD0','K_L/D_0 (MFM)';  'skewBTC','skew (MFM BTC)'};
 nA = size(axDef,1);
 th = pi/2 - (0:nA-1)*2*pi/nA;           % first axis at the top, clockwise
 
@@ -1070,6 +1103,52 @@ m.cv    = s/mu;
 m.skew  = sum((tm - mu).^3.*w)/W / s^3;
 m.kurt  = sum((tm - mu).^4.*w)/W / s^4 - 3;
 m.Cend  = C(end);
+end
+
+function al = getAlphaPe(file, key, fitData, cache, source, fallback, kind)
+% dispersivity [cm] of an MFM experiment from main_Processing, for Pe_alpha = u*alpha/D0
+%   source "group"  : per-case fit stored in expProcFullData.(key).(fitData).results
+%          "pooled" : fitSummary.(fitData).alpha_pooled, best_per_key row
+%   fallback        : group value missing -> pooled value
+%   kind   "alpha"  : alpha_cm (KL = D0 + alpha*u) | "alphaTau": alpha_tau_cm
+% Uncertainty = total (fit + method spread) when stored, otherwise the fit error.
+al = struct('a',NaN,'da',NaN,'src',"");
+S  = loadCached(file, cache);
+if isempty(S) || ~isfield(S, 'expProcFullData'), return, end
+if kind == "alphaTau"
+    vName = 'alpha_tau_cm';  eNames = {'totUncertAlpha_tau_cm','d_alpha_tau_cm'};
+else
+    vName = 'alpha_cm';      eNames = {'totUncertAlpha_cm','d_alpha_cm'};
+end
+srcList = string(source);
+if source == "group" && fallback, srcList = ["group","pooled"]; end
+for sNow = srcList
+    r = [];
+    if sNow == "group"
+        if isfield(S.expProcFullData, key) && isfield(S.expProcFullData.(key), fitData) && ...
+                isfield(S.expProcFullData.(key).(fitData), 'results')
+            r = S.expProcFullData.(key).(fitData).results;
+        end
+    else
+        try
+            P = S.expProcFullData.fitSummary.(fitData).alpha_pooled;
+            r = P(P.method == "best_per_key", :);
+        catch
+        end
+    end
+    if isempty(r), continue, end
+    n = fieldOrVarNames(r);
+    if ~ismember(vName, n), continue, end
+    a = r.(vName)(1);
+    if ~isfinite(a) || a <= 0, continue, end
+    al.a = a;  al.src = sNow;
+    for k = 1:numel(eNames)
+        if ismember(eNames{k}, n) && isfinite(r.(eNames{k})(1))
+            al.da = r.(eNames{k})(1);  break
+        end
+    end
+    return
+end
 end
 
 function [KL, dKL] = mfmKL(r)
