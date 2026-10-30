@@ -28,6 +28,10 @@
 %   MFM     expProcFullData.(key).(wEOS|woEOS).results.KL_cm2min (+ totUncertKL_cm2min)
 %   CT BTC  resultsAll.(ds).(variant).KL_BTC_CT_byZD.zD0p8.best
 %   CT W    resultsAll.(ds).(variant).KL_front_CT.width_C20_80_int0
+%   CT BTC  resultsAll.(ds).(variant).KL_BTC_CT_byZD.zD0p5.best        (BTC at mid-core)
+%   CT mid  resultsAll.(ds).(variant).KL_midProfile.methods.contour    (profile with the front
+%           centre at mid-core, KL = w^2/(4 tau), tau from the contour arrival)
+%   -> the last two are compared directly in KLmid_vs_BTC05_<group> (with MFM as reference)
 %   manual  KL +/- dKL typed in (experiments without a .mat file)
 %
 % Rows of `cases` (same order as caseTable in main_fluidProps_errorProp.m;
@@ -44,7 +48,8 @@
 %
 % Colours: He-Xe 725 green, He-Xe 900 blue, H2-CH4 yellow, H2-CO2 purple,
 %          lighter = lower Q, darker = higher Q.
-% Markers: MFM o, CT BTC square, CT width triangle, manual diamond.
+% Markers: MFM o, CT BTC zD 0.8 square, CT width triangle, manual diamond,
+%          CT BTC zD 0.5 down-triangle, CT mid-profile pentagram.
 %
 % Outputs (pathExport)
 %   MFM_index.xlsx                        all MFM experiments found in this repo
@@ -71,6 +76,9 @@ ctVariant    = "full";               % "full" or "xtrim"
 ctBTCtag     = "zD0p8";              % BTC fit level used for CT KL
 ctWidthTag   = "width_C20_80_int0";  % front-width method used for CT KL
 ctWidthStat  = "fit";                % "fit" (regression +/- SE) or "mean" (pointwise mean +/- std)
+ctBTCtagMid  = "zD0p5";              % second BTC level: mid-core, pairs with the mid-profile KL
+ctMidMethod  = "contour";            % mid-profile method: "contour" | "lines" | "sigma"
+ctMidStat    = "best";               % "best" (closest frame +/- SE) or "mean" (mean +/- std over the frames)
  
 % tolerances for matching an MFM experiment to a case ("auto" keys)
 tolP = 0.05;    % relative, on nominal pressure
@@ -106,7 +114,7 @@ alphaUsePooled    = true;       % alphaMode "case": case without alpha -> pooled
 peMain        = "Pea";     % Pe used in the KL/D0-vs-Pe colour plot, maps, PCA and radar:
                            % "Pea" = u*alpha/D0 | "Pe" = u*L/D0
 
-analysisGroups = ["theory","measAvg"];   % conditions used by EVERY plot and analysis below:
+analysisGroups = ["theory","measAvg","measBegEnd"];   % conditions used by EVERY plot and analysis below:
                                          % "theory" (nominal) | "measAvg" (run average) | "measBegEnd"
 groupsToPlot   = analysisGroups;
 closeAfterSave = false;
@@ -169,8 +177,10 @@ end
 %     'mfmKey',"CF_...",'mfmRun',1,'ctKey',"",'KL',NaN,'dKL',NaN,'main',false);
 
 srcNames = ["MFM", "CT BTC zD=" + strrep(extractAfter(ctBTCtag,"zD"),"p","."), ...
-            "CT width " + regexprep(ctWidthTag, '^width_C(\d+)_(\d+).*$', '$1-$2'), "manual"];
-srcMk    = ["o", "s", "^", "d"];
+            "CT width " + regexprep(ctWidthTag, '^width_C(\d+)_(\d+).*$', '$1-$2'), "manual", ...
+            "CT BTC zD=" + strrep(extractAfter(ctBTCtagMid,"zD"),"p","."), ...
+            "CT mid-profile " + ctMidMethod];
+srcMk    = ["o", "s", "^", "d", "v", "p"];
  
 %% Load dimensionless numbers and D0
  
@@ -279,6 +289,10 @@ for e = 1:numel(exps)
         KLlist = addKL(KLlist, srcNames(2), KL, dKL, ex.ctKey, note, ex.label);
         [KL, dKL, note] = getCT(ctFile, ctDataSource, ctVariant, ctWidthTag, ctWidthStat, cache);
         KLlist = addKL(KLlist, srcNames(3), KL, dKL, ex.ctKey, note, ex.label);
+        [KL, dKL, note] = getCT(ctFile, ctDataSource, ctVariant, "BTC_" + ctBTCtagMid, "fit", cache);
+        KLlist = addKL(KLlist, srcNames(5), KL, dKL, ex.ctKey, note, ex.label);
+        [KL, dKL, note] = getCT(ctFile, ctDataSource, ctVariant, "MID_" + ctMidMethod, ctMidStat, cache);
+        KLlist = addKL(KLlist, srcNames(6), KL, dKL, ex.ctKey, note, ex.label);
     end
     if isfinite(ex.KL)
         KLlist = addKL(KLlist, srcNames(4), ex.KL, ex.dKL, "manual", "", ex.label);
@@ -412,7 +426,7 @@ end
 
 %% Plots: XCT by method (one panel each) vs UHS MFM (in every panel)
 
-xctMethods = srcNames([1 3 2]);          % MFM, CT width, CT BTC
+xctMethods = srcNames([1 3 2 5 6]);      % MFM, CT width, CT BTC 0.8, CT BTC 0.5, CT mid-profile
 xctExps    = startsWith([exps.label], "He-Xe");
 uhsExps    = startsWith([exps.label], ["H2-CO2","H2-CH4"]);
 uhsSource  = srcNames(1);                % UHS cases only have MFM
@@ -422,7 +436,7 @@ for g = groupsToPlot
     if isempty(Tg), warning('No KL entries for group %s', g); continue, end
 
     for p = 1:size(xPanels,1)
-        fig = figure('Position',[60 80 1600 600]);
+        fig = figure('Position',[60 80 380*numel(xctMethods)+200 600]);
         tl  = tiledlayout(fig, 1, numel(xctMethods), 'TileSpacing','compact');
         axs = gobjects(1, numel(xctMethods));
 
@@ -474,12 +488,79 @@ for g = groupsToPlot
     end
 end
 
+%% Plots: CT KL at mid-core -- mid-profile vs BTC zD 0.5, and every CT KL vs MFM
+% one value per experiment (KL does not depend on the case row), from the first row found
+% (a) mid-profile KL vs BTC KL at zD = 0.5: same location, same first-term ADE -> expect 1:1
+% (b) every CT KL vs the MFM KL of the same experiment, marker = source
+
+ctCmp = srcNames([2 3 5 6]);           % CT BTC 0.8, CT width, CT BTC 0.5, CT mid-profile
+for g = groupsToPlot
+    Tg = T(T.group == g & isfinite(T.KL_cm2min) & T.KL_cm2min > 0, :);
+    if isempty(Tg), continue, end
+    expG = exps(ismember([exps.label], unique(Tg.experiment)));
+    klOf = @(lbl, src) firstKL(Tg, lbl, src);
+
+    fig = figure('Position',[80 80 1350 580]);
+    tl  = tiledlayout(fig, 1, 2, 'TileSpacing','compact');
+
+    % (a) mid-profile vs BTC zD 0.5
+    ax = nexttile(tl);  hold(ax,'on');  allV = [];
+    for e = 1:numel(expG)
+        [xb, dxb] = klOf(expG(e).label, srcNames(5));
+        [ym, dym] = klOf(expG(e).label, srcNames(6));
+        if ~(isfinite(xb) && isfinite(ym)), continue, end
+        errorbar(ax, xb, ym, min(dym,0.99*ym), dym, min(dxb,0.99*xb), dxb, 'p', ...
+            'Color',expG(e).color, 'MarkerFaceColor',expG(e).color, 'MarkerEdgeColor',0.5*expG(e).color, ...
+            'MarkerSize',13, 'LineStyle','none', 'CapSize',4, 'DisplayName', legendKeys(expG(e)))
+        text(ax, xb, ym, sprintf('  %.2f', ym/xb), 'FontSize',8, 'VerticalAlignment','bottom')
+        allV = [allV xb ym];  %#ok<AGROW>
+    end
+    addOneToOne(ax, allV)
+    set(ax, 'XScale','log', 'YScale','log', 'FontSize',11);  grid(ax,'on');  axis(ax,'square')
+    xlabel(ax, "K_L, " + srcNames(5) + " [cm^2/min]", 'Interpreter','tex')
+    ylabel(ax, "K_L, " + srcNames(6) + " [cm^2/min]", 'Interpreter','tex')
+    title(ax, 'mid-core: front profile vs BTC (label = ratio)', 'FontSize',11)
+    legend(ax, 'Location','northwest', 'Interpreter','none', 'FontSize',8)
+
+    % (b) all CT KL vs MFM
+    ax = nexttile(tl);  hold(ax,'on');  allV = [];
+    for e = 1:numel(expG)
+        [xm, dxm] = klOf(expG(e).label, srcNames(1));
+        if ~isfinite(xm), continue, end
+        for s = 1:numel(ctCmp)
+            [yc, dyc] = klOf(expG(e).label, ctCmp(s));
+            if ~isfinite(yc), continue, end
+            mk = srcMk(srcNames == ctCmp(s));
+            errorbar(ax, xm, yc, min(dyc,0.99*yc), dyc, min(dxm,0.99*xm), dxm, mk, ...
+                'Color',expG(e).color, 'MarkerFaceColor',expG(e).color, 'MarkerEdgeColor',0.5*expG(e).color, ...
+                'MarkerSize',10, 'LineStyle','none', 'CapSize',3, 'HandleVisibility','off')
+            allV = [allV xm yc];  %#ok<AGROW>
+        end
+    end
+    addOneToOne(ax, allV)
+    for s = 1:numel(ctCmp)
+        plot(ax, NaN, NaN, srcMk(srcNames == ctCmp(s)), 'MarkerSize',9, 'LineStyle','none', ...
+            'Color',[0.3 0.3 0.3], 'MarkerFaceColor',[0.6 0.6 0.6], 'DisplayName', ctCmp(s))
+    end
+    set(ax, 'XScale','log', 'YScale','log', 'FontSize',11);  grid(ax,'on');  axis(ax,'square')
+    xlabel(ax, 'K_L, MFM [cm^2/min]');  ylabel(ax, 'K_L, CT [cm^2/min]')
+    title(ax, 'CT methods vs MFM (colour = experiment)', 'FontSize',11)
+    legend(ax, 'Location','northwest', 'Interpreter','none', 'FontSize',8)
+
+    title(tl, sprintf('CT K_L at mid-core vs BTC and MFM (%s, %s) -- %s', ctDataSource, ctVariant, ...
+        groupTitle.(g)), 'Interpreter','none')
+    fname = "KLmid_vs_BTC05_" + g;
+    saveas(fig, fullfile(pathExport, fname), 'png');
+    saveas(fig, fullfile(pathExport, fname), 'fig');
+    if closeAfterSave, close(fig); end
+end
+
 %% Maps: M vs Pe and M vs Ng, marker colour = KL (one column per method)
 
 mapColorVar = 'KL_cm2min';      % 'KL_cm2min' or 'KLD0'
 mapColorLbl = struct('KL_cm2min','K_L [cm^2/min]', 'KLD0','K_L/D_0 [-]');
 mapLogColor = true;             % log colour scale
-mapMethods  = srcNames([1 3 2]);                  % MFM, CT width, CT BTC
+mapMethods  = srcNames([1 3 2 5 6]);              % MFM, CT width, CT BTC 0.8, CT BTC 0.5, CT mid-profile
 mapRows     = {char(peMain), peLblMain, true; ...
                'Ng', 'N_g [-]',         false};   % {y column, y label, log y}
 labelPoints = true;             % write the experiment label next to each marker
@@ -1252,6 +1333,18 @@ if startsWith(method, "BTC_")
     if ~e.complete || ~isfield(e.best,'KL_cm2min'), note = tag + " incomplete BTC"; return, end
     KL = e.best.KL_cm2min;
     if isfield(e.best,'dKL_cm2min'), dKL = e.best.dKL_cm2min; end
+elseif startsWith(method, "MID_")
+    m = extractAfter(method, "MID_");
+    if ~isfield(rv, 'KL_midProfile') || ~isfield(rv.KL_midProfile, 'methods') || ...
+            ~isfield(rv.KL_midProfile.methods, m)
+        note = "KL_midProfile." + m + " not computed (re-run main_CTpostproc)"; return
+    end
+    r = rv.KL_midProfile.methods.(m);
+    if stat == "mean"
+        KL = r.KL_cm2min_mean;  dKL = r.KL_cm2min_std;
+    else
+        KL = r.KL_cm2min_best;  dKL = r.dKL_cm2min_best;
+    end
 else
     if ~isfield(rv.KL_front_CT, method), note = method + " not in KL_front_CT"; return, end
     f = rv.KL_front_CT.(method);
@@ -1321,4 +1414,24 @@ end
 
 function s = ternStr(cond, a, b)
 if cond, s = a; else, s = b; end
+end
+
+function [KL, dKL] = firstKL(Tg, lbl, src)
+% KL +/- dKL of one experiment and source (first matching row), NaN if none
+KL = NaN;  dKL = NaN;
+k = find(Tg.experiment == lbl & Tg.source == src, 1);
+if isempty(k), return, end
+KL = Tg.KL_cm2min(k);  dKL = Tg.dKL_cm2min(k);
+if ~isfinite(dKL), dKL = 0; end
+end
+
+function addOneToOne(ax, v)
+% 1:1 line and +/-25 % band over the range of the plotted values
+v = v(isfinite(v) & v > 0);
+if isempty(v), return, end
+lim = [min(v)/1.5, max(v)*1.5];
+plot(ax, lim, lim, 'k-', 'HandleVisibility','off')
+plot(ax, lim, 1.25*lim, 'k:', 'HandleVisibility','off')
+plot(ax, lim, lim/1.25, 'k:', 'HandleVisibility','off')
+xlim(ax, lim);  ylim(ax, lim)
 end
