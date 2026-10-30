@@ -655,73 +655,83 @@ for g = groupsToPlot
     saveas(fig, fullfile(pathExport, fname), 'fig');
     if closeAfterSave, close(fig); end
 end
-
-%% KL/D0 vs Pe, marker colour = M
+%% KL/D0 vs Pe, marker colour = M and = N_g (discrete classes, blue = low -> red = high)
 
 pmSources  = srcNames(1);          % MFM; add srcNames(2:3) to include the XCT CT values
-pmGroups   = analysisGroups;           % nominal and average measured conditions
+pmGroups   = analysisGroups;       % conditions plotted
 pmUseAll   = false;                % true: include the horizontal runs (squares, Ng = 0)
-pmLogM     = true;                 % log colour scale for M
-pmLabels   = true;                 % experiment label next to each marker
+pmLabels   = true;                 % experiment name next to each marker (where pmColorVars allows)
+pmNLevels  = 6;                    % number of discrete colour classes
+% colour variables: {column, colour-bar label, log scale, file tag, point labels}
+pmColorVars = {'M',  'M = \mu_2/\mu_1 [-]', true,  'M',  false; ...
+               'Ng', 'N_g [-]',             false, 'Ng', false};   % N_g signed (negative -> positive)
 
 if pmUseAll, Tpm = Tall; else, Tpm = T; end
 for g = pmGroups
     Tg = Tpm(Tpm.group == g & ismember(Tpm.source, pmSources) & isfinite(Tpm.KLD0) & Tpm.KLD0 > 0, :);
     if isempty(Tg), warning('No entries for group %s', g); continue, end
-
-    cM = Tg.M;  if pmLogM, cM = log10(cM); end
-    isH = Tg.Ng == 0;                                     % horizontal runs (Ng = 0)
-
-    fig = figure('Position',[80 80 1150 750]);
-    ax = axes(fig);  hold(ax,'on')
-
-    % uncertainty bars (grey, behind)
+    isH   = Tg.Ng == 0;                                   % horizontal runs (Ng = 0)
+    isXCT = startsWith(Tg.experiment, "He-Xe");           % XCT analog cases (square), else UHS (circle)
     xPm = Tg.(peMain);  dxPm = Tg.("d" + peMain);  dxPm(~isfinite(dxPm)) = 0;
-    dyLow = min(Tg.dKLD0, 0.99*Tg.KLD0);  dxLow = min(dxPm, 0.99*xPm);
-    errorbar(ax, xPm, Tg.KLD0, dyLow, Tg.dKLD0, dxLow, dxPm, 'LineStyle','none', ...
-        'Color',[0.75 0.75 0.75], 'CapSize',3, 'HandleVisibility','off')
 
-    % markers: circle = vertical (Ng ~= 0), square = horizontal (Ng = 0); edge style per source
-    srcEdge = struct();  srcEdge.(matlab.lang.makeValidName(srcNames(1))) = 'k';
-    for s = 1:numel(pmSources)
-        selS = Tg.source == pmSources(s);
-        lw = 0.8;  if s > 1, lw = 2; end                  % CT sources: thick edge
-        if any(selS & ~isH)
-            scatter(ax, xPm(selS & ~isH), Tg.KLD0(selS & ~isH), 120, cM(selS & ~isH), 'o', ...
-                'filled', 'MarkerEdgeColor','k', 'LineWidth',lw, ...
-                'DisplayName', pmSources(s) + ", vertical (N_g \neq 0)")
+    for cv = 1:size(pmColorVars,1)
+        cName = pmColorVars{cv,1};  isLogC = pmColorVars{cv,3};
+        cV = Tg.(cName);
+        if isLogC, cV(cV <= 0) = NaN; cV = log10(cV); end
+        cLimP = [min(cV,[],'omitnan') max(cV,[],'omitnan')];
+        if ~all(isfinite(cLimP)), continue, end
+        if diff(cLimP) == 0, cLimP = cLimP + [-0.5 0.5]*max(abs(cLimP(1))*0.1, 0.1); end
+
+        fig = figure('Position',[80 80 1150 750]);
+        ax = axes(fig);  hold(ax,'on')
+
+        % uncertainty bars (grey, behind)
+        dyLow = min(Tg.dKLD0, 0.99*Tg.KLD0);  dxLow = min(dxPm, 0.99*xPm);
+        errorbar(ax, xPm, Tg.KLD0, dyLow, Tg.dKLD0, dxLow, dxPm, 'LineStyle','none', ...
+            'Color',[0.75 0.75 0.75], 'CapSize',3, 'HandleVisibility','off')
+
+        % markers: circle = UHS, square = XCT analog (He-Xe); horizontal runs (Ng = 0,
+        % only with pmUseAll) as diamonds; CT sources with a thick edge
+        mkSets = {~isXCT & ~isH, 'o', 120, "UHS"; ...
+                   isXCT & ~isH, 's', 130, "XCT"; ...
+                   isH,          'd', 130, "horizontal (N_g = 0)"};
+        for s = 1:numel(pmSources)
+            selS = Tg.source == pmSources(s);
+            lw = 0.8;  if s > 1, lw = 2; end
+            for q = 1:size(mkSets,1)
+                sel = selS & mkSets{q,1};
+                if ~any(sel), continue, end
+                scatter(ax, xPm(sel), Tg.KLD0(sel), mkSets{q,3}, cV(sel), mkSets{q,2}, ...
+                    'filled', 'MarkerEdgeColor','k', 'LineWidth',lw, ...
+                    'DisplayName', mkSets{q,4} + ternStr(numel(pmSources) > 1, " (" + pmSources(s) + ")", ""))
+            end
         end
-        if any(selS & isH)
-            scatter(ax, xPm(selS & isH), Tg.KLD0(selS & isH), 140, cM(selS & isH), 's', ...
-                'filled', 'MarkerEdgeColor','k', 'LineWidth',lw, ...
-                'DisplayName', pmSources(s) + ", horizontal (N_g = 0)")
+
+        if pmLabels && pmColorVars{cv,5}
+            text(ax, xPm, Tg.KLD0, "  " + namesOf(Tg.experiment, exps), 'FontSize',8, 'Interpreter','none')
         end
+
+        set(ax, 'XScale','log', 'YScale','log', 'FontSize',12);  grid(ax,'on')
+        xlabel(ax, peLblMain, 'FontSize',13)
+        ylabel(ax, 'K_L / D_0 [-]', 'FontSize',13)
+
+        % discrete colour classes, ticks at the class edges
+        colormap(ax, blueRedDiscrete(pmNLevels));  clim(ax, cLimP)
+        cb = colorbar(ax);
+        tk = linspace(cLimP(1), cLimP(2), pmNLevels + 1);
+        cb.Ticks = tk;
+        if isLogC, cb.TickLabels = compose('%.3g', 10.^tk); else, cb.TickLabels = compose('%.3g', tk); end
+        cb.Label.String = pmColorVars{cv,2};
+
+        legend(ax, 'Location','southeast', 'FontSize',9)
+        title(ax, sprintf('K_L/D_0 vs %s, colour = %s -- %s', peShort, pmColorVars{cv,2}, groupTitle.(g)), ...
+            'Interpreter','tex')
+
+        fname = "KLD0_vs_" + peMain + "_color" + pmColorVars{cv,4} + "_" + g + ternStr(pmUseAll, "_allExp", "");
+        saveas(fig, fullfile(pathExport, fname), 'png');
+        saveas(fig, fullfile(pathExport, fname), 'fig');
+        if closeAfterSave, close(fig); end
     end
-
-    if pmLabels
-        text(ax, xPm, Tg.KLD0, "  " + Tg.experiment, 'FontSize',7, 'Interpreter','none')
-    end
-
-    yline(ax, 1, ':k', 'K_L = D_0', 'HandleVisibility','off', 'LabelHorizontalAlignment','left')
-    set(ax, 'XScale','log', 'YScale','log', 'FontSize',12);  grid(ax,'on')
-    xlabel(ax, peLblMain, 'FontSize',13)
-    ylabel(ax, 'K_L / D_0 [-]', 'FontSize',13)
-
-    colormap(ax, turbo)
-    cb = colorbar(ax);
-    if pmLogM
-        tk = linspace(min(cM), max(cM), 6);
-        cb.Ticks = tk;  cb.TickLabels = compose('%.2f', 10.^tk);
-    end
-    cb.Label.String = 'M = \mu_2/\mu_1 [-]';
-
-    legend(ax, 'Location','northwest', 'FontSize',9)
-    title(ax, sprintf('K_L/D_0 vs %s, colour = M -- %s', peShort, groupTitle.(g)), 'Interpreter','tex')
-
-    fname = "KLD0_vs_" + peMain + "_colorM_" + g + ternStr(pmUseAll, "_allExp", "");
-    saveas(fig, fullfile(pathExport, fname), 'png');
-    saveas(fig, fullfile(pathExport, fname), 'fig');
-    if closeAfterSave, close(fig); end
 end
 
 %% MFM BTC moments (sigma, skewness) vs the dimensionless numbers, and KL/D0 vs moments
@@ -1544,4 +1554,14 @@ key = matlab.lang.makeValidName(regexprep(ex.label, '\s.*$', ''));   % "H2-CO2 Q
 if ~isfield(over, key) || ~startsWith(ex.label, regexprep(ex.label, '\s.*$', '') + " Q"), return, end
 c = over.(key);
 if contains(ex.label, "Q1"), col = c{1}; else, col = c{2}; end
+end
+
+function cm = blueRedDiscrete(n)
+% n discrete colours from cold blue (low) to warm red (high), via pale yellow
+% (ColorBrewer RdYlBu reversed)
+k = [0.19 0.21 0.58; 0.27 0.46 0.71; 0.67 0.85 0.91; 1.00 1.00 0.75; ...
+     0.99 0.68 0.38; 0.84 0.19 0.15; 0.65 0.00 0.15];
+x  = linspace(0, 1, size(k,1));
+xi = linspace(0, 1, n);
+cm = [interp1(x, k(:,1), xi)', interp1(x, k(:,2), xi)', interp1(x, k(:,3), xi)'];
 end
