@@ -100,7 +100,9 @@ alphaKind     = "alpha";   % "alpha" (KL = D0 + alpha*u) | "alphaTau" (KL = D0/t
 peMain        = "Pea";     % Pe used in the KL/D0-vs-Pe colour plot, maps, PCA and radar:
                            % "Pea" = u*alpha/D0 | "Pe" = u*L/D0
 
-groupsToPlot   = ["theory","measAvg","measBegEnd"];
+analysisGroups = ["theory","measAvg"];   % conditions used by EVERY plot and analysis below:
+                                         % "theory" (nominal) | "measAvg" (run average) | "measBegEnd"
+groupsToPlot   = analysisGroups;
 closeAfterSave = false;
  
 %% Colours
@@ -536,7 +538,7 @@ end
 %% KL/D0 vs Pe, marker colour = M
 
 pmSources  = srcNames(1);          % MFM; add srcNames(2:3) to include the XCT CT values
-pmGroups   = ["theory","measBegEnd"];   % nominal and per-fluid measured conditions
+pmGroups   = analysisGroups;           % nominal and average measured conditions
 pmUseAll   = false;                % true: include the horizontal runs (squares, Ng = 0)
 pmLogM     = true;                 % log colour scale for M
 pmLabels   = true;                 % experiment label next to each marker
@@ -644,8 +646,9 @@ for g = groupsToPlot
     if closeAfterSave, close(fig); end
 end
 
-% (2) KL/D0 vs sigma and vs skewness (independent of group -> nominal rows)
-Tm = T(T.group == "theory" & T.source == srcNames(1) & isfinite(T.skewBTC) & T.KLD0 > 0, :);
+% (2) KL/D0 vs sigma and vs skewness, one figure per analysis group
+for gM = analysisGroups
+Tm = T(T.group == gM & T.source == srcNames(1) & isfinite(T.skewBTC) & T.KLD0 > 0, :);
 if ~isempty(Tm)
     fig = figure('Position',[60 80 1300 520]);
     tl  = tiledlayout(fig, 1, 3, 'TileSpacing','compact');
@@ -667,10 +670,11 @@ if ~isempty(Tm)
     end
     lgd = legend(nexttile(tl,1), 'Interpreter','none', 'FontSize',8, 'NumColumns',5);
     lgd.Layout.Tile = 'south';
-    title(tl, 'K_L/D_0 (MFM) vs breakthrough-curve moments', 'Interpreter','tex')
-    fname = "KLD0_vs_BTCmoments";
+    title(tl, sprintf('K_L/D_0 (MFM) vs breakthrough-curve moments -- %s', groupTitle.(gM)), 'Interpreter','tex')
+    fname = "KLD0_vs_BTCmoments_" + gM;
     saveas(fig, fullfile(pathExport, fname), 'png');  saveas(fig, fullfile(pathExport, fname), 'fig');
     if closeAfterSave, close(fig); end
+end
 end
 
 %% Which dimensionless number controls KL? correlation, partial correlation, regression, PCA
@@ -679,7 +683,7 @@ end
 % construction, so Pe_alpha is expected to dominate the correlations.
 % One analysis per (group, data set); each experiment counted once per data set.
 
-anaGroups = ["theory","measBegEnd"];                     % nominal, and per-fluid measured (init/final)
+anaGroups = analysisGroups;                              % nominal and average measured conditions
 
 % data sets: main vertical runs with Ng; all runs without Ng (Ng = 0 for horizontal runs);
 % the same two again with the skewness of the MFM BTC added as a variable
@@ -893,77 +897,78 @@ end
 
 %% Radar chart: dimensionless numbers and KL/D0 (MFM), all experiments
 
-radarGroup = "measBegEnd";              % per-fluid measured conditions
 radarLog   = struct('Pe',true, 'Pea',true, 'M',false, 'absNg',true, 'Nrho',false, 'KLD0',true, 'skewBTC',false);
 rMin       = 0.15;                      % radius of the axis minimum (keeps polygons off the centre)
 
-Tr = T(T.group == radarGroup & T.source == srcNames(1) & isfinite(T.KLD0) & T.KLD0 > 0, :);
-Tr.absNg = abs(Tr.Ng);
+for radarGroup = analysisGroups
+    Tr = T(T.group == radarGroup & T.source == srcNames(1) & isfinite(T.KLD0) & T.KLD0 > 0, :);
+    Tr.absNg = abs(Tr.Ng);
 
-% axes: {column, label}
-axDef = {char(peMain), peShort;  'M','M';  'absNg','|N_g|';  'KLD0','K_L/D_0 (MFM)';  'skewBTC','skew (MFM BTC)'};
-nA = size(axDef,1);
-th = pi/2 - (0:nA-1)*2*pi/nA;           % first axis at the top, clockwise
+    % axes: {column, label}
+    axDef = {char(peMain), peShort;  'M','M';  'absNg','|N_g|';  'KLD0','K_L/D_0 (MFM)';  'skewBTC','skew (MFM BTC)'};
+    nA = size(axDef,1);
+    th = pi/2 - (0:nA-1)*2*pi/nA;           % first axis at the top, clockwise
 
-expSel = find(ismember([exps.label], Tr.experiment));
-V = nan(numel(expSel), nA);
-for ie = 1:numel(expSel)
-    rr = Tr(Tr.experiment == exps(expSel(ie)).label, :);
-    for a = 1:nA, V(ie,a) = rr.(axDef{a,1})(1); end
-end
-
-% min-max normalisation per axis (log where set)
-R = nan(size(V));  lo = nan(1,nA);  hi = nan(1,nA);
-for a = 1:nA
-    v = V(:,a);  isLog = radarLog.(axDef{a,1});
-    if isLog, v(v <= 0) = NaN; v = log10(v); end
-    lo(a) = min(v, [], 'omitnan');  hi(a) = max(v, [], 'omitnan');
-    if hi(a) > lo(a)
-        R(:,a) = rMin + (1-rMin)*(v - lo(a))/(hi(a) - lo(a));
-    else
-        R(:,a) = 0.5*(1+rMin);
+    expSel = find(ismember([exps.label], Tr.experiment));
+    V = nan(numel(expSel), nA);
+    for ie = 1:numel(expSel)
+        rr = Tr(Tr.experiment == exps(expSel(ie)).label, :);
+        for a = 1:nA, V(ie,a) = rr.(axDef{a,1})(1); end
     end
-    if isLog, lo(a) = 10^lo(a); hi(a) = 10^hi(a); end
+
+    % min-max normalisation per axis (log where set)
+    R = nan(size(V));  lo = nan(1,nA);  hi = nan(1,nA);
+    for a = 1:nA
+        v = V(:,a);  isLog = radarLog.(axDef{a,1});
+        if isLog, v(v <= 0) = NaN; v = log10(v); end
+        lo(a) = min(v, [], 'omitnan');  hi(a) = max(v, [], 'omitnan');
+        if hi(a) > lo(a)
+            R(:,a) = rMin + (1-rMin)*(v - lo(a))/(hi(a) - lo(a));
+        else
+            R(:,a) = 0.5*(1+rMin);
+        end
+        if isLog, lo(a) = 10^lo(a); hi(a) = 10^hi(a); end
+    end
+
+    fig = figure('Position',[80 60 1000 900]);
+    ax = axes(fig);  hold(ax,'on');  axis(ax,'equal','off')
+
+    % grid: rings and spokes, with min / max printed at each spoke
+    for ring = linspace(rMin, 1, 4)
+        plot(ax, ring*cos([th th(1)]), ring*sin([th th(1)]), '-', 'Color',[0.85 0.85 0.85], ...
+            'HandleVisibility','off')
+    end
+    for a = 1:nA
+        plot(ax, [0 cos(th(a))], [0 sin(th(a))], '-', 'Color',[0.6 0.6 0.6], 'HandleVisibility','off')
+        text(ax, 1.17*cos(th(a)), 1.17*sin(th(a)), axDef{a,2}, 'FontSize',13, ...
+            'FontWeight','bold', 'HorizontalAlignment','center')
+        text(ax, 1.04*cos(th(a)), 1.04*sin(th(a)) - 0.05, sprintf('%.3g', hi(a)), ...
+            'FontSize',8, 'Color',[0.4 0.4 0.4], 'HorizontalAlignment','center')
+        text(ax, rMin*cos(th(a)), rMin*sin(th(a)) - 0.05, sprintf('%.3g', lo(a)), ...
+            'FontSize',8, 'Color',[0.4 0.4 0.4], 'HorizontalAlignment','center')
+    end
+
+    % one polygon per experiment
+    for ie = 1:numel(expSel)
+        ex = exps(expSel(ie));
+        okA = isfinite(R(ie,:));
+        if nnz(okA) < 3, continue, end
+        x = R(ie,okA).*cos(th(okA));  y = R(ie,okA).*sin(th(okA));
+        patch(ax, x, y, ex.color, 'FaceAlpha',0.10, 'EdgeColor',ex.color, 'LineWidth',2.2, ...
+            'DisplayName', legendKeys(ex))
+        plot(ax, x, y, 'o', 'MarkerFaceColor',ex.color, 'MarkerEdgeColor','k', ...
+            'MarkerSize',6, 'HandleVisibility','off')
+    end
+
+    xlim(ax, [-1.35 1.35]);  ylim(ax, [-1.3 1.3])
+    legend(ax, 'Location','southoutside', 'Interpreter','none', 'FontSize',9, 'NumColumns',2)
+    title(ax, sprintf('Dimensionless numbers and K_L/D_0 (MFM) per experiment -- %s', ...
+        groupTitle.(radarGroup)), 'Interpreter','tex', 'FontSize',12)
+
+    fname = "radar_dimless_KLD0_MFM_" + radarGroup;
+    saveas(fig, fullfile(pathExport, fname), 'png');
+    saveas(fig, fullfile(pathExport, fname), 'fig');
 end
-
-fig = figure('Position',[80 60 1000 900]);
-ax = axes(fig);  hold(ax,'on');  axis(ax,'equal','off')
-
-% grid: rings and spokes, with min / max printed at each spoke
-for ring = linspace(rMin, 1, 4)
-    plot(ax, ring*cos([th th(1)]), ring*sin([th th(1)]), '-', 'Color',[0.85 0.85 0.85], ...
-        'HandleVisibility','off')
-end
-for a = 1:nA
-    plot(ax, [0 cos(th(a))], [0 sin(th(a))], '-', 'Color',[0.6 0.6 0.6], 'HandleVisibility','off')
-    text(ax, 1.17*cos(th(a)), 1.17*sin(th(a)), axDef{a,2}, 'FontSize',13, ...
-        'FontWeight','bold', 'HorizontalAlignment','center')
-    text(ax, 1.04*cos(th(a)), 1.04*sin(th(a)) - 0.05, sprintf('%.3g', hi(a)), ...
-        'FontSize',8, 'Color',[0.4 0.4 0.4], 'HorizontalAlignment','center')
-    text(ax, rMin*cos(th(a)), rMin*sin(th(a)) - 0.05, sprintf('%.3g', lo(a)), ...
-        'FontSize',8, 'Color',[0.4 0.4 0.4], 'HorizontalAlignment','center')
-end
-
-% one polygon per experiment
-for ie = 1:numel(expSel)
-    ex = exps(expSel(ie));
-    okA = isfinite(R(ie,:));
-    if nnz(okA) < 3, continue, end
-    x = R(ie,okA).*cos(th(okA));  y = R(ie,okA).*sin(th(okA));
-    patch(ax, x, y, ex.color, 'FaceAlpha',0.10, 'EdgeColor',ex.color, 'LineWidth',2.2, ...
-        'DisplayName', legendKeys(ex))
-    plot(ax, x, y, 'o', 'MarkerFaceColor',ex.color, 'MarkerEdgeColor','k', ...
-        'MarkerSize',6, 'HandleVisibility','off')
-end
-
-xlim(ax, [-1.35 1.35]);  ylim(ax, [-1.3 1.3])
-legend(ax, 'Location','southoutside', 'Interpreter','none', 'FontSize',9, 'NumColumns',2)
-title(ax, sprintf('Dimensionless numbers and K_L/D_0 (MFM) per experiment -- %s', ...
-    groupTitle.(radarGroup)), 'Interpreter','tex', 'FontSize',12)
-
-fname = "radar_dimless_KLD0_MFM_" + radarGroup;
-saveas(fig, fullfile(pathExport, fname), 'png');
-saveas(fig, fullfile(pathExport, fname), 'fig');
  
 %% Local functions
  
