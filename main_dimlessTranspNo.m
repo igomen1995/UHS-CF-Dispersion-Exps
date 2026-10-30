@@ -3,8 +3,9 @@
 % diffusion coefficient D0) to the dimensionless numbers of each case:
 %       KL/D0  vs  Pe, Pe_p, M, Ng, Nrho, Pe_alpha      (one figure per x-axis)
 % Pe = uL/D0 (core length), Pe_p = u d_pore/D0 (pore diameter, Gray Berea d_pore = 70 um),
-% Pe_alpha = u alpha/D0 (dispersivity alpha from main_Processing, see SETTINGS: alphaSource,
-% alphaKind, peMain = Pe used in the maps, colour plot, PCA and radar)
+% Pe_alpha = u alpha/D0 (dispersivity alpha from the main_Processing alpha_results_<fitData>.xlsx
+% of the chosen data set, see SETTINGS: alphaFile; peMain = Pe used in the maps, colour plot,
+% PCA and radar)
 % for the UHS cases (H2-CO2, H2-CH4, MFM) and the XCT analog cases (He-Xe,
 % MFM analog + CT), and for any other experiment added later.
 %
@@ -90,13 +91,18 @@ momTimeVar = "tD";     % column of expProcFullData.(key).(fitData).BT used as ti
 momSmooth  = 5;        % points, moving median on C before cummax (noise in E = dC/dt)
 momCendMin = 0.95;     % warn if the curve ends below this C (tail missing -> skew biased)
 
-% dispersivity-based Peclet number Pe_alpha = u*alpha/D0, alpha from main_Processing
-% (expProcFullData.(key).(fitData).results = per-case fit, or fitSummary alpha_pooled).
-% alpha is a property of the case (fluids, T, P, rock), so the MFM alpha of an
-% experiment is used for all its KL sources (MFM, CT BTC, CT width) and groups.
-alphaSource   = "group";   % "group" (fit of KL vs u per case) | "pooled" (one alpha for all experiments)
-alphaFallback = true;      % group alpha missing (case with < 2 points) -> use the pooled alpha
-alphaKind     = "alpha";   % "alpha" (KL = D0 + alpha*u) | "alphaTau" (KL = D0/tau + alpha_tau*u)
+% dispersivity-based Peclet number Pe_alpha = u*alpha/D0, alpha read from the alpha table
+% written by main_Processing for the selected (most suitable) experiments:
+%   sheet best_method (one row per case GroupID, best per-key method):
+%       alpha_tau_cm +/- totUncertAlpha_tau_cm, tau +/- totUncertTau   (alpha + tau fit)
+%       if that case has no tau fit -> alpha_cm +/- totUncertAlpha_cm  (alpha-only fit)
+%   case not in the table (or no alpha) -> pooled fit of all those experiments
+%       (sheet pooled_all, row best_per_key), same tau / alpha-only order
+% An experiment is matched to its case by MFM key (column Keys), then by fluids, T, P, L, angle.
+% alpha is a property of the case, so it is used for all KL sources and groups of that experiment.
+alphaFile         = fullfile('results', 'exp_verticalStable_CFCT_REFPROP', 'alpha_results_wEOS.xlsx');
+alphaPreferTau    = true;   % true: alpha_tau (+ tau) when fitted | false: always alpha_cm
+alphaUsePooled    = true;   % case without alpha in the table -> pooled best_per_key value
 peMain        = "Pea";     % Pe used in the KL/D0-vs-Pe colour plot, maps, PCA and radar:
                            % "Pea" = u*alpha/D0 | "Pe" = u*L/D0
 
@@ -232,6 +238,20 @@ end
 disp(table(string({exps.label})', [exps.mfmKey]', [exps.mfmKeyUsed]', [exps.ctKey]', ...
     'VariableNames', {'experiment','mfmKeyRequested','mfmKeyUsed','ctKey'}))
  
+%% Alpha table (main_Processing, selected experiments)
+
+alphaTab = readAlphaTable(alphaFile);
+if ~isempty(alphaTab.group)
+    fprintf('Alpha table %s:\n', alphaFile);
+    disp(alphaTab.group(:, intersect({'GroupID','n_points','alpha_cm','totUncertAlpha_cm', ...
+        'alpha_tau_cm','totUncertAlpha_tau_cm','tau','totUncertTau'}, ...
+        alphaTab.group.Properties.VariableNames, 'stable')))
+end
+if ~isempty(alphaTab.pooled)
+    fprintf('Pooled (best_per_key): alpha = %.4f cm, alpha_tau = %.4f cm, tau = %.2f\n', ...
+        alphaTab.pooled.alpha_cm, alphaTab.pooled.alpha_tau_cm, alphaTab.pooled.tau);
+end
+
 %% Collect KL for every experiment and source
  
 rows = cell(0,1);
@@ -240,11 +260,8 @@ for e = 1:numel(exps)
     ex = exps(e);
     KLlist = struct('src',{},'KL',{},'dKL',{},'key',{});
     mom = momNaN();                               % BTC moments (MFM curve only)
-    alEx = struct('a',NaN,'da',NaN,'src',"");     % dispersivity of this experiment [cm]
-    if ex.mfmKeyUsed ~= ""
-        alEx = getAlphaPe(ex.mfmFileUsed, ex.mfmKeyUsed, mfmFitData, cache, alphaSource, alphaFallback, alphaKind);
-        if ~isfinite(alEx.a), warning('%s: no alpha in main_Processing results -- Pe_alpha = NaN', ex.label); end
-    end
+    alEx = alphaForExp(alphaTab, ex, cases, alphaPreferTau, alphaUsePooled);   % alpha of this experiment [cm]
+    if ~isfinite(alEx.a), warning('%s: no alpha in %s -- Pe_alpha = NaN', ex.label, alphaFile); end
 
     if ex.mfmKeyUsed ~= ""
         [KL, dKL, note] = getMFM(ex.mfmFileUsed, ex.mfmKeyUsed, mfmFitData, cache);
@@ -292,13 +309,13 @@ for e = 1:numel(exps)
             rows{end+1,1} = table(c, groupOfCase(c), ex.label, string(d.Pair), ...
                 d.Pmix_psig, d.Tmix_C, d.u_cmmin, q.src, q.key, ...
                 q.KL, q.dKL, D0(c), dD0(c), KLD0, dKLD0, ...
-                d.Pe, d.dPe, Pep, dPep, alEx.a, alEx.da, alEx.src, Pea, dPea, ...
+                d.Pe, d.dPe, Pep, dPep, alEx.a, alEx.da, alEx.src, alEx.tau, alEx.dtau, Pea, dPea, ...
                 d.M, d.dM, d.Ng, d.dNg, d.Nrho, d.dNrho, PeKL, PeKL*q.dKL/q.KL, ...
                 mq.tmean, mq.sigma, mq.cv, mq.skew, mq.kurt, mq.Cend, ...
                 'VariableNames', {'caseIdx','group','experiment','pair', ...
                 'Pmix_psig','Tmix_C','u_cmmin','source','sourceKey', ...
                 'KL_cm2min','dKL_cm2min','D0_cm2min','dD0_cm2min','KLD0','dKLD0', ...
-                'Pe','dPe','Pep','dPep','alpha_cm','d_alpha_cm','alphaSrc','Pea','dPea', ...
+                'Pe','dPe','Pep','dPep','alpha_cm','d_alpha_cm','alphaSrc','tau','d_tau','Pea','dPea', ...
                 'M','dM','Ng','dNg','Nrho','dNrho','PeKL','dPeKL', ...
                 'tmeanBTC','sigmaBTC','cvBTC','skewBTC','kurtBTC','CendBTC'}); %#ok<SAGROW>
         end
@@ -314,7 +331,7 @@ T = vertcat(rows{:});
 T.skewADE    = 3*sqrt(2./T.PeKL);
 T.skewExcess = T.skewBTC - T.skewADE;
 disp(T(:, {'caseIdx','group','experiment','source','sourceKey','KL_cm2min','KLD0','Pe', ...
-    'alpha_cm','alphaSrc','Pea','M','Ng','sigmaBTC','skewBTC'}))
+    'alpha_cm','alphaSrc','tau','Pea','M','Ng','sigmaBTC','skewBTC'}))
 writetable(T, fullfile(pathExport, 'KL_dimless_all.xlsx'));
 % all experiments are kept for the PCA; every plot below uses the main (vertical) ones only
 Tall = T;
@@ -1110,49 +1127,79 @@ m.kurt  = sum((tm - mu).^4.*w)/W / s^4 - 3;
 m.Cend  = C(end);
 end
 
-function al = getAlphaPe(file, key, fitData, cache, source, fallback, kind)
-% dispersivity [cm] of an MFM experiment from main_Processing, for Pe_alpha = u*alpha/D0
-%   source "group"  : per-case fit stored in expProcFullData.(key).(fitData).results
-%          "pooled" : fitSummary.(fitData).alpha_pooled, best_per_key row
-%   fallback        : group value missing -> pooled value
-%   kind   "alpha"  : alpha_cm (KL = D0 + alpha*u) | "alphaTau": alpha_tau_cm
-% Uncertainty = total (fit + method spread) when stored, otherwise the fit error.
-al = struct('a',NaN,'da',NaN,'src',"");
-S  = loadCached(file, cache);
-if isempty(S) || ~isfield(S, 'expProcFullData'), return, end
-if kind == "alphaTau"
-    vName = 'alpha_tau_cm';  eNames = {'totUncertAlpha_tau_cm','d_alpha_tau_cm'};
-else
-    vName = 'alpha_cm';      eNames = {'totUncertAlpha_cm','d_alpha_cm'};
+function A = readAlphaTable(file)
+% best_method sheet (one row per case) and the best_per_key row of pooled_all
+A = struct('group', table(), 'pooled', table());
+if ~isfile(file)
+    warning('Alpha file not found: %s -- Pe_alpha = NaN', file);  return
 end
-srcList = string(source);
-if source == "group" && fallback, srcList = ["group","pooled"]; end
-for sNow = srcList
-    r = [];
-    if sNow == "group"
-        if isfield(S.expProcFullData, key) && isfield(S.expProcFullData.(key), fitData) && ...
-                isfield(S.expProcFullData.(key).(fitData), 'results')
-            r = S.expProcFullData.(key).(fitData).results;
-        end
-    else
-        try
-            P = S.expProcFullData.fitSummary.(fitData).alpha_pooled;
-            r = P(P.method == "best_per_key", :);
-        catch
-        end
+[~, sh] = xlsfinfo(file);
+if any(strcmp(sh, 'best_method'))
+    A.group = readtable(file, 'Sheet','best_method', 'TextType','string');
+end
+if any(strcmp(sh, 'pooled_all'))
+    P = readtable(file, 'Sheet','pooled_all', 'TextType','string');
+    A.pooled = P(P.method == "best_per_key", :);
+    if height(A.pooled) > 1, A.pooled = A.pooled(1,:); end
+end
+end
+
+function al = alphaForExp(A, ex, cases, preferTau, usePooled)
+% alpha [cm] (+ uncertainty) and tau of one experiment from the alpha table:
+% case row (matched by MFM key, else by fluids/T/P/L/angle) -> alpha_tau + tau, else alpha_cm;
+% no value for the case -> pooled best_per_key row (same order)
+al = struct('a',NaN, 'da',NaN, 'tau',NaN, 'dtau',NaN, 'src',"");
+G = A.group;
+r = [];
+if ~isempty(G) && ismember('Keys', G.Properties.VariableNames) && ex.mfmKeyUsed ~= ""
+    for k = 1:height(G)
+        if any(strtrim(split(string(G.Keys(k)), ";")) == ex.mfmKeyUsed), r = k; break, end
     end
-    if isempty(r), continue, end
-    n = fieldOrVarNames(r);
-    if ~ismember(vName, n), continue, end
-    a = r.(vName)(1);
-    if ~isfinite(a) || a <= 0, continue, end
-    al.a = a;  al.src = sNow;
-    for k = 1:numel(eNames)
-        if ismember(eNames{k}, n) && isfinite(r.(eNames{k})(1))
-            al.da = r.(eNames{k})(1);  break
-        end
-    end
-    return
+end
+if isempty(r) && ~isempty(G) && ~isempty(ex.idx)
+    c   = cases(ex.idx(1));  fl = string(c.fl);
+    gid = fl(1) + "_" + fl(2) + "_T" + string(c.T1_C) + "_P" + string(c.P1_psig) + ...
+          "_L" + string(c.L_in) + "_THETA" + string(c.theta_deg);
+    r = find(G.GroupID == gid, 1);
+end
+if ~isempty(r)
+    al = pickAlpha(G(r,:), preferTau);
+    if isfinite(al.a), al.src = "case " + string(G.GroupID(r)) + " (" + al.src + ")"; return, end
+end
+if usePooled && ~isempty(A.pooled)
+    al = pickAlpha(A.pooled, preferTau);
+    if isfinite(al.a), al.src = "pooled (" + al.src + ")"; end
+end
+end
+
+function al = pickAlpha(row, preferTau)
+% alpha_tau + tau (total uncertainties) when available and wanted, else alpha_cm
+al = struct('a',NaN, 'da',NaN, 'tau',NaN, 'dtau',NaN, 'src',"");
+v  = @(n) colVal(row, n);
+if preferTau && isfinite(v('alpha_tau_cm')) && v('alpha_tau_cm') > 0 && isfinite(v('tau'))
+    al.a   = v('alpha_tau_cm');  al.da   = firstFinite(v('totUncertAlpha_tau_cm'), v('d_alpha_tau_cm'));
+    al.tau = v('tau');           al.dtau = firstFinite(v('totUncertTau'), v('d_tau'));
+    al.src = "alpha_tau";
+elseif isfinite(v('alpha_cm')) && v('alpha_cm') > 0
+    al.a   = v('alpha_cm');      al.da   = firstFinite(v('totUncertAlpha_cm'), v('d_alpha_cm'));
+    al.src = "alpha";
+end
+end
+
+function x = colVal(row, name)
+x = NaN;
+if ismember(name, row.Properties.VariableNames)
+    x = row.(name)(1);
+    if iscell(x), x = x{1}; end
+    if isstring(x) || ischar(x), x = str2double(x); end
+    x = double(x);
+end
+end
+
+function x = firstFinite(varargin)
+x = NaN;
+for k = 1:nargin
+    if isfinite(varargin{k}), x = varargin{k}; return, end
 end
 end
 
