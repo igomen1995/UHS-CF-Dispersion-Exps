@@ -176,6 +176,19 @@ end
 % exps(end+1) = struct('label',"New exp",'idx',[53 54 55],'color',[0.85 0.33 0.10], ...
 %     'mfmKey',"CF_...",'mfmRun',1,'ctKey',"",'KL',NaN,'dKL',NaN,'main',false);
 
+%% Display names (legends and point labels of every plot)
+% {label prefix, name}: the experiment label "<prefix> Q1..." becomes "<name> loPe",
+% "<prefix> Q5..." becomes "<name> hiPe", and a run tag is kept ("... (R2)").
+% M = viscosity ratio: hiM for H2-CO2 / He-Xe 900, loM for H2-CH4 / He-Xe 725.
+% Labels without a match (e.g. the horizontal runs) keep their original label.
+expNames = {"H2-CO2",    "UHS hiM";   "He-Xe 900", "XCT hiM"; ...
+            "H2-CH4",    "UHS loM";   "He-Xe 725", "XCT loM"};
+qPeTag   = {"Q1", "loPe";  "Q5", "hiPe"};     % flow-rate tag -> Peclet tag
+legendShowKeys = false;                        % true: append the MFM / CT keys in the legends
+for e = 1:numel(exps)
+    exps(e).name = displayName(exps(e).label, expNames, qPeTag);
+end
+
 srcNames = ["MFM", "CT BTC zD=" + strrep(extractAfter(ctBTCtag,"zD"),"p","."), ...
             "CT width " + regexprep(ctWidthTag, '^width_C(\d+)_(\d+).*$', '$1-$2'), "manual", ...
             "CT BTC zD=" + strrep(extractAfter(ctBTCtagMid,"zD"),"p","."), ...
@@ -400,7 +413,7 @@ for g = groupsToPlot
         for e = 1:numel(exps)
             if ~any(Tg.experiment == exps(e).label), continue, end
             plot(ax, NaN, NaN, 's', 'MarkerSize',10, 'MarkerFaceColor',exps(e).color, ...
-                'MarkerEdgeColor','none', 'DisplayName', legendKeys(exps(e)))
+                'MarkerEdgeColor','none', 'DisplayName', legendKeys(exps(e), legendShowKeys))
         end
         for s = 1:numel(srcNames)
             if ~any(Tg.source == srcNames(s)), continue, end
@@ -467,7 +480,7 @@ for g = groupsToPlot
             if ~any(Tg.experiment == exps(e).label), continue, end
             hLeg(end+1) = plot(axL, NaN, NaN, 's', 'MarkerSize',10, ...
                 'MarkerFaceColor',exps(e).color, 'MarkerEdgeColor','none', ...
-                'DisplayName', legendKeys(exps(e))); %#ok<SAGROW>
+                'DisplayName', legendKeys(exps(e), legendShowKeys)); %#ok<SAGROW>
         end
         for s = 1:numel(srcNames)
             if ~ismember(srcNames(s), [xctMethods uhsSource]), continue, end
@@ -511,7 +524,7 @@ for g = groupsToPlot
         if ~(isfinite(xb) && isfinite(ym)), continue, end
         errorbar(ax, xb, ym, min(dym,0.99*ym), dym, min(dxb,0.99*xb), dxb, 'p', ...
             'Color',expG(e).color, 'MarkerFaceColor',expG(e).color, 'MarkerEdgeColor',0.5*expG(e).color, ...
-            'MarkerSize',13, 'LineStyle','none', 'CapSize',4, 'DisplayName', legendKeys(expG(e)))
+            'MarkerSize',13, 'LineStyle','none', 'CapSize',4, 'DisplayName', legendKeys(expG(e), legendShowKeys))
         text(ax, xb, ym, sprintf('  %.2f', ym/xb), 'FontSize',8, 'VerticalAlignment','bottom')
         allV = [allV xb ym];  %#ok<AGROW>
     end
@@ -602,7 +615,7 @@ for g = groupsToPlot
             end
 
             if labelPoints
-                text(ax, Ts.M, yv, "  " + Ts.experiment + " (" + Ts.source + ")", ...
+                text(ax, Ts.M, yv, "  " + namesOf(Ts.experiment, exps) + " (" + Ts.source + ")", ...
                     'FontSize',7, 'Interpreter','none', 'VerticalAlignment','middle')
             end
 
@@ -903,7 +916,7 @@ for g = anaGroups
         sc = max(abs(score(:,1:2)), [], 'all');
         scatter(ax, score(:,1), score(:,2), 90, y, 'filled', 'MarkerEdgeColor','k')
         colormap(ax, parula);  cb = colorbar(ax);  cb.Label.String = 'log_{10}K_L/D_0';
-        text(ax, score(:,1), score(:,2), "  " + Ts.experiment, 'FontSize',7, 'Interpreter','none')
+        text(ax, score(:,1), score(:,2), "  " + namesOf(Ts.experiment, exps), 'FontSize',7, 'Interpreter','none')
         for k = 1:nP
             quiver(ax, 0, 0, coeff(k,1)*sc, coeff(k,2)*sc, 0, 'Color',[0.2 0.2 0.2], ...
                 'LineWidth',1.2, 'MaxHeadSize',0.4)
@@ -998,13 +1011,15 @@ end
 %         skewness of the MFM BTC
 % one polygon per experiment in the experiment colour (lighter = lower Q, darker = higher Q);
 % vertices: circle = UHS (H2-CO2, H2-CH4), square = XCT analog (He-Xe)
-% colours: H2-CO2 and He-Xe 900 (high P) blue, He-Xe 725 (low P) green, H2-CH4 yellow
+% colours: high M (H2-CO2, He-Xe 900) blue, low M (H2-CH4, He-Xe 725) green
+% legend : display names (section "Display names")
 
 radarLog     = struct('Pe',true, 'Pea',true, 'Pep',true, 'M',false, 'Ng',false, 'Nrho',false, ...
                       'KLD0',true, 'skewBTC',false);
 rMin         = 0.15;                    % radius of the axis minimum (keeps polygons off the centre)
 radarFillA   = 0.10;                    % fill transparency
-radarColOver = struct('H2_CO2', {{blueL, blueD}});   % radar only: H2-CO2 drawn in blue (Q1 light, Q5 dark)
+radarColOver = struct('H2_CO2', {{blueL, blueD}}, ...     % radar only: {Q1 light, Q5 dark}
+                      'H2_CH4', {{greenL, greenD}});
 
 for radarGroup = analysisGroups
     Tr = T(T.group == radarGroup & T.source == srcNames(1) & isfinite(T.KLD0) & T.KLD0 > 0, :);
@@ -1074,16 +1089,16 @@ for radarGroup = analysisGroups
         x = R(ie,okA).*cos(th(okA));  y = R(ie,okA).*sin(th(okA));
         patch(ax, x, y, col, 'FaceAlpha',radarFillA, 'EdgeColor',col, ...
             'LineWidth',2.2, 'HandleVisibility','off')
-        plot(ax, x, y, mk, 'MarkerFaceColor',col, 'MarkerEdgeColor','k', 'MarkerSize',8, ...
+        plot(ax, x, y, mk, 'MarkerFaceColor',col, 'MarkerEdgeColor',col, 'MarkerSize',9, ...
             'LineStyle','none', 'HandleVisibility','off')
-        plot(ax, NaN, NaN, ['-' mk], 'Color',col, 'MarkerFaceColor',col, 'MarkerEdgeColor','k', ...
-            'LineWidth',2.2, 'MarkerSize',8, 'DisplayName', ex.label)
+        plot(ax, NaN, NaN, ['-' mk], 'Color',col, 'MarkerFaceColor',col, 'MarkerEdgeColor',col, ...
+            'LineWidth',2.2, 'MarkerSize',9, 'DisplayName', ex.name)
     end
 
     xlim(ax, [-1.35 1.35]);  ylim(ax, [-1.3 1.3])
     legend(ax, 'Location','southoutside', 'Interpreter','none', 'FontSize',9, 'NumColumns',2)
     title(ax, {sprintf('Dimensionless numbers and K_L/D_0 (MFM) per experiment -- %s', ...
-        groupTitle.(radarGroup)), 'circle = UHS, square = XCT analog He-Xe (both MFM K_L); lighter = lower Q, darker = higher Q'}, ...
+        groupTitle.(radarGroup)), 'circle = UHS, square = XCT (MFM K_L); blue = high M, green = low M; lighter = Q1 (loPe), darker = Q5 (hiPe)'}, ...
         'Interpreter','tex', 'FontSize',12)
 
     fname = "radar_dimless_KLD0_MFM_" + radarGroup;
@@ -1103,11 +1118,39 @@ if ~isfinite(dKL), dKL = 0; end
 list(end+1) = struct('src',src,'KL',KL,'dKL',dKL,'key',string(key));
 end
  
-function txt = legendKeys(ex)
+function txt = legendKeys(ex, showKeys)
+% legend text: display name (see "Display names"), optionally followed by the keys
+txt = ex.name;
+if nargin < 2 || ~showKeys, return, end
 keys = [ex.mfmKeyUsed, ex.ctKey];
 keys = keys(keys ~= "");
 if isfinite(ex.KL), keys(end+1) = "manual"; end
-if isempty(keys), txt = ex.label; else, txt = ex.label + ": " + strjoin(keys, " / "); end
+if ~isempty(keys), txt = ex.name + ": " + strjoin(keys, " / "); end
+end
+
+function txt = displayName(lbl, names, peTag)
+% "H2-CO2 Q5" -> "UHS hiM hiPe", "H2-CH4 Q1 R2" -> "UHS loM loPe (R2)"; no match -> label
+txt = string(lbl);
+for k = 1:size(names,1)
+    if ~startsWith(txt, names{k,1} + " Q"), continue, end
+    rest = extractAfter(txt, strlength(names{k,1}));
+    txt  = names{k,2};
+    for q = 1:size(peTag,1)
+        if ~isempty(regexp(char(rest), "\<" + peTag{q,1} + "\>", 'once')), txt = txt + " " + peTag{q,2}; break, end
+    end
+    run = string(regexp(char(rest), 'R\d+', 'match', 'once'));
+    if strlength(run) > 0, txt = txt + " (" + run + ")"; end
+    return
+end
+end
+
+function n = namesOf(labels, exps)
+% display names for a list of experiment labels (unmatched labels unchanged)
+n = string(labels);
+for k = 1:numel(n)
+    j = find([exps.label] == n(k), 1);
+    if ~isempty(j), n(k) = exps(j).name; end
+end
 end
  
 function S = loadCached(file, cache)
