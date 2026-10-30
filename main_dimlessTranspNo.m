@@ -1018,6 +1018,7 @@ radarLog     = struct('Pe',true, 'Pea',true, 'Pep',true, 'M',false, 'Ng',false, 
                       'KLD0',true, 'skewBTC',false);
 rMin         = 0.15;                    % radius of the axis minimum (keeps polygons off the centre)
 radarFillA   = 0.10;                    % fill transparency
+radarMkEdgeW = 0.4;                     % marker edge line width (thin black outline)
 radarColOver = struct('H2_CO2', {{blueL, blueD}}, ...     % radar only: {Q1 light, Q5 dark}
                       'H2_CH4', {{greenL, greenD}});
 
@@ -1089,10 +1090,12 @@ for radarGroup = analysisGroups
         x = R(ie,okA).*cos(th(okA));  y = R(ie,okA).*sin(th(okA));
         patch(ax, x, y, col, 'FaceAlpha',radarFillA, 'EdgeColor',col, ...
             'LineWidth',2.2, 'HandleVisibility','off')
-        plot(ax, x, y, mk, 'MarkerFaceColor',col, 'MarkerEdgeColor',col, 'MarkerSize',9, ...
-            'LineStyle','none', 'HandleVisibility','off')
-        plot(ax, NaN, NaN, ['-' mk], 'Color',col, 'MarkerFaceColor',col, 'MarkerEdgeColor',col, ...
-            'LineWidth',2.2, 'MarkerSize',9, 'DisplayName', ex.name)
+        plot(ax, x, y, mk, 'MarkerFaceColor',col, 'MarkerEdgeColor','k', 'MarkerSize',9, ...
+            'LineWidth',radarMkEdgeW, 'LineStyle','none', 'HandleVisibility','off')
+        % legend entry: the marker only, so its edge stays as thin as on the plot
+        % (a line + marker entry would draw the marker edge with the 2.2 line width)
+        plot(ax, NaN, NaN, mk, 'MarkerFaceColor',col, 'MarkerEdgeColor','k', 'MarkerSize',10, ...
+            'LineWidth',radarMkEdgeW, 'LineStyle','none', 'DisplayName', ex.name)
     end
 
     xlim(ax, [-1.35 1.35]);  ylim(ax, [-1.3 1.3])
