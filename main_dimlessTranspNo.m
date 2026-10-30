@@ -1113,6 +1113,7 @@ if numel(t) < 5, return, end
 [t, iu] = unique(t);  C = C(iu);
 C = min(max(C, 0), 1);
 C = cummax(movmedian(C, nSmooth));
+C(C < 0.02) = 0;  C(C > 0.98) = 1;   % snap plateaus (same as getBTCMetrics)
 w  = diff(C);   tm = 0.5*(t(1:end-1) + t(2:end));
 W  = sum(w);
 if W <= 0, return, end
