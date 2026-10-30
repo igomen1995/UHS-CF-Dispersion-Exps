@@ -994,16 +994,23 @@ for g = unique(anaSummary.group)'
 end
 
 %% Radar chart: dimensionless numbers and KL/D0 (MFM), all experiments
+% spokes: Pe (peMain), M, N_g (signed, linear: negative -> positive), K_L/D_0 (MFM),
+%         skewness of the MFM BTC
+% one polygon per experiment in the experiment colour (lighter = lower Q, darker = higher Q);
+% vertices: circle = UHS (H2-CO2, H2-CH4), square = XCT analog (He-Xe)
+% colours: H2-CO2 and He-Xe 900 (high P) blue, He-Xe 725 (low P) green, H2-CH4 yellow
 
-radarLog   = struct('Pe',true, 'Pea',true, 'M',false, 'absNg',true, 'Nrho',false, 'KLD0',true, 'skewBTC',false);
-rMin       = 0.15;                      % radius of the axis minimum (keeps polygons off the centre)
+radarLog     = struct('Pe',true, 'Pea',true, 'Pep',true, 'M',false, 'Ng',false, 'Nrho',false, ...
+                      'KLD0',true, 'skewBTC',false);
+rMin         = 0.15;                    % radius of the axis minimum (keeps polygons off the centre)
+radarFillA   = 0.10;                    % fill transparency
+radarColOver = struct('H2_CO2', {{blueL, blueD}});   % radar only: H2-CO2 drawn in blue (Q1 light, Q5 dark)
 
 for radarGroup = analysisGroups
     Tr = T(T.group == radarGroup & T.source == srcNames(1) & isfinite(T.KLD0) & T.KLD0 > 0, :);
-    Tr.absNg = abs(Tr.Ng);
 
-    % axes: {column, label}
-    axDef = {char(peMain), peShort;  'M','M';  'absNg','|N_g|';  'KLD0','K_L/D_0 (MFM)';  'skewBTC','skew (MFM BTC)'};
+    % spokes: {column, label}
+    axDef = {char(peMain), peShort;  'M','M';  'Ng','N_g';  'KLD0','K_L/D_0 (MFM)';  'skewBTC','skew (MFM BTC)'};
     nA = size(axDef,1);
     th = pi/2 - (0:nA-1)*2*pi/nA;           % first axis at the top, clockwise
 
@@ -1014,14 +1021,17 @@ for radarGroup = analysisGroups
         for a = 1:nA, V(ie,a) = rr.(axDef{a,1})(1); end
     end
 
-    % min-max normalisation per axis (log where set)
-    R = nan(size(V));  lo = nan(1,nA);  hi = nan(1,nA);
+    % min-max normalisation per spoke (log where set; N_g linear so its sign is kept)
+    R = nan(size(V));  lo = nan(1,nA);  hi = nan(1,nA);  r0 = nan(1,nA);
     for a = 1:nA
         v = V(:,a);  isLog = radarLog.(axDef{a,1});
         if isLog, v(v <= 0) = NaN; v = log10(v); end
         lo(a) = min(v, [], 'omitnan');  hi(a) = max(v, [], 'omitnan');
         if hi(a) > lo(a)
             R(:,a) = rMin + (1-rMin)*(v - lo(a))/(hi(a) - lo(a));
+            if ~isLog && lo(a) < 0 && hi(a) > 0             % where zero sits on this spoke
+                r0(a) = rMin + (1-rMin)*(0 - lo(a))/(hi(a) - lo(a));
+            end
         else
             R(:,a) = 0.5*(1+rMin);
         end
@@ -1031,7 +1041,7 @@ for radarGroup = analysisGroups
     fig = figure('Position',[80 60 1000 900]);
     ax = axes(fig);  hold(ax,'on');  axis(ax,'equal','off')
 
-    % grid: rings and spokes, with min / max printed at each spoke
+    % grid: rings and spokes, with min / max printed at each spoke, zero mark on N_g
     for ring = linspace(rMin, 1, 4)
         plot(ax, ring*cos([th th(1)]), ring*sin([th th(1)]), '-', 'Color',[0.85 0.85 0.85], ...
             'HandleVisibility','off')
@@ -1044,28 +1054,42 @@ for radarGroup = analysisGroups
             'FontSize',8, 'Color',[0.4 0.4 0.4], 'HorizontalAlignment','center')
         text(ax, rMin*cos(th(a)), rMin*sin(th(a)) - 0.05, sprintf('%.3g', lo(a)), ...
             'FontSize',8, 'Color',[0.4 0.4 0.4], 'HorizontalAlignment','center')
+        if isfinite(r0(a))
+            nrm = [-sin(th(a)) cos(th(a))]*0.03;          % short tick across the spoke at 0
+            p0  = r0(a)*[cos(th(a)) sin(th(a))];
+            plot(ax, p0(1) + [-1 1]*nrm(1), p0(2) + [-1 1]*nrm(2), 'k-', 'LineWidth',1.5, ...
+                'HandleVisibility','off')
+            text(ax, p0(1) + 2*nrm(1), p0(2) + 2*nrm(2), '0', 'FontSize',8, 'HorizontalAlignment','center')
+        end
     end
 
-    % one polygon per experiment
+    % one polygon per experiment: experiment colour, marker = UHS (circle) / XCT (square)
     for ie = 1:numel(expSel)
-        ex = exps(expSel(ie));
+        ex  = exps(expSel(ie));
+        col = radarColour(ex, radarColOver);
+        isUHS = startsWith(ex.label, ["H2-CO2","H2-CH4"]);
+        mk = 's';  if isUHS, mk = 'o'; end
         okA = isfinite(R(ie,:));
         if nnz(okA) < 3, continue, end
         x = R(ie,okA).*cos(th(okA));  y = R(ie,okA).*sin(th(okA));
-        patch(ax, x, y, ex.color, 'FaceAlpha',0.10, 'EdgeColor',ex.color, 'LineWidth',2.2, ...
-            'DisplayName', legendKeys(ex))
-        plot(ax, x, y, 'o', 'MarkerFaceColor',ex.color, 'MarkerEdgeColor','k', ...
-            'MarkerSize',6, 'HandleVisibility','off')
+        patch(ax, x, y, col, 'FaceAlpha',radarFillA, 'EdgeColor',col, ...
+            'LineWidth',2.2, 'HandleVisibility','off')
+        plot(ax, x, y, mk, 'MarkerFaceColor',col, 'MarkerEdgeColor','k', 'MarkerSize',8, ...
+            'LineStyle','none', 'HandleVisibility','off')
+        plot(ax, NaN, NaN, ['-' mk], 'Color',col, 'MarkerFaceColor',col, 'MarkerEdgeColor','k', ...
+            'LineWidth',2.2, 'MarkerSize',8, 'DisplayName', ex.label)
     end
 
     xlim(ax, [-1.35 1.35]);  ylim(ax, [-1.3 1.3])
     legend(ax, 'Location','southoutside', 'Interpreter','none', 'FontSize',9, 'NumColumns',2)
-    title(ax, sprintf('Dimensionless numbers and K_L/D_0 (MFM) per experiment -- %s', ...
-        groupTitle.(radarGroup)), 'Interpreter','tex', 'FontSize',12)
+    title(ax, {sprintf('Dimensionless numbers and K_L/D_0 (MFM) per experiment -- %s', ...
+        groupTitle.(radarGroup)), 'circle = UHS, square = XCT analog He-Xe (both MFM K_L); lighter = lower Q, darker = higher Q'}, ...
+        'Interpreter','tex', 'FontSize',12)
 
     fname = "radar_dimless_KLD0_MFM_" + radarGroup;
     saveas(fig, fullfile(pathExport, fname), 'png');
     saveas(fig, fullfile(pathExport, fname), 'fig');
+    if closeAfterSave, close(fig); end
 end
  
 %% Local functions
@@ -1434,4 +1458,13 @@ plot(ax, lim, lim, 'k-', 'HandleVisibility','off')
 plot(ax, lim, 1.25*lim, 'k:', 'HandleVisibility','off')
 plot(ax, lim, lim/1.25, 'k:', 'HandleVisibility','off')
 xlim(ax, lim);  ylim(ax, lim)
+end
+
+function col = radarColour(ex, over)
+% experiment colour for the radar; pairs listed in `over` get {light, dark} by Q
+col = ex.color;
+key = matlab.lang.makeValidName(regexprep(ex.label, '\s.*$', ''));   % "H2-CO2 Q5" -> H2_CO2
+if ~isfield(over, key) || ~startsWith(ex.label, regexprep(ex.label, '\s.*$', '') + " Q"), return, end
+c = over.(key);
+if contains(ex.label, "Q1"), col = c{1}; else, col = c{2}; end
 end
