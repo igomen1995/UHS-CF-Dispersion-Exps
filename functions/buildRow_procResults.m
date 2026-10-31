@@ -55,6 +55,8 @@ function row = buildRow_procResults(filedataExp, expProcData, KL_out, i)
     %           Pe_uMFM_L_KL   = uMFM*L/KL
     %           Pe_upump_L_D0  = upump*L/D0
     %           Pe_uMFM_L_D0   = uMFM*L/D0
+    %           KLD0           = KL/D0 (D0 = D12, binary molecular diffusion)
+    %           dKLD0          = KLD0*sqrt((dKL/KL)^2 + (dD12/D12)^2)
     %           dtD        = u*dt/L
     %           L_lines    = v_lines*dt
     %           V_lines    = Q*dt
@@ -113,6 +115,10 @@ function row = buildRow_procResults(filedataExp, expProcData, KL_out, i)
     row.C_fit = {KL_out.C_fit}; 
     row.Pe_uMFM_L_KL = uMFM*L/row.KL_SI;
     row.dPe_uMFM_L_KL  = row.Pe_uMFM_L_KL *sqrt((duMFM/uMFM)^2  + (row.dKL_SI/row.KL_SI)^2);
+
+    % dispersion relative to molecular diffusion, KL/D0 (D0 = D12) [-]
+    % uncertainty: fit error of KL and uncertainty of D12, in quadrature
+    row.KLD0  = row.KL_SI/D12_SI;
+    row.dKLD0 = row.KLD0*sqrt((row.dKL_SI/row.KL_SI)^2 + (dD12_SI/D12_SI)^2);
     
 end
-
