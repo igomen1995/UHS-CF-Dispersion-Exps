@@ -682,7 +682,7 @@ pmLabels   = true;                 % experiment name next to each marker (where 
 pmNLevels  = 6;                    % number of discrete colour classes
 % colour variables: {column, colour-bar label, log scale, file tag, point labels}
 pmColorVars = {'M',  'M = \mu_2/\mu_1 [-]', true,  'M',  false; ...
-               'Ng', 'N_g [-]',             false, 'Ng', false};   % N_g signed (negative -> positive)
+               'Ng', 'N_g [-]',             false, 'Ng', false};   % N_g > 0 = gravity-stable
 
 if pmUseAll, Tpm = Tall; else, Tpm = T; end
 for g = pmGroups

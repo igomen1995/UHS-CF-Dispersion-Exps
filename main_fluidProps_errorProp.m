@@ -31,7 +31,7 @@
 % DIMENSIONLESS NUMBERS (same definitions/convention as main_DataExtract.m)
 %   M    = mu2/mu1                           viscosity ratio (displaced/displacing)
 %   Nrho = (rho1-rho2)/rho2                   density number
-%   Ng   = K*(rho1-rho2)*g*sin(theta)/(mu2*u) gravity number
+%   Ng   = K*(rho2-rho1)*g*sin(theta)/(mu2*u) gravity number (> 0 = gravity-stable)
 %   Pe   = u*L/D12                            Peclet number (core length)
 %   Pep  = u*d_pore/D12                       pore Peclet number (pore diameter,
 %                                             Gray Berea d_pore = 70 um, see INPUT)
@@ -288,11 +288,11 @@ for c = 1:numel(cases)
     Nrho  = (rho1-rho2)/rho2;
     dNrho = sqrt( (drho1/rho2)^2 + ((-rho1*drho2)/(rho2^2))^2 );
 
-    % gravity number Ng = K*(rho1-rho2)*g*sin(theta)/(mu2*u)
-    Ng  = K_SI*(rho1-rho2)*9.8*sin(theta)/(mu2*u_SI);
-    dNg = abs(Ng)*sqrt( (drho1/(rho1-rho2))^2 + (drho2/(rho1-rho2))^2 ...
+    % gravity number Ng = K*(rho2-rho1)*g*sin(theta)/(mu2*u)
+    % > 0: gravity-stable (lighter fluid 1 displacing denser fluid 2 downward)
+    Ng  = K_SI*(rho2-rho1)*9.8*sin(theta)/(mu2*u_SI);
+    dNg = abs(Ng)*sqrt( (drho1/(rho2-rho1))^2 + (drho2/(rho2-rho1))^2 ...
                       + (dmu2/mu2)^2 + (du_SI/u_SI)^2 + (dK_SI/K_SI)^2 );
-
     % Peclet number Pe = u*L/D12 (D12 at the 50/50 mixture point)
     Pe  = u_SI*L_SI/D12_SI;
     dPe = Pe*sqrt( (du_SI/u_SI)^2 + (dD12_SI/D12_SI)^2 );

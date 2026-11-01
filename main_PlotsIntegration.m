@@ -173,7 +173,7 @@
 % where:
 %
 %       M  = mu2/mu1                              (REFPROP)
-%       Ng = K*(rho1-rho2)*g*sin(theta)/(mu2*ux)  (REFPROP)
+%       Ng = K*(rho2-rho1)*g*sin(theta)/(mu2*ux)  (REFPROP; > 0 = gravity-stable)
 %       D0 = Thorne-Enskog D12 at the 50/50 mixture (LJ parameters of
 %            inputDiffConfig.xlsx, as main_fluidProps_errorProp)
 %
@@ -660,8 +660,8 @@ else
 
     % ---- dimensionless numbers
     A.M  = A.mu2_Pas ./ A.mu1_Pas;
-    A.Ng = A.K_mD*9.869e-16 .* (A.rho1_kgm3 - A.rho2_kgm3) * 9.81 .* sind(A.theta_deg) ...
-           ./ (A.mu2_Pas .* A.u_cmmin/6000);
+    A.Ng = A.K_mD*9.869e-16 .* (A.rho2_kgm3 - A.rho1_kgm3) * 9.81 .* sind(A.theta_deg) ...
+       ./ (A.mu2_Pas .* A.u_cmmin/6000);
     A.Nrho = (A.rho1_kgm3 - A.rho2_kgm3) ./ A.rho2_kgm3;
     A.M_source  = repmat("REFPROP (sheet T, P)", nA, 1);
     A.M_source(~isfinite(A.M)) = "";
