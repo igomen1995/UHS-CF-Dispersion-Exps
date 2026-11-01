@@ -106,11 +106,17 @@ momCendMin = 0.95;     % warn if the curve ends below this C (tail missing -> sk
 %   alphaMode "case": sheet best_method, the experiment's own case (matched by MFM key in
 %       column Keys, then by fluids, T, P, L, angle); no value -> pooled (alphaUsePooled)
 %   in both: alpha_tau_cm +/- totUncertAlpha_tau_cm with tau +/- totUncertTau (alpha + tau fit),
-%       if no tau fit -> alpha_cm +/- totUncertAlpha_cm (alpha-only fit)
+%       if no tau fit -> alpha_cm +/- totUncertAlpha_cm (alpha-only fit, beta = 1)
+%   alpha_tau is the COEFFICIENT of KL = D0*(1/tau + C2*Pe^beta), alpha_tau = C2*L, Pe = uL/D0.
+%   The dispersivity is alpha_eff = alpha_tau*(uL/D0)^(beta-1), computed here per case
+%   (u, D0 of the case, L = core length) and used in Pe_alpha = u*alpha_eff/D0
+%   (alpha_eff = alpha for the alpha-only fit). beta = beta_tau of the alpha file.
 alphaFile         = fullfile('results', 'exp_verticalStable_CFCT_REFPROP', 'alpha_results_wEOS.xlsx');
 alphaMode         = "pooled";   % "pooled" (pooled_all, best_per_key) | "case" (best_method per case)
 alphaPreferTau    = true;       % true: alpha_tau (+ tau) when fitted | false: always alpha_cm
 alphaUsePooled    = true;       % alphaMode "case": case without alpha -> pooled value
+alphaBetaDefault  = 1.2;        % beta of the alpha + tau fit if the alpha file has no beta_tau
+                                % column (older main_Processing output) = beta_tau of main_Processing
 peMain        = "Pea";     % Pe used in the KL/D0-vs-Pe colour plot, maps, PCA and radar:
                            % "Pea" = u*alpha/D0 | "Pe" = u*L/D0
 
@@ -281,8 +287,12 @@ if alphaMode == "case" && ~isempty(alphaTab.group)
         alphaTab.group.Properties.VariableNames, 'stable')))
 end
 if ~isempty(alphaTab.pooled)
-    fprintf('Pooled (best_per_key): alpha = %.4f cm, alpha_tau = %.4f cm, tau = %.2f\n', ...
+    fprintf('Pooled (best_per_key): alpha = %.4f cm, alpha_tau = %.4f cm (coefficient), tau = %.2f\n', ...
         alphaTab.pooled.alpha_cm, alphaTab.pooled.alpha_tau_cm, alphaTab.pooled.tau);
+    if ismember('alpha_eff_cm_min', alphaTab.pooled.Properties.VariableNames)
+        fprintf('   alpha_eff = alpha_tau*Pe^(beta-1) over the fitted experiments: %.4f - %.4f cm\n', ...
+            alphaTab.pooled.alpha_eff_cm_min, alphaTab.pooled.alpha_eff_cm_max);
+    end
 end
 
 %% Collect KL for every experiment and source
@@ -338,21 +348,29 @@ for e = 1:numel(exps)
                 dPep = Pep*sqrt(relU^2 + (dD0(c)/D0(c))^2 + (ddpore_um/dpore_um)^2);
             end
             if q.src == srcNames(1), mq = mom; else, mq = momNaN(); end   % moments: MFM rows only
-            % Pe_alpha = u*alpha/D0 (alpha in cm, u in cm/min, D0 in cm2/min)
-            Pea  = d.u_cmmin*alEx.a/D0(c);
+            % effective dispersivity alpha_eff = alpha*(uL/D0)^(beta-1) (alpha in cm, u in cm/min,
+            % D0 in cm2/min, L = core length; beta = 1 for the alpha-only fit -> alpha_eff = alpha)
+            % and Pe_alpha = u*alpha_eff/D0 = alpha*u^beta*L^(beta-1)/D0^beta
+            bA   = alEx.beta;  if ~isfinite(bA), bA = alphaBetaDefault; end
             relU = 0;  if d.u_cmmin > 0, relU = d.du_cmmin/d.u_cmmin; end
             relA = 0;  if isfinite(alEx.da) && alEx.a > 0, relA = alEx.da/alEx.a; end
-            dPea = Pea*sqrt(relU^2 + relA^2 + (dD0(c)/D0(c))^2);
+            relD = dD0(c)/D0(c);
+            PeL   = d.u_cmmin*L_cm/D0(c);
+            aEff  = alEx.a*PeL^(bA - 1);
+            daEff = aEff*sqrt(relA^2 + ((bA - 1)*sqrt(relU^2 + relD^2))^2);
+            Pea  = d.u_cmmin*aEff/D0(c);
+            dPea = Pea*sqrt(relA^2 + (bA*relU)^2 + (bA*relD)^2);
             rows{end+1,1} = table(c, groupOfCase(c), ex.label, string(d.Pair), ...
                 d.Pmix_psig, d.Tmix_C, d.u_cmmin, q.src, q.key, ...
                 q.KL, q.dKL, D0(c), dD0(c), KLD0, dKLD0, ...
-                d.Pe, d.dPe, Pep, dPep, alEx.a, alEx.da, alEx.src, alEx.tau, alEx.dtau, Pea, dPea, ...
+                d.Pe, d.dPe, Pep, dPep, aEff, daEff, alEx.a, alEx.da, bA, alEx.src, alEx.tau, alEx.dtau, Pea, dPea, ...
                 d.M, d.dM, d.Ng, d.dNg, d.Nrho, d.dNrho, PeKL, PeKL*q.dKL/q.KL, ...
                 mq.tmean, mq.sigma, mq.cv, mq.skew, mq.kurt, mq.Cend, ...
                 'VariableNames', {'caseIdx','group','experiment','pair', ...
                 'Pmix_psig','Tmix_C','u_cmmin','source','sourceKey', ...
                 'KL_cm2min','dKL_cm2min','D0_cm2min','dD0_cm2min','KLD0','dKLD0', ...
-                'Pe','dPe','Pep','dPep','alpha_cm','d_alpha_cm','alphaSrc','tau','d_tau','Pea','dPea', ...
+                'Pe','dPe','Pep','dPep','alphaEff_cm','d_alphaEff_cm','alphaFit_cm','d_alphaFit_cm','betaAlpha', ...
+                'alphaSrc','tau','d_tau','Pea','dPea', ...
                 'M','dM','Ng','dNg','Nrho','dNrho','PeKL','dPeKL', ...
                 'tmeanBTC','sigmaBTC','cvBTC','skewBTC','kurtBTC','CendBTC'}); %#ok<SAGROW>
         end
@@ -368,7 +386,7 @@ T = vertcat(rows{:});
 T.skewADE    = 3*sqrt(2./T.PeKL);
 T.skewExcess = T.skewBTC - T.skewADE;
 disp(T(:, {'caseIdx','group','experiment','source','sourceKey','KL_cm2min','KLD0','Pe', ...
-    'alpha_cm','alphaSrc','tau','Pea','M','Ng','sigmaBTC','skewBTC'}))
+    'alphaEff_cm','alphaFit_cm','alphaSrc','tau','Pea','M','Ng','sigmaBTC','skewBTC'}))
 writetable(T, fullfile(pathExport, 'KL_dimless_all.xlsx'));
 % all experiments are kept for the PCA; every plot below uses the main (vertical) ones only
 Tall = T;
@@ -1341,8 +1359,9 @@ function al = alphaForExp(A, ex, cases, mode, preferTau, usePooled)
 % alpha [cm] (+ uncertainty) and tau of one experiment from the alpha table:
 % mode "pooled": pooled_all best_per_key row for every experiment;
 % mode "case": case row (matched by MFM key, else by fluids/T/P/L/angle), no value -> pooled.
-% In both: alpha_tau + tau when available, else alpha_cm.
-al = struct('a',NaN, 'da',NaN, 'tau',NaN, 'dtau',NaN, 'src',"");
+% In both: alpha_tau + tau when available, else alpha_cm. beta: exponent of the fit
+% (beta_tau of the alpha file, NaN if not stored; 1 for alpha_cm).
+al = struct('a',NaN, 'da',NaN, 'tau',NaN, 'dtau',NaN, 'beta',NaN, 'src',"");
 if mode == "pooled"
     if ~isempty(A.pooled)
         al = pickAlpha(A.pooled, preferTau);
@@ -1375,14 +1394,16 @@ end
 
 function al = pickAlpha(row, preferTau)
 % alpha_tau + tau (total uncertainties) when available and wanted, else alpha_cm
-al = struct('a',NaN, 'da',NaN, 'tau',NaN, 'dtau',NaN, 'src',"");
+al = struct('a',NaN, 'da',NaN, 'tau',NaN, 'dtau',NaN, 'beta',NaN, 'src',"");
 v  = @(n) colVal(row, n);
 if preferTau && isfinite(v('alpha_tau_cm')) && v('alpha_tau_cm') > 0 && isfinite(v('tau'))
     al.a   = v('alpha_tau_cm');  al.da   = firstFinite(v('totUncertAlpha_tau_cm'), v('d_alpha_tau_cm'));
     al.tau = v('tau');           al.dtau = firstFinite(v('totUncertTau'), v('d_tau'));
+    al.beta = v('beta_tau');     % NaN for older files -> alphaBetaDefault
     al.src = "alpha_tau";
 elseif isfinite(v('alpha_cm')) && v('alpha_cm') > 0
     al.a   = v('alpha_cm');      al.da   = firstFinite(v('totUncertAlpha_cm'), v('d_alpha_cm'));
+    al.beta = 1;
     al.src = "alpha";
 end
 end

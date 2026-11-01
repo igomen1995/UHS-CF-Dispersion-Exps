@@ -1119,8 +1119,13 @@ min_points_alpha_tau = 3;
 p_guess_alpha     = 1;
 p_guess_alpha_tau = [1,1];
 
+% alpha_eff: effective dispersivity of the alpha + tau fit at each experiment's Pe.
+% With KL = D0*(1/tau + C2*Pe^beta), Pe = uL/D0 and alpha_tau = C2*L, the dispersive
+% term is alpha_eff*u with alpha_eff = alpha_tau*Pe^(beta-1) (= alpha_tau for beta = 1).
+% alpha_tau is only the fit coefficient; alpha_eff is the dispersivity (per experiment).
 alpha_cols = {'alpha_SI','d_alpha_SI','alpha_cm','d_alpha_cm', ...
     'alpha_tau_SI','d_alpha_tau_SI','alpha_tau_cm','d_alpha_tau_cm','tau','d_tau', ...
+    'beta_tau','alpha_eff_SI','d_alpha_eff_SI','alpha_eff_cm','d_alpha_eff_cm', ...
     'Pe_upump_alpha_D0','dPe_upump_alpha_D0','Pe_upump_alpha_tau_D0','dPe_upump_alpha_tau_D0', ...
     'Pe_uMFM_alpha_D0','dPe_uMFM_alpha_D0','Pe_uMFM_alpha_tau_D0','dPe_uMFM_alpha_tau_D0'};
 
@@ -1183,6 +1188,7 @@ for mm = 1:length(method_names)
             Dp_val  = L_unique(n)*0.0254;
 
             upump = Tmethod.u_SI(match_idx);          dupump = 0.1*upump;
+            relPeL = sqrt((dupump./upump).^2 + (dD0_val/D0_val)^2);   % rel. uncertainty of Pe = uL/D0
             uMFM  = Tmethod.uavg_MFM_SI(match_idx);   duMFM  = Tmethod.ustd_MFM_SI(match_idx);
 
             groupID = string(Fluid1_unique(i)) + "_" + string(Fluid2_unique(j)) + ...
@@ -1204,7 +1210,8 @@ for mm = 1:length(method_names)
             alpha_struct(count_row).Keys     = strjoin(Tmethod.Key(match_idx), ";");
             for c = {'alpha_SI','d_alpha_SI','alpha_cm','d_alpha_cm', ...
                      'alpha_tau_SI','d_alpha_tau_SI','alpha_tau_cm','d_alpha_tau_cm', ...
-                     'tau','d_tau','C2_tau','d_C2_tau','beta_tau'}
+                     'tau','d_tau','C2_tau','d_C2_tau','beta_tau', ...
+                     'alpha_eff_cm_mean','alpha_eff_cm_min','alpha_eff_cm_max'}
                 alpha_struct(count_row).(c{1}) = NaN;
             end
 
@@ -1257,10 +1264,24 @@ for mm = 1:length(method_names)
                         Tmethod.tau(match_idx)            = out_tau.tau;
                         Tmethod.d_tau(match_idx)          = out_tau.d_tau;
 
+                        % effective dispersivity per experiment: alpha_eff = alpha_tau*Pe^(beta-1)
+                        [aEff, daEff] = alphaEffOf(out_tau.alpha_SI, out_tau.d_alpha_SI, ...
+                            Pe_upump_L_D0, relPeL, beta_tau);
+                        Tmethod.beta_tau(match_idx)       = beta_tau;
+                        Tmethod.alpha_eff_SI(match_idx)   = aEff;
+                        Tmethod.d_alpha_eff_SI(match_idx) = daEff;
+                        Tmethod.alpha_eff_cm(match_idx)   = aEff*100;
+                        Tmethod.d_alpha_eff_cm(match_idx) = daEff*100;
+                        alpha_struct(count_row).alpha_eff_cm_mean = mean(aEff*100, 'omitnan');
+                        alpha_struct(count_row).alpha_eff_cm_min  = min(aEff*100);
+                        alpha_struct(count_row).alpha_eff_cm_max  = max(aEff*100);
+
+                        % Pe_alpha of the alpha + tau fit = u*alpha_eff/D0 (the dispersivity,
+                        % not the coefficient alpha_tau; identical for beta = 1)
                         [Tmethod.Pe_upump_alpha_tau_D0(match_idx), Tmethod.dPe_upump_alpha_tau_D0(match_idx)] = ...
-                            peAlpha(upump, dupump, out_tau.alpha_SI, out_tau.d_alpha_SI, D0_val, dD0_val);
+                            peAlpha(upump, dupump, aEff, daEff, D0_val, dD0_val);
                         [Tmethod.Pe_uMFM_alpha_tau_D0(match_idx), Tmethod.dPe_uMFM_alpha_tau_D0(match_idx)] = ...
-                            peAlpha(uMFM, duMFM, out_tau.alpha_SI, out_tau.d_alpha_SI, D0_val, dD0_val);
+                            peAlpha(uMFM, duMFM, aEff, daEff, D0_val, dD0_val);
                     end
                 catch ME
                     warning("alpha+tau fit failed (%s, %s): %s", current_method, groupID, ME.message)
@@ -1348,7 +1369,8 @@ end
 
 % per key: alpha-based Peclet numbers
 pe_alpha_vars = {'Pe_upump_alpha_D0','Pe_uMFM_alpha_D0', ...
-                 'Pe_upump_alpha_tau_D0','Pe_uMFM_alpha_tau_D0'};
+                 'Pe_upump_alpha_tau_D0','Pe_uMFM_alpha_tau_D0', ...
+                 'alpha_eff_SI','alpha_eff_cm'};
 best_method_table = addMethodSpread(best_method_table, method_results, ...
     candidate_methods, cand_row, pe_alpha_vars);
 
@@ -1359,7 +1381,8 @@ alpha_pairs = {'alpha_SI','d_alpha_SI'; 'alpha_cm','d_alpha_cm'; ...
 pe_alpha_pairs = {'Pe_upump_alpha_D0','dPe_upump_alpha_D0'; ...
                   'Pe_uMFM_alpha_D0','dPe_uMFM_alpha_D0'; ...
                   'Pe_upump_alpha_tau_D0','dPe_upump_alpha_tau_D0'; ...
-                  'Pe_uMFM_alpha_tau_D0','dPe_uMFM_alpha_tau_D0'};
+                  'Pe_uMFM_alpha_tau_D0','dPe_uMFM_alpha_tau_D0'; ...
+                  'alpha_eff_SI','d_alpha_eff_SI'; 'alpha_eff_cm','d_alpha_eff_cm'};
 alpha_table       = addTotalUncert(alpha_table, alpha_pairs);
 best_method_table = addTotalUncert(best_method_table, [alpha_pairs; pe_alpha_pairs]);
 
@@ -1385,14 +1408,16 @@ else
         'VariableNames', {'GroupID','nPoints','alpha_cm','d_alpha_cm', ...
         'uncertAlpha_cm','totUncertAlpha_cm'}))
 
-    disp("Alpha + tau fit (K_L = D0/tau + alpha*u) - best per-key method:")
+    fprintf("Alpha + tau fit (K_L = D0*(1/tau + C2*Pe^beta), beta = %g, alpha_tau = C2*L,\n" + ...
+        "  alpha_eff = alpha_tau*Pe^(beta-1)) - best per-key method:\n", beta_tau)
     disp(table(alpha_table.GroupID, alpha_table.n_points, ...
         alpha_table.alpha_tau_cm, alpha_table.d_alpha_tau_cm, ...
         alpha_table.uncertAlpha_tau_cm, alpha_table.totUncertAlpha_tau_cm, ...
+        alpha_table.alpha_eff_cm_min, alpha_table.alpha_eff_cm_max, ...
         alpha_table.tau, alpha_table.d_tau, ...
         alpha_table.uncertTau, alpha_table.totUncertTau, ...
         'VariableNames', {'GroupID','nPoints','alpha_tau_cm','d_alpha_tau_cm', ...
-        'uncertAlpha_tau_cm','totUncertAlpha_tau_cm', ...
+        'uncertAlpha_tau_cm','totUncertAlpha_tau_cm','alpha_eff_cm_min','alpha_eff_cm_max', ...
         'tau','d_tau','uncertTau','totUncertTau'}))
 end
 
@@ -1411,7 +1436,8 @@ for mm = 1:numel(method_names_all)
     s = struct('method', string(method_names_all{mm}), 'n_points', 0, 'Keys', "", ...
         'alpha_cm', NaN, 'd_alpha_cm', NaN, 'R2_alpha', NaN, ...
         'alpha_tau_cm', NaN, 'd_alpha_tau_cm', NaN, 'tau', NaN, 'd_tau', NaN, ...
-        'R2_alpha_tau', NaN);
+        'R2_alpha_tau', NaN, 'beta_tau', beta_tau, ...
+        'alpha_eff_cm_min', NaN, 'alpha_eff_cm_median', NaN, 'alpha_eff_cm_max', NaN);
 
     if ~isempty(Tm)
         ok = isfinite(Tm.KL_cm2min) & ...
@@ -1450,6 +1476,25 @@ end
 alpha_pooled = addTotalUncert(alpha_pooled, ...
     {'alpha_cm','d_alpha_cm'; 'alpha_tau_cm','d_alpha_tau_cm'; 'tau','d_tau'});
 
+% per key: effective dispersivity of the POOLED alpha + tau fit,
+% alpha_eff_pooled = alpha_tau(pooled)*Pe^(beta-1), Pe = uL/D0 of each experiment
+best_method_table.alpha_eff_pooled_cm   = nan(nExp,1);
+best_method_table.d_alpha_eff_pooled_cm = nan(nExp,1);
+if ~isempty(row_best) && isfinite(alpha_pooled.alpha_tau_cm(row_best))
+    aP  = alpha_pooled.alpha_tau_cm(row_best);
+    daP = alpha_pooled.totUncertAlpha_tau_cm(row_best);
+    if ~isfinite(daP), daP = alpha_pooled.d_alpha_tau_cm(row_best); end
+    relPeL = sqrt(0.1^2 + (best_method_table.dD12_SI./best_method_table.D12_SI).^2);  % du = 10 %
+    [best_method_table.alpha_eff_pooled_cm, best_method_table.d_alpha_eff_pooled_cm] = ...
+        alphaEffOf(aP, daP, best_method_table.Pe_upump_L_D0, relPeL, beta_tau);
+end
+method_results.best_per_key = best_method_table;
+for i = 1:nExp
+    key = filedataExp.Key(i);
+    expProcData.(key).results = best_method_table(i,:);
+    expProcData.(key).method_results.best_per_key = best_method_table(i,:);
+end
+
 expProcData.alpha_pooled = alpha_pooled;
 
 % print
@@ -1457,7 +1502,8 @@ disp("Pooled fit - all experiments together (same rock):")
 disp(alpha_pooled(:, {'method','n_points', ...
     'alpha_cm','d_alpha_cm','uncertAlpha_cm','totUncertAlpha_cm','R2_alpha', ...
     'alpha_tau_cm','d_alpha_tau_cm','tau','d_tau', ...
-    'uncertTau','totUncertTau','R2_alpha_tau'}))
+    'uncertTau','totUncertTau','R2_alpha_tau', ...
+    'beta_tau','alpha_eff_cm_min','alpha_eff_cm_median','alpha_eff_cm_max'}))
 
 %% Save results
 
@@ -1888,6 +1934,14 @@ function [Pe, dPe] = peAlpha(u, du, a, da, D0, dD0)
     dPe = Pe.*sqrt((du./u).^2 + (da./a).^2 + (dD0./D0).^2);
 end
 
+function [aEff, daEff] = alphaEffOf(a, da, PeL, relPeL, beta)
+% Effective dispersivity of the alpha + tau fit KL = D0*(1/tau + C2*Pe^beta), alpha = C2*L:
+% the dispersive term is D0*(a/L)*Pe^beta = a*Pe^(beta-1)*u -> aEff = a*Pe^(beta-1).
+% a, da in any length unit (aEff in the same); PeL = uL/D0, relPeL = dPe/Pe.
+    aEff  = a .* PeL.^(beta-1);
+    daEff = aEff .* sqrt((da./a).^2 + ((beta-1).*relPeL).^2);
+end
+
 function out = pooledAlphaFit(X, KL_SI, dKL_SI, alpha0_cm, min_pts_tau, beta)
 % Pooled fit over experiments with different D0 and L.
 % X = [Pe_upump_L_D0, D0_SI, L_SI]. Alpha fitted in cm (better scaling).
@@ -1898,7 +1952,8 @@ function out = pooledAlphaFit(X, KL_SI, dKL_SI, alpha0_cm, min_pts_tau, beta)
 
     out = struct('alpha_cm',NaN,'d_alpha_cm',NaN,'R2_alpha',NaN, ...
                  'alpha_tau_cm',NaN,'d_alpha_tau_cm',NaN,'tau',NaN,'d_tau',NaN, ...
-                 'R2_alpha_tau',NaN);
+                 'R2_alpha_tau',NaN, 'beta_tau',beta, ...
+                 'alpha_eff_cm_min',NaN,'alpha_eff_cm_median',NaN,'alpha_eff_cm_max',NaN);
 
     % alpha only: p = alpha/L for each experiment (same convention as grouped fits)
     f1 = @(b,X) sc*arrayfun(@(k) KL_Pe_alpha_only_model(X(k,1), X(k,2), ...
@@ -1927,6 +1982,11 @@ function out = pooledAlphaFit(X, KL_SI, dKL_SI, alpha0_cm, min_pts_tau, beta)
                 out.tau            = b(2);
                 out.d_tau          = sqrt(CovB(2,2));
                 out.R2_alpha_tau   = weightedR2(y, f2(b,X), w);
+                % effective dispersivity over the fitted experiments: alpha_tau*Pe^(beta-1)
+                aEff = b(1)*X(:,1).^(beta-1);
+                out.alpha_eff_cm_min    = min(aEff);
+                out.alpha_eff_cm_median = median(aEff);
+                out.alpha_eff_cm_max    = max(aEff);
             end
         catch ME
             warning("pooledAlpha:tauFitFailed", ...

@@ -475,7 +475,10 @@ savefig(gcf,pathExportAll + "KLD0vsPe_allLit")
 % Data from input_KL_allAuthors.xlsx, one row per data point (sheets 1-3, see header).
 % Empty cells of the OWN rows (sheets 1-2) are filled from:
 %   KL_dimless_all.xlsx (main_dimlessTranspNo): KL, dKL, D0 (Thorne), M, Ng, u
-%   expProcFullData.mat (main_Processing):      alpha, alpha_tau, tau (+ uncertainties)
+%   expProcFullData.mat (main_Processing):      alpha, alpha_tau, tau, beta_tau (+ uncertainties)
+% alpha_tau is the coefficient of KL = D0*(1/tau + C2*Pe^beta) (alpha_tau = C2*L, Pe = uL/D0);
+% the dispersivity is alpha_eff = alpha_tau*(uL/D0)^(beta-1), computed per row with the
+% row's u, L and D0 (= alpha_tau for beta = 1).
 % Other authors: mu and rho from REFPROP, D0 = Thorne-Enskog D12 at the 50/50 mixture;
 % the reported D0 is kept for comparison. Ng only where K and theta are given.
 % Marker = author, colour = M or Ng.
@@ -492,7 +495,11 @@ aaOwnGroup     = "theory";        % conditions for own rows: "theory" | "measAvg
 aaMFMRoot      = fullfile(thisRepo, 'results');                % where main_Processing writes expProcFullData.mat
 aaFitData      = "wEOS";          % "wEOS" (concentration) or "woEOS" (rhoNorm), as in main_dimlessTranspNo
 aaAlphaSource  = "group";         % own rows with empty alpha: "group" (per-case fit) | "pooled"
-aaPeAlpha      = "alpha";         % "alpha": Pe = u*alpha/D0 | "alphaTau": Pe = u*alpha_tau/D0
+aaPeAlpha      = "alpha";         % "alpha": Pe = u*alpha/D0 (alpha-only fit, beta = 1)
+                                  % "alphaEff": Pe = u*alpha_eff/D0, alpha_eff = alpha_tau*(uL/D0)^(beta-1)
+                                  % ("alphaTau" = old name, same as "alphaEff")
+aaBetaTau      = 1.2;             % beta of the alpha + tau fit of OWN rows where main_Processing did not
+                                  % store beta_tau (other authors' alpha_tau: beta = 1)
 aaD0Mode       = "thorne";        % "thorne": Thorne-Enskog D12 for every row | "sheet": D0_cm2min column where filled
 aaDiffConfig   = fullfile(thisRepo, 'inputDiffConfig.xlsx');   % LJ parameters (as main_fluidProps_errorProp)
 aaNgColour     = "signedlog";     % "signedlog" (sign*log10(1+|Ng|)) | "linear"
@@ -529,6 +536,8 @@ else
     A.D0_reported_cm2min = A.D0_cm2min;          % value typed in the sheet (kept for comparison)
     A.D0_source = repmat("sheet", nA, 1);
     A.D0_source(~isfinite(A.D0_cm2min)) = "";
+    A.beta_tau = NaN(nA,1);                      % exponent of the alpha + tau fit (own rows: main_Processing)
+    aEffMFM = NaN(nA,1);  daEffMFM = NaN(nA,1);  % alpha_eff stored by main_Processing (fallback)
 
     % ---- own rows: fill empty cells from main_dimlessTranspNo and main_Processing
     Town = table();
@@ -561,9 +570,10 @@ else
         if (ismissing(key) || key == "") && startsWith(A.Dataset(r), "CF_"), key = A.Dataset(r); end
         if ~ismissing(key) && key ~= "" && isKey(mfmFiles, char(key))
             al = getMFMAlpha(mfmFiles(char(key)), key, aaFitData, aaAlphaSource);
-            for f = ["alpha_cm","d_alpha_cm","alpha_tau_cm","d_alpha_tau_cm","tau","d_tau"]
+            for f = ["alpha_cm","d_alpha_cm","alpha_tau_cm","d_alpha_tau_cm","tau","d_tau","beta_tau"]
                 if ~isfinite(A.(f)(r)), A.(f)(r) = al.(f); end
             end
+            aEffMFM(r) = al.alpha_eff_cm;  daEffMFM(r) = al.d_alpha_eff_cm;
         end
     end
 
@@ -658,8 +668,23 @@ else
     A.M(isfinite(Mown))   = Mown(isfinite(Mown));               % own rows: props file values
     A.Ng(isfinite(Ngown)) = Ngown(isfinite(Ngown));
     A.M_source(isfinite(Mown)) = "props file (" + aaOwnGroup + ")";
-    if aaPeAlpha == "alphaTau"
-        aUse = A.alpha_tau_cm;  daUse = A.d_alpha_tau_cm;  peLbl = 'Pe = u \alpha_\tau / D_0';
+    % effective dispersivity of the alpha + tau fit, alpha_eff = alpha_tau*(uL/D0)^(beta-1);
+    % rows without u, L or D0: the value stored by main_Processing (own rows only)
+    % beta: own rows from main_Processing (else aaBetaTau); other authors' alpha_tau = linear fit (beta = 1)
+    bT = A.beta_tau;
+    bT(~isfinite(bT) & A.sheet <= 2) = aaBetaTau;
+    bT(~isfinite(bT)) = 1;
+    A.beta_tau = bT;
+    PeL    = A.u_cmmin .* A.L_cm ./ A.D0_cm2min;
+    relAt  = A.d_alpha_tau_cm ./ A.alpha_tau_cm;  relAt(~isfinite(relAt)) = 0;
+    relD0e = A.dD0_cm2min ./ A.D0_cm2min;         relD0e(~isfinite(relD0e)) = 0;
+    A.alpha_eff_cm   = A.alpha_tau_cm .* PeL.^(bT - 1);
+    A.d_alpha_eff_cm = A.alpha_eff_cm .* sqrt(relAt.^2 + ((bT - 1).*relD0e).^2);
+    noEff = ~isfinite(A.alpha_eff_cm) & isfinite(aEffMFM);
+    A.alpha_eff_cm(noEff) = aEffMFM(noEff);  A.d_alpha_eff_cm(noEff) = daEffMFM(noEff);
+
+    if any(aaPeAlpha == ["alphaEff","alphaTau"])
+        aUse = A.alpha_eff_cm;  daUse = A.d_alpha_eff_cm;  peLbl = 'Pe = u \alpha_{eff} / D_0';
     else
         aUse = A.alpha_cm;      daUse = A.d_alpha_cm;      peLbl = 'Pe = u \alpha / D_0';
     end
@@ -683,6 +708,7 @@ else
                "T_C","P_MPa","P_psig","L_cm","porosity","K_mD","theta_deg","u_cmmin", ...
                "KL_cm2min","dKL_cm2min","D0_cm2min","dD0_cm2min","D0_reported_cm2min","D0_source", ...
                "alpha_cm","d_alpha_cm","alpha_tau_cm","d_alpha_tau_cm","tau","d_tau", ...
+               "beta_tau","alpha_eff_cm","d_alpha_eff_cm", ...
                "mu1_Pas","mu2_Pas","rho1_kgm3","rho2_kgm3", ...
                "M","M_source","Ng","Nrho","Pe","dPe","KLD0","dKLD0","plotted","notes"];
     if isfile(aaResultsFile), delete(aaResultsFile); end
@@ -823,14 +849,14 @@ end
  
 
 function al = getMFMAlpha(file, key, fitData, mode)
-% alpha (alpha-only fit), alpha_tau, tau and their uncertainties for an MFM experiment
-% from main_Processing: mode "group" = per-case fit stored in results,
-% "pooled" = pooled fit (best_per_key row). Uncertainty = total (fit + method spread)
-% when available, otherwise the fit error.
+% alpha (alpha-only fit), alpha_tau, tau, beta_tau, alpha_eff and their uncertainties for an
+% MFM experiment from main_Processing: mode "group" = per-case fit stored in results,
+% "pooled" = pooled fit (best_per_key row; alpha_eff from the per-key alpha_eff_pooled_cm).
+% Uncertainty = total (fit + method spread) when available, otherwise the fit error.
 persistent fileCache
 if isempty(fileCache), fileCache = containers.Map('KeyType','char','ValueType','any'); end
 al = struct('alpha_cm',NaN, 'd_alpha_cm',NaN, 'alpha_tau_cm',NaN, 'd_alpha_tau_cm',NaN, ...
-            'tau',NaN, 'd_tau',NaN);
+            'tau',NaN, 'd_tau',NaN, 'beta_tau',NaN, 'alpha_eff_cm',NaN, 'd_alpha_eff_cm',NaN);
 if ~isKey(fileCache, char(file)), fileCache(char(file)) = load(file, 'expProcFullData'); end
 S = fileCache(char(file));
 if ~isfield(S, 'expProcFullData'), return, end
@@ -856,6 +882,26 @@ al.alpha_tau_cm   = pick({'alpha_tau_cm'});
 al.d_alpha_tau_cm = pick({'totUncertAlpha_tau_cm','d_alpha_tau_cm'});
 al.tau            = pick({'tau'});
 al.d_tau          = pick({'totUncertTau','d_tau'});
+al.beta_tau       = pick({'beta_tau'});
+% per-key alpha_eff (group: alpha_eff_cm; pooled: alpha_eff_pooled_cm of the key's results)
+rk = r;
+if mode == "pooled"
+    rk = [];
+    if isfield(S.expProcFullData, key) && isfield(S.expProcFullData.(key), fitData) && ...
+            isfield(S.expProcFullData.(key).(fitData), 'results')
+        rk = S.expProcFullData.(key).(fitData).results;
+    end
+end
+if ~isempty(rk)
+    nk = fieldOrVarNames(rk);
+    if mode == "pooled"
+        al.alpha_eff_cm   = firstField(rk, nk, {'alpha_eff_pooled_cm'});
+        al.d_alpha_eff_cm = firstField(rk, nk, {'d_alpha_eff_pooled_cm'});
+    else
+        al.alpha_eff_cm   = firstField(rk, nk, {'alpha_eff_cm'});
+        al.d_alpha_eff_cm = firstField(rk, nk, {'totUncertAlpha_eff_cm','d_alpha_eff_cm'});
+    end
+end
 end
 
 function M = mfmFileIndex(root)
