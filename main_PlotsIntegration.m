@@ -738,16 +738,15 @@ end
 % Markers keep the all-author map (aaAuthAll), so each author has the same marker everywhere.
 
 % aaPlotAuthors  = [];              % authors to PLOT (all are still read, completed and saved);
-%                                   % [] = all, e.g. ["This work (UHS)",
-%                                   % "This work (XCT analog)", "This work (horizontal)", ...
-%                                   % "Kobeissi et al. (2024)","Yang et al.
+%                                   % [] = all, e.g. ["This work (UHS vertical)",
+%                                   % "This work (XCT vertical)", "This work (H2-CO2 horizontal)", ...
+%                                   % "This work (He-CO2 horizontal)", "Kobeissi et al. (2024)","Yang et al.
 %                                   % (2023)","Kobeissi et al. (2026)","Dabrowski et al. (2024a)", ...
 %                                   % "Dabrowski et al. (2024b)","Dabrowski et al. (2025)"]
 %                                   % matched case-insensitively as substrings of the Author column
 
-aaPlotAuthors  = ["This work (UHS)", "This work (XCT analog)", "This work (horizontal)", ...
-    "Kobeissi et al. (2024)","Yang et al. (2023)","Kobeissi et al. (2026)", ...
-    "Dabrowski et al. (2025)"]; 
+aaPlotAuthors  = ["This work (UHS vertical)", "This work (XCT vertical)", "This work (H2-CO2 horizontal)", ...
+    "This work (He-CO2 horizontal)", "Kobeissi et al. (2024)","Yang et al. (2023)","Kobeissi et al. (2026)"]; 
 
 aaSelTag      = "_selected";      % suffix of the saved figures
 
