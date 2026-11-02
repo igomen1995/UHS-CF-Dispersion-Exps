@@ -505,14 +505,7 @@ aaDiffConfig   = fullfile(thisRepo, 'inputDiffConfig.xlsx');   % LJ parameters (
 aaNgColour     = "signedlog";     % "signedlog" (sign*log10(1+|Ng|)) | "linear"
 aaMarkers      = {'o','s','^','d','v','p','h','<','>'};
 aaResultsFile  = fullfile(pathExport, 'KL_allAuthors_results.xlsx');   % completed input sheets
-aaPlotAuthors  = [];              % authors to PLOT (all are still read, completed and saved);
-                                  % [] = all, e.g. ["This work (UHS)",
-                                  % "This work (XCT analog)", "This work (horizontal)", ...
-                                  % "Kobeissi et al. (2024)","Yang et al.
-                                  % (2023)","Kobeissi et al. (2026)","Dabrowski et al. (2024a)", ...
-                                  % "Dabrowski et al. (2024b)","Dabrowski et al. (2025)"]
-                                  % matched case-insensitively as substrings of the Author column
-
+ 
 if ~isfile(allAuthorsFile)
     warning('All-authors file not found (%s) -- figures 3-4 skipped', allAuthorsFile);
 else
@@ -726,20 +719,7 @@ else
     fprintf('All authors: results written to %s\n', aaResultsFile);
 
     A = A(ok, :);
-    aaAuthAll = unique(A.Author, 'stable');      % fixed author -> marker map (from ALL authors,
-                                                 % so a subset keeps the same markers)
-    if ~isempty(aaPlotAuthors)
-        selA = false(height(A),1);
-        for a = string(aaPlotAuthors)
-            selA = selA | contains(lower(A.Author), lower(a));
-        end
-        notFound = string(aaPlotAuthors(~arrayfun(@(a) any(contains(lower(A.Author), lower(a))), string(aaPlotAuthors))));
-        if ~isempty(notFound)
-            warning('All authors: no plotted rows for %s', strjoin(notFound, ', '));
-        end
-        A = A(selA, :);
-        fprintf('All authors: plotting %d points from %s\n', height(A), strjoin(unique(A.Author,'stable'), ', '));
-    end
+    aaAuthAll = unique(A.Author, 'stable');      % fixed author -> marker map (all authors)
 
     if ~isempty(A)
         plotAllAuthors(A, A.M,  'M = \mu_2/\mu_1 [-]', "log", aaMarkers, peLbl, ...
@@ -749,6 +729,46 @@ else
             'K_L/D_0 vs Pe, all authors -- colour = N_g', "allAuthors_KLD0_vs_Pe_colorNg", ...
             pathExport, closeAfterSave, aaAuthAll);
     end
+end
+
+%% All authors: SELECTED authors only (uses A from the workspace -- run this section alone)
+% Plots a subset of the already loaded and completed table A (section above run once).
+% Authors matched case-insensitively as substrings of the Author column.
+% Markers keep the all-author map (aaAuthAll), so each author has the same marker everywhere.
+
+% aaPlotAuthors  = [];              % authors to PLOT (all are still read, completed and saved);
+%                                   % [] = all, e.g. ["This work (UHS)",
+%                                   % "This work (XCT analog)", "This work (horizontal)", ...
+%                                   % "Kobeissi et al. (2024)","Yang et al.
+%                                   % (2023)","Kobeissi et al. (2026)","Dabrowski et al. (2024a)", ...
+%                                   % "Dabrowski et al. (2024b)","Dabrowski et al. (2025)"]
+%                                   % matched case-insensitively as substrings of the Author column
+
+aaPlotAuthors  = ["This work (UHS)", "This work (XCT analog)", "This work (horizontal)", ...
+    "Kobeissi et al. (2024)","Yang et al. (2023)","Kobeissi et al. (2026)", ...
+    "Dabrowski et al. (2025)"]; 
+
+aaSelTag      = "_selected";      % suffix of the saved figures
+
+if ~exist('A','var') || ~istable(A) || ~ismember('Pe', A.Properties.VariableNames)
+    error('Run the all-authors section first (A not in the workspace)');
+end
+selA = false(height(A),1);
+for a = string(aaPlotAuthors)
+    hit = contains(lower(A.Author), lower(a));
+    if ~any(hit), warning('Selected authors: no rows for "%s"', a); end
+    selA = selA | hit;
+end
+As = A(selA, :);
+fprintf('Selected authors: %d points from %s\n', height(As), strjoin(unique(As.Author,'stable'), ', '));
+
+if ~isempty(As)
+    plotAllAuthors(As, As.M,  'M = \mu_2/\mu_1 [-]', "log", aaMarkers, peLbl, ...
+        'K_L/D_0 vs Pe, selected authors -- colour = M', "allAuthors_KLD0_vs_Pe_colorM" + aaSelTag, ...
+        pathExport, closeAfterSave, aaAuthAll);
+    plotAllAuthors(As, As.Ng, 'N_g [-]', aaNgColour, aaMarkers, peLbl, ...
+        'K_L/D_0 vs Pe, selected authors -- colour = N_g', "allAuthors_KLD0_vs_Pe_colorNg" + aaSelTag, ...
+        pathExport, closeAfterSave, aaAuthAll);
 end
 
 %% Same rock type: figures 3-4 again for one rock at a time
@@ -777,6 +797,33 @@ if exist('A', 'var') && istable(A) && ~isempty(A) && ismember('Pe', A.Properties
             sprintf('K_L/D_0 vs Pe, %s -- colour = N_g', rk), "allAuthors_KLD0_vs_Pe_colorNg_" + tag, ...
             pathExport, closeAfterSave, aaAuthAll);
     end
+end
+
+%% Same rock type, SELECTED authors only (uses As from the selected-authors section)
+% Figures 3-4 for one rock at a time, only the authors in aaPlotAuthors. Run the
+% selected-authors section first (it builds As); markers keep the all-author map (aaAuthAll).
+
+aaRockSetsSel = ["Berea", "Fontainebleau", "Bentheimer"];   % rock types (case-insensitive substrings)
+aaRockMinNSel = 0;                                           % fewer plotted points -> skipped
+
+if ~exist('As','var') || ~istable(As) || ~ismember('Pe', As.Properties.VariableNames)
+    error('Run the selected-authors section first (As not in the workspace)');
+end
+for rk = aaRockSetsSel
+    sel = contains(lower(As.Rock), lower(rk));
+    if nnz(sel) < max(aaRockMinNSel, 1)
+        fprintf('Rock %s (selected authors): %d points -- figures skipped\n', rk, nnz(sel));
+        continue
+    end
+    Ar  = As(sel, :);
+    tag = matlab.lang.makeValidName(rk);
+    fprintf('Rock %s (selected authors): %d points (%s)\n', rk, height(Ar), strjoin(unique(Ar.Author, 'stable'), ', '));
+    plotAllAuthors(Ar, Ar.M,  'M = \mu_2/\mu_1 [-]', "log", aaMarkers, peLbl, ...
+        sprintf('K_L/D_0 vs Pe, %s, selected authors -- colour = M', rk), ...
+        "allAuthors_KLD0_vs_Pe_colorM_" + tag + aaSelTag, pathExport, closeAfterSave, aaAuthAll);
+    plotAllAuthors(Ar, Ar.Ng, 'N_g [-]', aaNgColour, aaMarkers, peLbl, ...
+        sprintf('K_L/D_0 vs Pe, %s, selected authors -- colour = N_g', rk), ...
+        "allAuthors_KLD0_vs_Pe_colorNg_" + tag + aaSelTag, pathExport, closeAfterSave, aaAuthAll);
 end
 
 
