@@ -505,6 +505,13 @@ aaDiffConfig   = fullfile(thisRepo, 'inputDiffConfig.xlsx');   % LJ parameters (
 aaNgColour     = "signedlog";     % "signedlog" (sign*log10(1+|Ng|)) | "linear"
 aaMarkers      = {'o','s','^','d','v','p','h','<','>'};
 aaResultsFile  = fullfile(pathExport, 'KL_allAuthors_results.xlsx');   % completed input sheets
+aaPlotAuthors  = [];              % authors to PLOT (all are still read, completed and saved);
+                                  % [] = all, e.g. ["This work (UHS)",
+                                  % "This work (XCT analog)", "This work (horizontal)", ...
+                                  % "Kobeissi et al. (2024)","Yang et al.
+                                  % (2023)","Kobeissi et al. (2026)","Dabrowski et al. (2024a)", ...
+                                  % "Dabrowski et al. (2024b)","Dabrowski et al. (2025)"]
+                                  % matched case-insensitively as substrings of the Author column
 
 if ~isfile(allAuthorsFile)
     warning('All-authors file not found (%s) -- figures 3-4 skipped', allAuthorsFile);
@@ -719,7 +726,20 @@ else
     fprintf('All authors: results written to %s\n', aaResultsFile);
 
     A = A(ok, :);
-    aaAuthAll = unique(A.Author, 'stable');      % fixed author -> marker map for every figure
+    aaAuthAll = unique(A.Author, 'stable');      % fixed author -> marker map (from ALL authors,
+                                                 % so a subset keeps the same markers)
+    if ~isempty(aaPlotAuthors)
+        selA = false(height(A),1);
+        for a = string(aaPlotAuthors)
+            selA = selA | contains(lower(A.Author), lower(a));
+        end
+        notFound = string(aaPlotAuthors(~arrayfun(@(a) any(contains(lower(A.Author), lower(a))), string(aaPlotAuthors))));
+        if ~isempty(notFound)
+            warning('All authors: no plotted rows for %s', strjoin(notFound, ', '));
+        end
+        A = A(selA, :);
+        fprintf('All authors: plotting %d points from %s\n', height(A), strjoin(unique(A.Author,'stable'), ', '));
+    end
 
     if ~isempty(A)
         plotAllAuthors(A, A.M,  'M = \mu_2/\mu_1 [-]', "log", aaMarkers, peLbl, ...
