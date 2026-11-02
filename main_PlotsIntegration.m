@@ -838,11 +838,9 @@ function plotAllAuthors(A, cv, cLabel, cMode, mk, peLbl, ttl, fname, pathExport,
     fig = figure('Position',[80 80 1150 760], 'NumberTitle','off', 'Name', ttl);
     ax  = axes(fig);  hold(ax,'on')
     
+    % colour = raw value (M or Ng), classes of width 1 between whole numbers
     c = cv;
-    switch cMode
-        case "log",       c(c <= 0) = NaN;  c = log10(c);
-        case "signedlog", c = sign(c).*log10(1 + abs(c));
-    end
+    if cMode == "log", c(c <= 0) = NaN; end          % M must be > 0
     okC = isfinite(c);
     
     dy = A.dKLD0;  dy(~isfinite(dy)) = 0;  dyLow = min(dy, 0.99*A.KLD0);
@@ -871,19 +869,20 @@ function plotAllAuthors(A, cv, cLabel, cMode, mk, peLbl, ttl, fname, pathExport,
     set(ax, 'XScale','log', 'YScale','log', 'FontSize',12);  grid(ax,'on')
     xlabel(ax, peLbl, 'FontSize',13);  ylabel(ax, 'K_L / D_0 [-]', 'FontSize',13)
     
-    % discrete colour classes, ticks at the class edges (as main_dimlessTranspNo)
+    % discrete classes between whole numbers: floor(min) : 1 : ceil(max)
+    % (step widened to the next whole number if that would give more than maxCls classes)
+    maxCls = 12;
     cb = colorbar(ax);
     if any(okC)
-        cLim = [min(c(okC)) max(c(okC))];
-        if diff(cLim) == 0, cLim = cLim + [-0.5 0.5]*max(abs(cLim(1))*0.1, 0.1); end
-        colormap(ax, blueRedDiscrete(nLev));  clim(ax, cLim)
-        tk = linspace(cLim(1), cLim(2), nLev + 1);
-        cb.Ticks = tk;
-        switch cMode
-            case "log",       cb.TickLabels = compose('%.3g', 10.^tk);
-            case "signedlog", cb.TickLabels = compose('%.3g', sign(tk).*(10.^abs(tk) - 1));
-            otherwise,        cb.TickLabels = compose('%.3g', tk);
-        end
+        lo = floor(min(c(okC)));  hi = ceil(max(c(okC)));
+        if hi == lo, hi = lo + 1; end
+        step  = max(1, ceil((hi - lo)/maxCls));
+        hi    = lo + step*ceil((hi - lo)/step);
+        edges = lo:step:hi;
+        nCls  = numel(edges) - 1;
+        colormap(ax, blueRedDiscrete(nCls));  clim(ax, [lo hi])
+        cb.Ticks = edges;
+        cb.TickLabels = compose('%g', edges);
     end
     cb.Label.String = cLabel;
     
