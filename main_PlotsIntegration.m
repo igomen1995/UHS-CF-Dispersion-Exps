@@ -502,7 +502,8 @@ aaBetaTau      = 1.2;             % beta of the alpha + tau fit of OWN rows wher
                                   % store beta_tau (other authors' alpha_tau: beta = 1)
 aaD0Mode       = "thorne";        % "thorne": Thorne-Enskog D12 for every row | "sheet": D0_cm2min column where filled
 aaDiffConfig   = fullfile(thisRepo, 'inputDiffConfig.xlsx');   % LJ parameters (as main_fluidProps_errorProp)
-aaNgColour     = "signedlog";     % "signedlog" (sign*log10(1+|Ng|)) | "linear"
+aaNgColour     = "linear";        % N_g linear, as main_dimlessTranspNo ("signedlog" = sign*log10(1+|Ng|))
+aaNLevels      = 6;               % discrete colour classes (as pmNLevels in main_dimlessTranspNo)
 aaMarkers      = {'o','s','^','d','v','p','h','<','>'};
 aaResultsFile  = fullfile(pathExport, 'KL_allAuthors_results.xlsx');   % completed input sheets
  
@@ -829,77 +830,68 @@ end
 
 %% Local functions
 
-function plotAllAuthors(A, cv, cLabel, cMode, mk, peLbl, ttl, fname, pathExport, closeAfterSave, authAll)
-% KL/D0 vs Pe, marker = author, colour = cv (M or Ng); rows with NaN colour drawn open grey.
-% authAll (optional): full author list -> the same marker per author in every figure
-if nargin < 11 || isempty(authAll), authAll = unique(A.Author, 'stable'); end
-fig = figure('Position',[80 80 1150 760]);
-ax  = axes(fig);  hold(ax,'on')
-
-c = cv;
-switch cMode
-    case "log",       c(c <= 0) = NaN;  c = log10(c);
-    case "signedlog", c = sign(c).*log10(1 + abs(c));
-end
-okC = isfinite(c);
-
-dy = A.dKLD0;  dy(~isfinite(dy)) = 0;  dyLow = min(dy, 0.99*A.KLD0);
-dx = A.dPe;    dx(~isfinite(dx)) = 0;  dxLow = min(dx, 0.99*A.Pe);
-errorbar(ax, A.Pe, A.KLD0, dyLow, dy, dxLow, dx, 'LineStyle','none', 'Color',[0.75 0.75 0.75], ...
-    'CapSize',2, 'HandleVisibility','off')
-
-auth = unique(A.Author, 'stable');
-for k = 1:numel(auth)
-    s   = A.Author == auth(k);
-    ka  = find(authAll == auth(k), 1);  if isempty(ka), ka = k; end
-    m   = mk{mod(ka-1, numel(mk)) + 1};
-    own = any(A.sheet(s) <= 2);
-    lw  = 0.6;  sz = 60;
-    if own, lw = 1.4; sz = 95; end
-    if any(s & okC)
-        scatter(ax, A.Pe(s & okC), A.KLD0(s & okC), sz, c(s & okC), m, 'filled', ...
-            'MarkerEdgeColor','k', 'LineWidth',lw, 'DisplayName', auth(k))
-    end
-    if any(s & ~okC)
-        scatter(ax, A.Pe(s & ~okC), A.KLD0(s & ~okC), sz, [0.55 0.55 0.55], m, 'LineWidth',lw, ...
-            'DisplayName', auth(k) + " (" + strtok(string(cLabel)) + " n/a)")
-    end
-end
-
-% xr = logspace(floor(log10(min(A.Pe))) - 0.2, ceil(log10(max(A.Pe))) + 0.2, 200);
-% plot(ax, xr, xr,     'k--', 'LineWidth',1, 'DisplayName','K_L/D_0 = Pe')
-% plot(ax, xr, 1 + xr, 'k:',  'LineWidth',1, 'DisplayName','K_L/D_0 = 1 + Pe  (\tau = 1)')
-
-set(ax, 'XScale','log', 'YScale','log', 'FontSize',12);  grid(ax,'on')
-xlabel(ax, peLbl, 'FontSize',13);  ylabel(ax, 'K_L / D_0 [-]', 'FontSize',13)
-
-cb = colorbar(ax);
-if any(okC)
+function plotAllAuthors(A, cv, cLabel, cMode, mk, peLbl, ttl, fname, pathExport, closeAfterSave, authAll, nLev)
+    % KL/D0 vs Pe, marker = author, colour = cv (M or Ng) in nLev discrete classes, blue = low ->
+    % red = high (blueRedDiscrete, as main_dimlessTranspNo); rows with NaN colour drawn open grey.
+    % authAll (optional): full author list -> the same marker per author in every figure
+    if nargin < 11 || isempty(authAll), authAll = unique(A.Author, 'stable'); end
+    if nargin < 12 || isempty(nLev),    nLev = 6; end
+    fig = figure('Position',[80 80 1150 760], 'NumberTitle','off', 'Name', ttl);
+    ax  = axes(fig);  hold(ax,'on')
+    
+    c = cv;
     switch cMode
-        case "log"
-            colormap(ax, turbo);
-            lo = min(c(okC));  hi = max(c(okC));  if hi <= lo, hi = lo + 0.1; end
-            clim(ax, [lo hi]);
-            tk = linspace(lo, hi, 6);  cb.Ticks = tk;  cb.TickLabels = compose('%.3g', 10.^tk);
-        case "signedlog"
-            colormap(ax, redblue(256));
-            mx = max(abs(c(okC)));  if mx == 0, mx = 1; end
-            clim(ax, [-mx mx]);
-            tk = linspace(-mx, mx, 7);  cb.Ticks = tk;
-            cb.TickLabels = compose('%.3g', sign(tk).*(10.^abs(tk) - 1));
-        otherwise
-            colormap(ax, redblue(256));
-            mx = max(abs(c(okC)));  if mx == 0, mx = 1; end
-            clim(ax, [-mx mx]);
+        case "log",       c(c <= 0) = NaN;  c = log10(c);
+        case "signedlog", c = sign(c).*log10(1 + abs(c));
     end
-end
-cb.Label.String = cLabel;
-
-legend(ax, 'Location','northwest', 'FontSize',9, 'Interpreter','tex')
-title(ax, ttl, 'Interpreter','tex')
-saveas(fig, fullfile(pathExport, fname), 'png');
-saveas(fig, fullfile(pathExport, fname), 'fig');
-if closeAfterSave, close(fig); end
+    okC = isfinite(c);
+    
+    dy = A.dKLD0;  dy(~isfinite(dy)) = 0;  dyLow = min(dy, 0.99*A.KLD0);
+    dx = A.dPe;    dx(~isfinite(dx)) = 0;  dxLow = min(dx, 0.99*A.Pe);
+    errorbar(ax, A.Pe, A.KLD0, dyLow, dy, dxLow, dx, 'LineStyle','none', 'Color',[0.75 0.75 0.75], ...
+        'CapSize',2, 'HandleVisibility','off')
+    
+    auth = unique(A.Author, 'stable');
+    for k = 1:numel(auth)
+        s   = A.Author == auth(k);
+        ka  = find(authAll == auth(k), 1);  if isempty(ka), ka = k; end
+        m   = mk{mod(ka-1, numel(mk)) + 1};
+        own = any(A.sheet(s) <= 2);
+        lw  = 0.6;  sz = 60;
+        if own, lw = 1.4; sz = 95; end
+        if any(s & okC)
+            scatter(ax, A.Pe(s & okC), A.KLD0(s & okC), sz, c(s & okC), m, 'filled', ...
+                'MarkerEdgeColor','k', 'LineWidth',lw, 'DisplayName', auth(k))
+        end
+        if any(s & ~okC)
+            scatter(ax, A.Pe(s & ~okC), A.KLD0(s & ~okC), sz, [0.55 0.55 0.55], m, 'LineWidth',lw, ...
+                'DisplayName', auth(k) + " (" + strtok(string(cLabel)) + " n/a)")
+        end
+    end
+    
+    set(ax, 'XScale','log', 'YScale','log', 'FontSize',12);  grid(ax,'on')
+    xlabel(ax, peLbl, 'FontSize',13);  ylabel(ax, 'K_L / D_0 [-]', 'FontSize',13)
+    
+    % discrete colour classes, ticks at the class edges (as main_dimlessTranspNo)
+    cb = colorbar(ax);
+    if any(okC)
+        cLim = [min(c(okC)) max(c(okC))];
+        if diff(cLim) == 0, cLim = cLim + [-0.5 0.5]*max(abs(cLim(1))*0.1, 0.1); end
+        colormap(ax, blueRedDiscrete(nLev));  clim(ax, cLim)
+        tk = linspace(cLim(1), cLim(2), nLev + 1);
+        cb.Ticks = tk;
+        switch cMode
+            case "log",       cb.TickLabels = compose('%.3g', 10.^tk);
+            case "signedlog", cb.TickLabels = compose('%.3g', sign(tk).*(10.^abs(tk) - 1));
+            otherwise,        cb.TickLabels = compose('%.3g', tk);
+        end
+    end
+    cb.Label.String = cLabel;
+    
+    legend(ax, 'Location','northwest', 'FontSize',9, 'Interpreter','tex')
+    saveas(fig, fullfile(pathExport, fname), 'png');
+    saveas(fig, fullfile(pathExport, fname), 'fig');
+    if closeAfterSave, close(fig); end
 end
 
 function v = firstField(r, n, names)
@@ -1003,4 +995,14 @@ function c = redblue(n)
 h = floor(n/2);
 c = [[linspace(0.15,1,h)' linspace(0.3,1,h)' ones(h,1)]; ...
      [ones(n-h,1) linspace(1,0.3,n-h)' linspace(1,0.15,n-h)']];
+end
+
+function cm = blueRedDiscrete(n)
+% n discrete colours from cold blue (low) to warm red (high), via pale yellow
+% (ColorBrewer RdYlBu reversed)
+k = [0.19 0.21 0.58; 0.27 0.46 0.71; 0.67 0.85 0.91; 1.00 1.00 0.75; ...
+     0.99 0.68 0.38; 0.84 0.19 0.15; 0.65 0.00 0.15];
+x  = linspace(0, 1, size(k,1));
+xi = linspace(0, 1, n);
+cm = [interp1(x, k(:,1), xi)', interp1(x, k(:,2), xi)', interp1(x, k(:,3), xi)'];
 end
