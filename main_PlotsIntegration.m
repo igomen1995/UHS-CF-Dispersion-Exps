@@ -172,6 +172,7 @@
 %
 % where:
 %
+%       colour classes: M every 1, Ng every 0.5 (1st blue, 2nd red, darker red ... last black)
 %       M  = mu2/mu1                              (REFPROP)
 %       Ng = K*(rho2-rho1)*g*sin(theta)/(mu2*ux)  (REFPROP; > 0 = gravity-stable)
 %       D0 = Thorne-Enskog D12 at the 50/50 mixture (LJ parameters of
@@ -503,7 +504,7 @@ aaBetaTau      = 1.2;             % beta of the alpha + tau fit of OWN rows wher
 aaD0Mode       = "thorne";        % "thorne": Thorne-Enskog D12 for every row | "sheet": D0_cm2min column where filled
 aaDiffConfig   = fullfile(thisRepo, 'inputDiffConfig.xlsx');   % LJ parameters (as main_fluidProps_errorProp)
 aaNgColour     = "linear";        % N_g linear, as main_dimlessTranspNo ("signedlog" = sign*log10(1+|Ng|))
-aaNLevels      = 6;               % discrete colour classes (as pmNLevels in main_dimlessTranspNo)
+aaNLevels      = 6;               % not used (colour classes: M every 1, N_g every 0.5, see plotAllAuthors)
 aaMarkers      = {'o','s','^','d','v','p','h','<','>'};
 aaResultsFile  = fullfile(pathExport, 'KL_allAuthors_results.xlsx');   % completed input sheets
  
@@ -830,15 +831,16 @@ end
 %% Local functions
 
 function plotAllAuthors(A, cv, cLabel, cMode, mk, peLbl, ttl, fname, pathExport, closeAfterSave, authAll, nLev)
-    % KL/D0 vs Pe, marker = author, colour = cv (M or Ng) in nLev discrete classes, blue = low ->
-    % red = high (blueRedDiscrete, as main_dimlessTranspNo); rows with NaN colour drawn open grey.
+    % KL/D0 vs Pe, marker = author, colour = cv (M or Ng) in discrete classes on a fixed grid
+    % (M every 1, Ng every 0.5): 1st class blue, 2nd red, darker red ... last black (blueRedBlack);
+    % rows with NaN colour drawn open grey. nLev is kept for compatibility (not used).
     % authAll (optional): full author list -> the same marker per author in every figure
     if nargin < 11 || isempty(authAll), authAll = unique(A.Author, 'stable'); end
     if nargin < 12 || isempty(nLev),    nLev = 6; end
     fig = figure('Position',[80 80 1150 760], 'NumberTitle','off', 'Name', ttl);
     ax  = axes(fig);  hold(ax,'on')
     
-    % colour = raw value (M or Ng), classes of width 1 between whole numbers
+    % colour = raw value (M or Ng), linear
     c = cv;
     if cMode == "log", c(c <= 0) = NaN; end          % M must be > 0
     okC = isfinite(c);
@@ -869,18 +871,20 @@ function plotAllAuthors(A, cv, cLabel, cMode, mk, peLbl, ttl, fname, pathExport,
     set(ax, 'XScale','log', 'YScale','log', 'FontSize',12);  grid(ax,'on')
     xlabel(ax, peLbl, 'FontSize',13);  ylabel(ax, 'K_L / D_0 [-]', 'FontSize',13)
     
-    % discrete classes between whole numbers: floor(min) : 1 : ceil(max)
-    % (step widened to the next whole number if that would give more than maxCls classes)
-    maxCls = 12;
+    % discrete classes: M every 1, Ng every 0.5, from floor(min) to ceil(max) on that grid;
+    % colours: 1st class blue, 2nd red, then darker red ... last class black
+    if cMode == "log", step0 = 1; else, step0 = 0.5; end    % M (log mode) | Ng
+    maxCls = 12;                                            % widen the step beyond this
     cb = colorbar(ax);
     if any(okC)
-        lo = floor(min(c(okC)));  hi = ceil(max(c(okC)));
-        if hi == lo, hi = lo + 1; end
-        step  = max(1, ceil((hi - lo)/maxCls));
+        lo = floor(min(c(okC))/step0)*step0;
+        hi = ceil(max(c(okC))/step0)*step0;
+        if hi == lo, hi = lo + step0; end
+        step  = step0*max(1, ceil((hi - lo)/(step0*maxCls)));
         hi    = lo + step*ceil((hi - lo)/step);
         edges = lo:step:hi;
         nCls  = numel(edges) - 1;
-        colormap(ax, blueRedDiscrete(nCls));  clim(ax, [lo hi])
+        colormap(ax, blueRedBlack(nCls));  clim(ax, [lo hi])
         cb.Ticks = edges;
         cb.TickLabels = compose('%g', edges);
     end
@@ -995,12 +999,11 @@ c = [[linspace(0.15,1,h)' linspace(0.3,1,h)' ones(h,1)]; ...
      [ones(n-h,1) linspace(1,0.3,n-h)' linspace(1,0.15,n-h)']];
 end
 
-function cm = blueRedDiscrete(n)
-% n discrete colours from cold blue (low) to warm red (high), via pale yellow
-% (ColorBrewer RdYlBu reversed)
-k = [0.19 0.21 0.58; 0.27 0.46 0.71; 0.67 0.85 0.91; 1.00 1.00 0.75; ...
-     0.99 0.68 0.38; 0.84 0.19 0.15; 0.65 0.00 0.15];
-x  = linspace(0, 1, size(k,1));
-xi = linspace(0, 1, n);
-cm = [interp1(x, k(:,1), xi)', interp1(x, k(:,2), xi)', interp1(x, k(:,3), xi)'];
+function cm = blueRedBlack(n)
+% n discrete colours: 1st blue, 2nd red, then progressively darker red, last black
+blue = [0.19 0.37 0.75];  red = [0.85 0.10 0.10];  black = [0 0 0];
+if n == 1, cm = blue; return, end
+if n == 2, cm = [blue; red]; return, end
+f  = linspace(0, 1, n - 1)';                 % 0 = red (class 2) ... 1 = black (last class)
+cm = [blue; (1 - f).*red + f.*black];
 end
