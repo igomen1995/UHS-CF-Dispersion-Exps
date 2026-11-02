@@ -487,7 +487,7 @@ thisRepo       = pwd;                                          % run from the re
 pathExport     = pathExportAll;
 closeAfterSave = false;
 
-allAuthorsFile = fullfile(thisRepo, 'input', 'input_KL_allAuthorsSelected_noDabrowski.xlsx');
+allAuthorsFile = fullfile(thisRepo, 'input', 'input_KL_allAuthors.xlsx');
 aaSheets       = ["1_CF_CT_main", "2_extra_own", "3_other_authors"];
 aaOwnFile      = fullfile(thisRepo, 'results', 'dimlessKL', 'KL_dimless_all.xlsx');  % main_dimlessTranspNo
 aaOwnSource    = "MFM";           % KL source used for the own rows

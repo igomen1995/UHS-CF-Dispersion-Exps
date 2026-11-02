@@ -725,13 +725,15 @@ for g = pmGroups
             end
         end
 
+        fsPm = 16;                                     % font size of everything in these figures
         if pmLabels && pmColorVars{cv,5}
-            text(ax, xPm, Tg.KLD0, "  " + namesOf(Tg.experiment, exps), 'FontSize',8, 'Interpreter','none')
+            text(ax, xPm, Tg.KLD0, "  " + namesOf(Tg.experiment, exps), 'FontSize',fsPm-4, 'Interpreter','none')
         end
 
-        set(ax, 'XScale','log', 'YScale','log', 'FontSize',12);  grid(ax,'on')
-        xlabel(ax, peLblMain, 'FontSize',13)
-        ylabel(ax, 'K_L / D_0 [-]', 'FontSize',13)
+        set(ax, 'XScale','log', 'YScale','log', 'FontSize',fsPm, ...
+            'LabelFontSizeMultiplier',1, 'TitleFontSizeMultiplier',1);  grid(ax,'on')
+        xlabel(ax, peLblMain, 'FontSize',fsPm)
+        ylabel(ax, 'K_L / D_0 [-]', 'FontSize',fsPm)
 
         % discrete colour classes, ticks at the class edges
         colormap(ax, blueRedDiscrete(pmNLevels));  clim(ax, cLimP)
@@ -740,10 +742,11 @@ for g = pmGroups
         cb.Ticks = tk;
         if isLogC, cb.TickLabels = compose('%.3g', 10.^tk); else, cb.TickLabels = compose('%.3g', tk); end
         cb.Label.String = pmColorVars{cv,2};
+        cb.FontSize = fsPm;  cb.Label.FontSize = fsPm;
 
-        legend(ax, 'Location','southeast', 'FontSize',9)
-        title(ax, sprintf('K_L/D_0 vs %s, colour = %s -- %s', peShort, pmColorVars{cv,2}, groupTitle.(g)), ...
-            'Interpreter','tex')
+        legend(ax, 'Location','southeast', 'FontSize',fsPm)
+        % title(ax, sprintf('K_L/D_0 vs %s, colour = %s -- %s', peShort, pmColorVars{cv,2}, groupTitle.(g)), ...
+        %     'Interpreter','tex')
 
         fname = "KLD0_vs_" + peMain + "_color" + pmColorVars{cv,4} + "_" + g + ternStr(pmUseAll, "_allExp", "");
         saveas(fig, fullfile(pathExport, fname), 'png');
@@ -1095,6 +1098,7 @@ for radarGroup = analysisGroups
 
     fig = figure('Position',[80 60 1000 900]);
     ax = axes(fig);  hold(ax,'on');  axis(ax,'equal','off')
+    xlim(ax, [-1.35 1.35]);  ylim(ax, [-1.30 1.30])        % room for the spoke labels at r = 1.17
 
     % grid: rings and spokes, with min / max printed at each spoke, zero mark on N_g
     for ring = linspace(rMin, 1, 4)
@@ -1159,9 +1163,9 @@ for radarGroup = analysisGroups
     end
     lg = legend(ax, hOrd, 'Location','southoutside', 'Interpreter','none', 'FontSize',9, ...
         'Orientation','horizontal', 'NumColumns',2);
-    title(ax, {sprintf('Dimensionless numbers and K_L/D_0 (MFM) per experiment -- %s', ...
-        groupTitle.(radarGroup)), 'circle = UHS, square = XCT (MFM K_L); blue = high M, green = low M; lighter = Q1 (loPe), darker = Q5 (hiPe)'}, ...
-        'Interpreter','tex', 'FontSize',12)
+    % title(ax, {sprintf('Dimensionless numbers and K_L/D_0 (MFM) per experiment -- %s', ...
+    %     groupTitle.(radarGroup)), 'circle = UHS, square = XCT (MFM K_L); blue = high M, green = low M; lighter = Q1 (loPe), darker = Q5 (hiPe)'}, ...
+    %     'Interpreter','tex', 'FontSize',12)
 
     fname = "radar_dimless_KLD0_MFM_" + radarGroup;
     saveas(fig, fullfile(pathExport, fname), 'png');
