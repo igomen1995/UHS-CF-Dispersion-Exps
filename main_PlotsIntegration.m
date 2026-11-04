@@ -901,10 +901,13 @@ end
 % Figure 2: y = KL/(u*L),     x = Pe_L     = u*L/D0       (L = core length L_cm)
 % All dimensionless (KL cm2/min, u cm/min, alpha and L cm, D0 cm2/min). Marker and colour =
 % author. Uses A from the workspace -- run this section alone. sclAuthors = [] plots all
-% authors, a list plots only those (file suffix "_selected").
+% authors, a list plots only those (file suffix "_selected"). sclColorM = true: colour = M
+% (continuous rainbow colour bar), marker = author.
 
 sclAuthors = [];                   % [] = all authors, or a list (as aaPlotAuthors)
 sclRockSets = strings(0);          % optional rock types, e.g. ["Berea","Bentheimer"]; empty = none
+sclColorM  = true;                 % true: colour = M on a continuous rainbow (jet), file suffix "_colorM"
+                                   % false: colour = author (no colour bar)
 
 if ~exist('A','var') || ~istable(A) || ~ismember('Pe', A.Properties.VariableNames)
     error('Run the all-authors section first (A not in the workspace)');
@@ -931,10 +934,11 @@ for q = 1:size(sclSets,1)
     relAS = daS ./ aS;  relAS(~isfinite(relAS)) = 0;
     y1  = T.KL_cm2min ./ (T.u_cmmin .* aS);
     dy1 = y1 .* sqrt(relKL.^2 + relAS.^2);
+    if sclColorM, cM = T.M; cTag = "_colorM"; else, cM = []; cTag = ""; end
     plotScaledKL(T, T.Pe, T.dPe, y1, dy1, aaMarkers, aaAuthAll, ...
         sprintf('Pe_\\alpha = u %s / D_0 [-]', aLbl), sprintf('K_L / (u %s) [-]', aLbl), ...
-        "K_L/(u alpha) vs Pe_alpha, " + sclSets{q,2}, "KL_ualpha_vs_Pealpha" + sclSets{q,3}, ...
-        pathExport, closeAfterSave);
+        "K_L/(u alpha) vs Pe_alpha, " + sclSets{q,2}, "KL_ualpha_vs_Pealpha" + sclSets{q,3} + cTag, ...
+        pathExport, closeAfterSave, cM, 'M = \mu_2/\mu_1 [-]');
 
     % --- 2: KL/(u L) vs Pe_L
     PeL  = T.u_cmmin .* T.L_cm ./ T.D0_cm2min;
@@ -943,16 +947,21 @@ for q = 1:size(sclSets,1)
     dy2  = y2 .* relKL;
     plotScaledKL(T, PeL, dPeL, y2, dy2, aaMarkers, aaAuthAll, ...
         'Pe_L = u L / D_0 [-]', 'K_L / (u L) [-]', ...
-        "K_L/(u L) vs Pe_L, " + sclSets{q,2}, "KL_uL_vs_PeL" + sclSets{q,3}, ...
-        pathExport, closeAfterSave);
+        "K_L/(u L) vs Pe_L, " + sclSets{q,2}, "KL_uL_vs_PeL" + sclSets{q,3} + cTag, ...
+        pathExport, closeAfterSave, cM, 'M = \mu_2/\mu_1 [-]');
 end
 
 
 %% Local functions
 
-function plotScaledKL(A, x, dx, y, dy, mk, authAll, xLbl, yLbl, ttl, fname, pathExport, closeAfterSave)
-% log-log scatter of y vs x, marker and colour = author (same marker map as the other figures),
-% grey error bars; rows without x or y skipped. Own data with larger markers / thicker edge.
+function plotScaledKL(A, x, dx, y, dy, mk, authAll, xLbl, yLbl, ttl, fname, pathExport, closeAfterSave, cv, cLbl)
+% log-log scatter of y vs x, marker = author (same marker map as the other figures), grey error
+% bars; rows without x or y skipped. Own data with larger markers / thicker edge.
+% cv (optional, e.g. M): colour = cv on a continuous rainbow (jet) with colour bar cLbl;
+% rows without cv drawn open grey. cv = [] or omitted: colour = author.
+if nargin < 14, cv = []; end
+if nargin < 15, cLbl = ''; end
+useC = ~isempty(cv);
 ok = isfinite(x) & isfinite(y) & x > 0 & y > 0;
 if ~any(ok), warning('%s: no points with finite x and y', fname); return, end
 fig = figure('Position',[80 80 1100 750], 'NumberTitle','off', 'Name', ttl);
@@ -970,8 +979,29 @@ for k = 1:numel(auth)
     own = any(A.sheet(s) <= 2);
     lw  = 0.6;  sz = 60;
     if own, lw = 1.4; sz = 95; end
-    scatter(ax, x(s), y(s), sz, col, m, 'filled', 'MarkerEdgeColor','k', 'LineWidth',lw, ...
-        'DisplayName', auth(k))
+    if useC
+        okc = s & isfinite(cv);
+        if any(okc)
+            scatter(ax, x(okc), y(okc), sz, cv(okc), m, 'filled', 'MarkerEdgeColor','k', 'LineWidth',lw, ...
+                'DisplayName', auth(k))
+        end
+        if any(s & ~isfinite(cv))
+            scatter(ax, x(s & ~isfinite(cv)), y(s & ~isfinite(cv)), sz, [0.55 0.55 0.55], m, 'LineWidth',lw, ...
+                'DisplayName', auth(k) + " (" + strtok(string(cLbl)) + " n/a)")
+        end
+    else
+        scatter(ax, x(s), y(s), sz, col, m, 'filled', 'MarkerEdgeColor','k', 'LineWidth',lw, ...
+            'DisplayName', auth(k))
+    end
+end
+if useC
+    okAll = ok & isfinite(cv);
+    cb = colorbar(ax);
+    if any(okAll)
+        lo = min(cv(okAll));  hi = max(cv(okAll));  if hi <= lo, hi = lo + 0.1; end
+        colormap(ax, jet(256));  clim(ax, [lo hi])
+    end
+    cb.Label.String = cLbl;
 end
 set(ax, 'XScale','log', 'YScale','log', 'FontSize',12);  grid(ax,'on');  box(ax,'on')
 xlabel(ax, xLbl, 'FontSize',13);  ylabel(ax, yLbl, 'FontSize',13)
