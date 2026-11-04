@@ -172,7 +172,7 @@
 %
 % where:
 %
-%       colour classes: M every 1 (1st blue, 2nd red, darker red ... last black),
+%       colour classes: M every 1 from 0 (0-1 dark blue, 1-2 light blue, then red ... black),
 %                       Ng every 0.5 (blue - pale yellow - red)
 %       M  = mu2/mu1                              (REFPROP)
 %       Ng = K*(rho2-rho1)*g*sin(theta)/(mu2*ux)  (REFPROP; > 0 = gravity-stable)
@@ -665,7 +665,7 @@ else
     A.M  = A.mu2_Pas ./ A.mu1_Pas;
     A.Ng = A.K_mD*9.869e-16 .* (A.rho2_kgm3 - A.rho1_kgm3) * 9.81 .* sind(A.theta_deg) ...
        ./ (A.mu2_Pas .* A.u_cmmin/6000);
-    A.Nrho = (A.rho1_kgm3 - A.rho2_kgm3) ./ A.rho2_kgm3;
+    A.Nrho = (A.rho2_kgm3 - A.rho1_kgm3) ./ A.rho2_kgm3;
     A.M_source  = repmat("REFPROP (sheet T, P)", nA, 1);
     A.M_source(~isfinite(A.M)) = "";
     A.M(isfinite(Mown))   = Mown(isfinite(Mown));               % own rows: props file values
@@ -747,8 +747,7 @@ end
 %                                   % "Dabrowski et al. (2024b)","Dabrowski et al. (2025)"]
 %                                   % matched case-insensitively as substrings of the Author column
 
-aaPlotAuthors  = ["This work (UHS vertical)", "This work (XCT vertical)", "This work (H2-CO2 horizontal)", ...
-    "Kobeissi et al. (2024)","Yang et al. (2023)","Kobeissi et al. (2026)"]; 
+aaPlotAuthors  = ["This work (UHS vertical)", "This work (XCT vertical)", "This work (H2-CO2 horizontal)"]; 
 
 aaSelTag      = "_selected";      % suffix of the saved figures
 
@@ -833,7 +832,7 @@ end
 
 function plotAllAuthors(A, cv, cLabel, cMode, mk, peLbl, ttl, fname, pathExport, closeAfterSave, authAll, nLev)
     % KL/D0 vs Pe, marker = author, colour = cv (M or Ng) in discrete classes on a fixed grid
-    % (M every 1, Ng every 0.5); M: 1st class blue, 2nd red, darker red ... last black (blueRedBlack),
+    % (M every 1 from 0, Ng every 0.5); M: 0-1 dark blue, 1-2 light blue, then red ... black (blueRedBlack),
     % Ng: blue -> pale yellow -> red (blueRedDiscrete);
     % rows with NaN colour drawn open grey. nLev is kept for compatibility (not used).
     % authAll (optional): full author list -> the same marker per author in every figure
@@ -874,13 +873,14 @@ function plotAllAuthors(A, cv, cLabel, cMode, mk, peLbl, ttl, fname, pathExport,
     xlabel(ax, peLbl, 'FontSize',13);  ylabel(ax, 'K_L / D_0 [-]', 'FontSize',13)
     
     % discrete classes: M every 1, Ng every 0.5, from floor(min) to ceil(max) on that grid;
-    % colours: M 1st class blue, 2nd red, then darker red ... last class black;
+    % colours: M from 0: 0-1 dark blue, 1-2 light blue, then red -> darker red ... last class black;
     %          Ng blue -> pale yellow -> red (blueRedDiscrete, as main_dimlessTranspNo)
     if cMode == "log", step0 = 1; else, step0 = 0.5; end    % M (log mode) | Ng
     maxCls = 12;                                            % widen the step beyond this
     cb = colorbar(ax);
     if any(okC)
         lo = floor(min(c(okC))/step0)*step0;
+        if cMode == "log", lo = 0; end                      % M: scale always starts at 0 (0-1, 1-2, ...)
         hi = ceil(max(c(okC))/step0)*step0;
         if hi == lo, hi = lo + step0; end
         step  = step0*max(1, ceil((hi - lo)/(step0*maxCls)));
@@ -888,7 +888,7 @@ function plotAllAuthors(A, cv, cLabel, cMode, mk, peLbl, ttl, fname, pathExport,
         edges = lo:step:hi;
         nCls  = numel(edges) - 1;
         if cMode == "log"
-            colormap(ax, blueRedBlack(nCls))          % M: blue, red, darker red ... black
+            colormap(ax, blueRedBlack(nCls))          % M: 0-1 dark blue, 1-2 light blue, then red ... black
         else
             colormap(ax, blueRedDiscrete(nCls))       % Ng: blue - pale yellow - red (RdYlBu)
         end
@@ -1008,12 +1008,14 @@ c = [[linspace(0.15,1,h)' linspace(0.3,1,h)' ones(h,1)]; ...
 end
 
 function cm = blueRedBlack(n)
-% n discrete colours: 1st blue, 2nd red, then progressively darker red, last black
-blue = [0.19 0.37 0.75];  red = [0.85 0.10 0.10];  black = [0 0 0];
-if n == 1, cm = blue; return, end
-if n == 2, cm = [blue; red]; return, end
-f  = linspace(0, 1, n - 1)';                 % 0 = red (class 2) ... 1 = black (last class)
-cm = [blue; (1 - f).*red + f.*black];
+% n discrete colours: 1st dark blue, 2nd light blue, 3rd red, then progressively darker red,
+% last black (for M from 0: 0-1 dark blue, 1-2 light blue, 2-3 red, ...)
+blueD = [0.10 0.25 0.60];  blueL = [0.55 0.75 0.95];  red = [0.85 0.10 0.10];  black = [0 0 0];
+cm = [blueD; blueL];
+if n <= 2, cm = cm(1:n,:); return, end
+if n == 3, cm = [cm; red]; return, end
+f  = linspace(0, 1, n - 2)';                 % 0 = red (class 3) ... 1 = black (last class)
+cm = [cm; (1 - f).*red + f.*black];
 end
 
 function cm = blueRedDiscrete(n)
