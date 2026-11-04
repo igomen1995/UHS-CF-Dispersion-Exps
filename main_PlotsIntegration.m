@@ -665,7 +665,7 @@ else
     A.M  = A.mu2_Pas ./ A.mu1_Pas;
     A.Ng = A.K_mD*9.869e-16 .* (A.rho2_kgm3 - A.rho1_kgm3) * 9.81 .* sind(A.theta_deg) ...
        ./ (A.mu2_Pas .* A.u_cmmin/6000);
-    A.Nrho = (A.rho2_kgm3 - A.rho1_kgm3) ./ A.rho2_kgm3;
+    A.Nrho = (A.rho1_kgm3 - A.rho2_kgm3) ./ A.rho2_kgm3;
     A.M_source  = repmat("REFPROP (sheet T, P)", nA, 1);
     A.M_source(~isfinite(A.M)) = "";
     A.M(isfinite(Mown))   = Mown(isfinite(Mown));               % own rows: props file values
@@ -747,7 +747,8 @@ end
 %                                   % "Dabrowski et al. (2024b)","Dabrowski et al. (2025)"]
 %                                   % matched case-insensitively as substrings of the Author column
 
-aaPlotAuthors  = ["This work (UHS vertical)", "This work (XCT vertical)", "This work (H2-CO2 horizontal)"]; 
+aaPlotAuthors  = ["This work (UHS vertical)", "This work (XCT vertical)", "This work (H2-CO2 horizontal)", ...
+    "Dabrowski et al. (2024b)","Dabrowski et al. (2025)"]; 
 
 aaSelTag      = "_selected";      % suffix of the saved figures
 
@@ -828,12 +829,44 @@ for rk = aaRockSetsSel
 end
 
 
+%% M as a continuous rainbow colour bar (all authors, selected authors, rock types)
+% Same KL/D0 vs Pe figures as above, colour = M on a continuous rainbow (jet) scale instead of
+% the discrete classes. Uses A (and As, if the selected-authors section has run) from the
+% workspace -- run this section alone. Saved with the suffix "_rainbow".
+
+rbRockSets = ["Berea", "Fontainebleau", "Bentheimer"];   % rock types (case-insensitive substrings)
+rbTag      = "_rainbow";
+
+if ~exist('A','var') || ~istable(A) || ~ismember('Pe', A.Properties.VariableNames)
+    error('Run the all-authors section first (A not in the workspace)');
+end
+rbSets = {A, "all authors", ""};
+if exist('As','var') && istable(As) && ~isempty(As), rbSets(end+1,:) = {As, "selected authors", aaSelTag}; end
+for q = 1:size(rbSets,1)
+    T = rbSets{q,1};
+    if isempty(T), continue, end
+    plotAllAuthors(T, T.M, 'M = \mu_2/\mu_1 [-]', "rainbow", aaMarkers, peLbl, ...
+        "K_L/D_0 vs Pe, " + rbSets{q,2} + " -- colour = M (continuous)", ...
+        "allAuthors_KLD0_vs_Pe_colorM" + rbSets{q,3} + rbTag, pathExport, closeAfterSave, aaAuthAll);
+    for rk = rbRockSets
+        sel = contains(lower(T.Rock), lower(rk));
+        if ~any(sel), continue, end
+        Tr  = T(sel, :);
+        tag = matlab.lang.makeValidName(rk);
+        plotAllAuthors(Tr, Tr.M, 'M = \mu_2/\mu_1 [-]', "rainbow", aaMarkers, peLbl, ...
+            "K_L/D_0 vs Pe, " + rk + ", " + rbSets{q,2} + " -- colour = M (continuous)", ...
+            "allAuthors_KLD0_vs_Pe_colorM_" + tag + rbSets{q,3} + rbTag, pathExport, closeAfterSave, aaAuthAll);
+    end
+end
+
+
 %% Local functions
 
 function plotAllAuthors(A, cv, cLabel, cMode, mk, peLbl, ttl, fname, pathExport, closeAfterSave, authAll, nLev)
     % KL/D0 vs Pe, marker = author, colour = cv (M or Ng) in discrete classes on a fixed grid
     % (M every 1 from 0, Ng every 0.5); M: 0-1 dark blue, 1-2 light blue, then red ... black (blueRedBlack),
     % Ng: blue -> pale yellow -> red (blueRedDiscrete);
+    % cMode "rainbow": continuous jet colour bar on the raw value (used for M in the rainbow section).
     % rows with NaN colour drawn open grey. nLev is kept for compatibility (not used).
     % authAll (optional): full author list -> the same marker per author in every figure
     if nargin < 11 || isempty(authAll), authAll = unique(A.Author, 'stable'); end
@@ -843,7 +876,7 @@ function plotAllAuthors(A, cv, cLabel, cMode, mk, peLbl, ttl, fname, pathExport,
     
     % colour = raw value (M or Ng), linear
     c = cv;
-    if cMode == "log", c(c <= 0) = NaN; end          % M must be > 0
+    if any(cMode == ["log","rainbow"]), c(c <= 0) = NaN; end    % M must be > 0
     okC = isfinite(c);
     
     dy = A.dKLD0;  dy(~isfinite(dy)) = 0;  dyLow = min(dy, 0.99*A.KLD0);
@@ -878,7 +911,11 @@ function plotAllAuthors(A, cv, cLabel, cMode, mk, peLbl, ttl, fname, pathExport,
     if cMode == "log", step0 = 1; else, step0 = 0.5; end    % M (log mode) | Ng
     maxCls = 12;                                            % widen the step beyond this
     cb = colorbar(ax);
-    if any(okC)
+    if cMode == "rainbow" && any(okC)
+        % continuous rainbow (jet), linear, limits = range of the plotted points
+        lo = min(c(okC));  hi = max(c(okC));  if hi <= lo, hi = lo + 0.1; end
+        colormap(ax, jet(256));  clim(ax, [lo hi])
+    elseif any(okC)
         lo = floor(min(c(okC))/step0)*step0;
         if cMode == "log", lo = 0; end                      % M: scale always starts at 0 (0-1, 1-2, ...)
         hi = ceil(max(c(okC))/step0)*step0;
