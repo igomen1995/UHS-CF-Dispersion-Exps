@@ -742,13 +742,13 @@ end
 % aaPlotAuthors  = [];              % authors to PLOT (all are still read, completed and saved);
 %                                   % [] = all, e.g. ["This work (UHS vertical)",
 %                                   % "This work (XCT vertical)", "This work (H2-CO2 horizontal)", ...
-%                                   % "This work (He-CO2 horizontal)", "Kobeissi et al. (2024)","Yang et al.(2023)",
-%                                   % "Kobeissi et al. (2026)","Dabrowski et al. (2024a)", ...
+%                                   % "This work (He-CO2 horizontal)", "Kobeissi et al. (2024)","Yang et al.
+%                                   % (2023)","Kobeissi et al. (2026)","Dabrowski et al. (2024a)", ...
 %                                   % "Dabrowski et al. (2024b)","Dabrowski et al. (2025)"]
 %                                   % matched case-insensitively as substrings of the Author column
 
 aaPlotAuthors  = ["This work (UHS vertical)", "This work (XCT vertical)", "This work (H2-CO2 horizontal)", ...
-    "Yang et al.(2023)", "Dabrowski et al. (2024b)","Dabrowski et al. (2025)"]; 
+    "Dabrowski et al. (2024b)","Dabrowski et al. (2025)"]; 
 
 aaSelTag      = "_selected";      % suffix of the saved figures
 
@@ -831,17 +831,18 @@ end
 
 %% M as a continuous rainbow colour bar (all authors, selected authors, rock types)
 % Same KL/D0 vs Pe figures as above, colour = M on a continuous rainbow (jet) scale instead of
-% the discrete classes. Uses A (and As, if the selected-authors section has run) from the
-% workspace -- run this section alone. Saved with the suffix "_rainbow".
+% the discrete classes. Uses A from the workspace -- run this section alone. rbAuthors = []
+% plots all authors, a list plots only those. Saved with the suffix "_rainbow".
 
 rbRockSets = ["Berea", "Fontainebleau", "Bentheimer"];   % rock types (case-insensitive substrings)
 rbTag      = "_rainbow";
+rbAuthors  = [];                   % authors to plot: [] = all authors, or a list (as aaPlotAuthors)
 
 if ~exist('A','var') || ~istable(A) || ~ismember('Pe', A.Properties.VariableNames)
     error('Run the all-authors section first (A not in the workspace)');
 end
-rbSets = {A, "all authors", ""};
-if exist('As','var') && istable(As) && ~isempty(As), rbSets(end+1,:) = {As, "selected authors", aaSelTag}; end
+[Trb, rbName, rbSel] = selectAuthors(A, rbAuthors, "_selected");
+rbSets = {Trb, rbName, rbSel};
 for q = 1:size(rbSets,1)
     T = rbSets{q,1};
     if isempty(T), continue, end
@@ -862,19 +863,23 @@ end
 
 %% KL/D0 vs M, colour = Pe (continuous rainbow) -- all authors, selected authors, rock types
 % x = M = mu2/mu1, y = KL/D0, colour = Pe (same Pe as the figures above, peLbl), log colour
-% scale on a continuous rainbow (jet). Marker = author (aaAuthAll map). Uses A / As from the
-% workspace -- run this section alone. Saved as KLD0_vs_M_colorPe_<set>.
+% scale on a continuous rainbow (jet). Marker = author (aaAuthAll map). Uses A from the
+% workspace -- run this section alone. mpAuthors = [] plots all authors, a list plots only
+% those (file suffix "_selected"). Saved as KLD0_vs_M_colorPe[_<rock>][_selected].
 
 mpXLog     = false;                % true: log x axis (M)
 mpYLog     = true;                 % true: log y axis (KL/D0)
 mpCLog     = true;                 % true: colour = log10(Pe) (Pe spans decades)
 mpRockSets = ["Berea", "Fontainebleau", "Bentheimer"];
+mpAuthors  = [];                   % authors to plot: [] = all authors, or e.g.
+                                   % ["This work (UHS vertical)", "Kobeissi et al. (2024)"]
+                                   % (case-insensitive substrings of the Author column)
 
 if ~exist('A','var') || ~istable(A) || ~ismember('Pe', A.Properties.VariableNames)
     error('Run the all-authors section first (A not in the workspace)');
 end
-mpSets = {A, "all authors", ""};
-if exist('As','var') && istable(As) && ~isempty(As), mpSets(end+1,:) = {As, "selected authors", aaSelTag}; end
+[Tm, mpName, mpTag] = selectAuthors(A, mpAuthors, "_selected");
+mpSets = {Tm, mpName, mpTag};
 for q = 1:size(mpSets,1)
     T = mpSets{q,1};
     if isempty(T), continue, end
@@ -891,6 +896,22 @@ end
 
 
 %% Local functions
+
+function [T, name, tag] = selectAuthors(A, authors, selTag)
+% rows of A whose Author contains one of the given names (case-insensitive);
+% authors = [] or "" -> all rows. name / tag: text for titles / file-name suffix.
+if isempty(authors) || all(string(authors) == "")
+    T = A;  name = "all authors";  tag = "";  return
+end
+sel = false(height(A),1);
+for a = string(authors)
+    hit = contains(lower(A.Author), lower(a));
+    if ~any(hit), warning('selectAuthors: no rows for "%s"', a); end
+    sel = sel | hit;
+end
+T = A(sel,:);  name = "selected authors";  tag = selTag;
+fprintf('Selected %d points from %s\n', height(T), strjoin(unique(T.Author,'stable'), ', '));
+end
 
 function plotKLD0vsM(A, mk, peLbl, ttl, fname, pathExport, closeAfterSave, authAll, xLog, yLog, cLog)
 % KL/D0 (y) vs M (x), colour = Pe on a continuous rainbow (jet), marker = author.
