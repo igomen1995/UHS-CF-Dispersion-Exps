@@ -742,13 +742,13 @@ end
 % aaPlotAuthors  = [];              % authors to PLOT (all are still read, completed and saved);
 %                                   % [] = all, e.g. ["This work (UHS vertical)",
 %                                   % "This work (XCT vertical)", "This work (H2-CO2 horizontal)", ...
-%                                   % "This work (He-CO2 horizontal)", "Kobeissi et al. (2024)","Yang et al.
-%                                   % (2023)","Kobeissi et al. (2026)","Dabrowski et al. (2024a)", ...
+%                                   % "This work (He-CO2 horizontal)", "Kobeissi et al. (2024)","Yang et al.(2023)",
+%                                   % "Kobeissi et al. (2026)","Dabrowski et al. (2024a)", ...
 %                                   % "Dabrowski et al. (2024b)","Dabrowski et al. (2025)"]
 %                                   % matched case-insensitively as substrings of the Author column
 
 aaPlotAuthors  = ["This work (UHS vertical)", "This work (XCT vertical)", "This work (H2-CO2 horizontal)", ...
-    "Dabrowski et al. (2024b)","Dabrowski et al. (2025)"]; 
+    "Yang et al.(2023)", "Dabrowski et al. (2024b)","Dabrowski et al. (2025)"]; 
 
 aaSelTag      = "_selected";      % suffix of the saved figures
 
@@ -860,7 +860,93 @@ for q = 1:size(rbSets,1)
 end
 
 
+%% KL/D0 vs M, colour = Pe (continuous rainbow) -- all authors, selected authors, rock types
+% x = M = mu2/mu1, y = KL/D0, colour = Pe (same Pe as the figures above, peLbl), log colour
+% scale on a continuous rainbow (jet). Marker = author (aaAuthAll map). Uses A / As from the
+% workspace -- run this section alone. Saved as KLD0_vs_M_colorPe_<set>.
+
+mpXLog     = false;                % true: log x axis (M)
+mpYLog     = true;                 % true: log y axis (KL/D0)
+mpCLog     = true;                 % true: colour = log10(Pe) (Pe spans decades)
+mpRockSets = ["Berea", "Fontainebleau", "Bentheimer"];
+
+if ~exist('A','var') || ~istable(A) || ~ismember('Pe', A.Properties.VariableNames)
+    error('Run the all-authors section first (A not in the workspace)');
+end
+mpSets = {A, "all authors", ""};
+if exist('As','var') && istable(As) && ~isempty(As), mpSets(end+1,:) = {As, "selected authors", aaSelTag}; end
+for q = 1:size(mpSets,1)
+    T = mpSets{q,1};
+    if isempty(T), continue, end
+    plotKLD0vsM(T, aaMarkers, peLbl, "K_L/D_0 vs M, " + mpSets{q,2} + " -- colour = Pe", ...
+        "KLD0_vs_M_colorPe" + mpSets{q,3}, pathExport, closeAfterSave, aaAuthAll, mpXLog, mpYLog, mpCLog);
+    for rk = mpRockSets
+        sel = contains(lower(T.Rock), lower(rk));
+        if ~any(sel), continue, end
+        tag = matlab.lang.makeValidName(rk);
+        plotKLD0vsM(T(sel,:), aaMarkers, peLbl, "K_L/D_0 vs M, " + rk + ", " + mpSets{q,2} + " -- colour = Pe", ...
+            "KLD0_vs_M_colorPe_" + tag + mpSets{q,3}, pathExport, closeAfterSave, aaAuthAll, mpXLog, mpYLog, mpCLog);
+    end
+end
+
+
 %% Local functions
+
+function plotKLD0vsM(A, mk, peLbl, ttl, fname, pathExport, closeAfterSave, authAll, xLog, yLog, cLog)
+% KL/D0 (y) vs M (x), colour = Pe on a continuous rainbow (jet), marker = author.
+% Rows without M or KL/D0 are skipped; rows without Pe drawn open grey.
+fig = figure('Position',[80 80 1150 760], 'NumberTitle','off', 'Name', ttl);
+ax  = axes(fig);  hold(ax,'on')
+x = A.M;  y = A.KLD0;
+okXY = isfinite(x) & isfinite(y) & x > 0 & y > 0;
+c = A.Pe;  c(~(c > 0)) = NaN;
+if cLog, c = log10(c); end
+okC = isfinite(c);
+
+dy = A.dKLD0;  dy(~isfinite(dy)) = 0;  dyLow = min(dy, 0.99*y);
+errorbar(ax, x(okXY), y(okXY), dyLow(okXY), dy(okXY), 'LineStyle','none', 'Color',[0.75 0.75 0.75], ...
+    'CapSize',2, 'HandleVisibility','off')
+
+auth = unique(A.Author(okXY), 'stable');
+for k = 1:numel(auth)
+    s   = A.Author == auth(k) & okXY;
+    ka  = find(authAll == auth(k), 1);  if isempty(ka), ka = k; end
+    m   = mk{mod(ka-1, numel(mk)) + 1};
+    own = any(A.sheet(s) <= 2);
+    lw  = 0.6;  sz = 60;
+    if own, lw = 1.4; sz = 95; end
+    if any(s & okC)
+        scatter(ax, x(s & okC), y(s & okC), sz, c(s & okC), m, 'filled', ...
+            'MarkerEdgeColor','k', 'LineWidth',lw, 'DisplayName', auth(k))
+    end
+    if any(s & ~okC)
+        scatter(ax, x(s & ~okC), y(s & ~okC), sz, [0.55 0.55 0.55], m, 'LineWidth',lw, ...
+            'DisplayName', auth(k) + " (Pe n/a)")
+    end
+end
+
+if xLog, set(ax, 'XScale','log'); end
+if yLog, set(ax, 'YScale','log'); end
+set(ax, 'FontSize',12);  grid(ax,'on');  box(ax,'on')
+xlabel(ax, 'M = \mu_2/\mu_1 [-]', 'FontSize',13);  ylabel(ax, 'K_L / D_0 [-]', 'FontSize',13)
+
+cb = colorbar(ax);
+if any(okC)
+    lo = min(c(okC));  hi = max(c(okC));  if hi <= lo, hi = lo + 0.1; end
+    colormap(ax, jet(256));  clim(ax, [lo hi])
+    if cLog
+        tk = ceil(lo):floor(hi);                          % decades inside the range
+        if numel(tk) < 2, tk = linspace(lo, hi, 5); end
+        cb.Ticks = tk;  cb.TickLabels = compose('%.3g', 10.^tk);
+    end
+end
+cb.Label.String = string(peLbl) + " [-]";
+
+legend(ax, 'Location','northwest', 'FontSize',9, 'Interpreter','tex')
+saveas(fig, fullfile(pathExport, fname), 'png');
+saveas(fig, fullfile(pathExport, fname), 'fig');
+if closeAfterSave, close(fig); end
+end
 
 function plotAllAuthors(A, cv, cLabel, cMode, mk, peLbl, ttl, fname, pathExport, closeAfterSave, authAll, nLev)
     % KL/D0 vs Pe, marker = author, colour = cv (M or Ng) in discrete classes on a fixed grid
