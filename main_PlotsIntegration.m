@@ -895,7 +895,91 @@ for q = 1:size(mpSets,1)
 end
 
 
+%% KL/(u alpha) vs Pe_alpha and KL/(u L) vs Pe_L (no colour axis)
+% Figure 1: y = KL/(u*alpha), x = Pe_alpha = u*alpha/D0   (alpha as in the figures above:
+%           alpha_eff for aaPeAlpha = "alphaEff", else alpha)
+% Figure 2: y = KL/(u*L),     x = Pe_L     = u*L/D0       (L = core length L_cm)
+% All dimensionless (KL cm2/min, u cm/min, alpha and L cm, D0 cm2/min). Marker and colour =
+% author. Uses A from the workspace -- run this section alone. sclAuthors = [] plots all
+% authors, a list plots only those (file suffix "_selected").
+
+sclAuthors = [];                   % [] = all authors, or a list (as aaPlotAuthors)
+sclRockSets = strings(0);          % optional rock types, e.g. ["Berea","Bentheimer"]; empty = none
+
+if ~exist('A','var') || ~istable(A) || ~ismember('Pe', A.Properties.VariableNames)
+    error('Run the all-authors section first (A not in the workspace)');
+end
+[Tsc, sclName, sclTag] = selectAuthors(A, sclAuthors, "_selected");
+sclSets = {Tsc, sclName, sclTag};
+for rk = sclRockSets
+    sel = contains(lower(Tsc.Rock), lower(rk));
+    if any(sel), sclSets(end+1,:) = {Tsc(sel,:), rk + ", " + sclName, "_" + matlab.lang.makeValidName(rk) + sclTag}; end %#ok<AGROW>
+end
+
+for q = 1:size(sclSets,1)
+    T = sclSets{q,1};
+    if isempty(T), continue, end
+    relKL = T.dKL_cm2min ./ T.KL_cm2min;  relKL(~isfinite(relKL)) = 0;
+    relD0 = T.dD0_cm2min ./ T.D0_cm2min;  relD0(~isfinite(relD0)) = 0;
+
+    % --- 1: KL/(u alpha) vs Pe_alpha
+    if any(aaPeAlpha == ["alphaEff","alphaTau"])
+        aS = T.alpha_eff_cm;  daS = T.d_alpha_eff_cm;  aLbl = '\alpha_{eff}';
+    else
+        aS = T.alpha_cm;      daS = T.d_alpha_cm;      aLbl = '\alpha';
+    end
+    relAS = daS ./ aS;  relAS(~isfinite(relAS)) = 0;
+    y1  = T.KL_cm2min ./ (T.u_cmmin .* aS);
+    dy1 = y1 .* sqrt(relKL.^2 + relAS.^2);
+    plotScaledKL(T, T.Pe, T.dPe, y1, dy1, aaMarkers, aaAuthAll, ...
+        sprintf('Pe_\\alpha = u %s / D_0 [-]', aLbl), sprintf('K_L / (u %s) [-]', aLbl), ...
+        "K_L/(u alpha) vs Pe_alpha, " + sclSets{q,2}, "KL_ualpha_vs_Pealpha" + sclSets{q,3}, ...
+        pathExport, closeAfterSave);
+
+    % --- 2: KL/(u L) vs Pe_L
+    PeL  = T.u_cmmin .* T.L_cm ./ T.D0_cm2min;
+    dPeL = PeL .* relD0;
+    y2   = T.KL_cm2min ./ (T.u_cmmin .* T.L_cm);
+    dy2  = y2 .* relKL;
+    plotScaledKL(T, PeL, dPeL, y2, dy2, aaMarkers, aaAuthAll, ...
+        'Pe_L = u L / D_0 [-]', 'K_L / (u L) [-]', ...
+        "K_L/(u L) vs Pe_L, " + sclSets{q,2}, "KL_uL_vs_PeL" + sclSets{q,3}, ...
+        pathExport, closeAfterSave);
+end
+
+
 %% Local functions
+
+function plotScaledKL(A, x, dx, y, dy, mk, authAll, xLbl, yLbl, ttl, fname, pathExport, closeAfterSave)
+% log-log scatter of y vs x, marker and colour = author (same marker map as the other figures),
+% grey error bars; rows without x or y skipped. Own data with larger markers / thicker edge.
+ok = isfinite(x) & isfinite(y) & x > 0 & y > 0;
+if ~any(ok), warning('%s: no points with finite x and y', fname); return, end
+fig = figure('Position',[80 80 1100 750], 'NumberTitle','off', 'Name', ttl);
+ax  = axes(fig);  hold(ax,'on')
+dx(~isfinite(dx)) = 0;  dy(~isfinite(dy)) = 0;
+errorbar(ax, x(ok), y(ok), min(dy(ok), 0.99*y(ok)), dy(ok), min(dx(ok), 0.99*x(ok)), dx(ok), ...
+    'LineStyle','none', 'Color',[0.75 0.75 0.75], 'CapSize',2, 'HandleVisibility','off')
+cols = lines(max(numel(authAll), 1));
+auth = unique(A.Author(ok), 'stable');
+for k = 1:numel(auth)
+    s   = A.Author == auth(k) & ok;
+    ka  = find(authAll == auth(k), 1);  if isempty(ka), ka = k; end
+    m   = mk{mod(ka-1, numel(mk)) + 1};
+    col = cols(mod(ka-1, size(cols,1)) + 1, :);
+    own = any(A.sheet(s) <= 2);
+    lw  = 0.6;  sz = 60;
+    if own, lw = 1.4; sz = 95; end
+    scatter(ax, x(s), y(s), sz, col, m, 'filled', 'MarkerEdgeColor','k', 'LineWidth',lw, ...
+        'DisplayName', auth(k))
+end
+set(ax, 'XScale','log', 'YScale','log', 'FontSize',12);  grid(ax,'on');  box(ax,'on')
+xlabel(ax, xLbl, 'FontSize',13);  ylabel(ax, yLbl, 'FontSize',13)
+legend(ax, 'Location','best', 'FontSize',9, 'Interpreter','tex')
+saveas(fig, fullfile(pathExport, fname), 'png');
+saveas(fig, fullfile(pathExport, fname), 'fig');
+if closeAfterSave, close(fig); end
+end
 
 function [T, name, tag] = selectAuthors(A, authors, selTag)
 % rows of A whose Author contains one of the given names (case-insensitive);
