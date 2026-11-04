@@ -30,7 +30,7 @@
 %
 % DIMENSIONLESS NUMBERS (same definitions/convention as main_DataExtract.m)
 %   M    = mu2/mu1                           viscosity ratio (displaced/displacing)
-%   Nrho = (rho1-rho2)/rho2                   density number
+%   Nrho = (rho2-rho1)/rho2                   density number
 %   Ng   = K*(rho2-rho1)*g*sin(theta)/(mu2*u) gravity number (> 0 = gravity-stable)
 %   Pe   = u*L/D12                            Peclet number (core length)
 %   Pep  = u*d_pore/D12                       pore Peclet number (pore diameter,
@@ -285,7 +285,7 @@ for c = 1:numel(cases)
     dM = sqrt( ((-mu2*dmu1)/(mu1^2))^2 + (dmu2/mu1)^2 );
 
     % density number Nrho = (rho1-rho2)/rho2
-    Nrho  = (rho1-rho2)/rho2;
+    Nrho  = (rho2-rho1)/rho2;
     dNrho = sqrt( (drho1/rho2)^2 + ((-rho1*drho2)/(rho2^2))^2 );
 
     % gravity number Ng = K*(rho2-rho1)*g*sin(theta)/(mu2*u)

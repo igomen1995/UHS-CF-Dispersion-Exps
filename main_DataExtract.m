@@ -655,17 +655,16 @@ for i = 1:length(filedataExp.Key)
 
     % Dimensionless numbers (before processing or estimating KL)
     M = mu2/mu1; % viscosity ratio = displaced / displacing
-    Nrho = (rho1-rho2)/rho2; % density number
-    Ng_upump = (filedataExp.K(i)*9.869*(10^-16))*(rho1-rho2)*9.8*sin(thetha)/(mu2*upump); % Ng = K*(drho)*g*cos(angle)/(vel_interstitial*mu2)
-    Ng_uMFM = (filedataExp.K(i)*9.869*(10^-16))*(rho1-rho2)*9.8*sin(thetha)/(mu2*uMFM); % Ng = K*(drho)*g*cos(angle)/(vel_interstitial*mu2)
+    Nrho = (rho2-rho1)/rho2; % density number (> 0: displaced fluid denser)
+    Ng_upump = (filedataExp.K(i)*9.869*(10^-16))*(rho2-rho1)*9.8*sin(thetha)/(mu2*upump); % Ng = K*(rho2-rho1)*g*sin(theta)/(mu2*u), > 0 = gravity-stable
+    Ng_uMFM = (filedataExp.K(i)*9.869*(10^-16))*(rho2-rho1)*9.8*sin(thetha)/(mu2*uMFM);   % Ng = K*(rho2-rho1)*g*sin(theta)/(mu2*u), > 0 = gravity-stable
     Pe_upump_L_D0 = upump*L/(D12_SI);
     Pe_uMFM_L_D0 = uMFM*L/(D12_SI);
-
     % uncertainties dimless numbers
     dM = ((-mu2*dmu1/(mu1^2))^2+(dmu2/mu1)^2)^(1/2);
     dNrho = ((drho1/rho2)^2+(-rho1*drho2/(rho2^2))^2)^(1/2);
-    dNg_upump = Ng_upump*(((drho1/(rho1-rho2))^2+(drho2/(rho1-rho2))^2+(dmu2/mu2)^2+(dupump/upump)^2)^(1/2));
-    dNg_uMFM = Ng_uMFM*(((drho1/(rho1-rho2))^2+(drho2/(rho1-rho2))^2+(dmu2/mu2)^2+(duMFM/uMFM)^2)^(1/2));
+    dNg_upump = abs(Ng_upump)*(((drho1/(rho2-rho1))^2+(drho2/(rho2-rho1))^2+(dmu2/mu2)^2+(dupump/upump)^2)^(1/2));
+    dNg_uMFM = abs(Ng_uMFM)*(((drho1/(rho2-rho1))^2+(drho2/(rho2-rho1))^2+(dmu2/mu2)^2+(duMFM/uMFM)^2)^(1/2));
     dPe_upump_L_D0 = Pe_upump_L_D0*(((dupump/upump)^2+(dD12_SI/D12_SI)^2)^(1/2));
     dPe_uMFM_L_D0 = Pe_uMFM_L_D0*(((duMFM/uMFM)^2+(dD12_SI/D12_SI)^2)^(1/2));
 
