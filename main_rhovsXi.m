@@ -147,11 +147,6 @@ end
 % Pure He,  Eq. 10-11 (ab initio, Aziz et al. potential), valid 210-400 K:
 %   B11(T)  [cm^3/mol] = 11.885370 + 6.6508722e-3*T - 3.205894e-5*T^2 + 3.1354694e-8*T^3
 %   C111(T) [cm^6/mol^2] = 44.2846 + 2.379099e4/T - 1.6689669e6/T^2
-%   (NOTE: the source PDF's OCR text shows the last term of C111 also as
-%    T^-1; given the paper's own 1/T-power-series convention (Eq. 15) and
-%    that two distinct T^-1 terms would be redundant, this is read as a
-%    typesetting artifact and coded here as T^-2 - flag this if you can
-%    check it against a clean copy of Eq. 11.)
 %
 % Pure Xe, Eq. 12-13 (hard-core square-well fit), valid 210-400 K:
 %   B22(T)  = b0*(1 - (lam^3-1)*Delta),  Delta = exp(eps/kB/T) - 1
@@ -166,20 +161,6 @@ end
 %   B12(T)  = 2.756941e-5 + 4.617880e-3/T - 1.741538/T^2 + 1.364453e2/T^3
 %   C112(T) = -2.692605e-10 + 1.340259e-7/T
 %   C122(T) =  4.984636e-10 + 2.256122e-7/T
-%
-% VALIDITY: the paper states an overall range of 0.5-5 MPa and 210-400 K
-% for the He-Xe mixture fit (Burnett p(P,T) data went up to 5 MPa).
-% 725 psig = 5.10 MPa is right at/just past that edge; 900 psig = 6.31 MPa
-% is clearly beyond it - both are flagged (solid vs. dashed, and in the
-% legend).
-%
-% UNCERTAINTY: the paper quotes (p.599, Fig. 9) that the Burnett p(P,T)
-% mixture data are fit with an RMS percentage deviation of 0.013%, and
-% "most of the data are bounded by ... +-0.02% of the pressure." We use
-% that stated +-0.02%-of-P figure as the virial density's uncertainty band
-% (error bars below) - it is the paper's own fit-quality bound on ITS
-% stated range, not a validated accuracy bound for extrapolated conditions,
-% so treat the 900 psig error bars as illustrative only.
 
 R = 8.314462618; % J/(mol.K)
 MW_He = 4.002602e-3; % kg/mol
