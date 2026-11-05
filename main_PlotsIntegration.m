@@ -901,13 +901,13 @@ end
 % Figure 2: y = KL/(u*L),     x = Pe_L     = u*L/D0       (L = core length L_cm)
 % All dimensionless (KL cm2/min, u cm/min, alpha and L cm, D0 cm2/min). Marker and colour =
 % author. Uses A from the workspace -- run this section alone. sclAuthors = [] plots all
-% authors, a list plots only those (file suffix "_selected"). sclColorM = true: colour = M
-% (continuous rainbow colour bar), marker = author.
+% authors, a list plots only those (file suffix "_selected"). sclColorBy: colour = M and/or Ng
+% (continuous rainbow colour bar) or author (""), marker = author.
 
 sclAuthors = [];                   % [] = all authors, or a list (as aaPlotAuthors)
 sclRockSets = strings(0);          % optional rock types, e.g. ["Berea","Bentheimer"]; empty = none
-sclColorM  = true;                 % true: colour = M on a continuous rainbow (jet), file suffix "_colorM"
-                                   % false: colour = author (no colour bar)
+sclColorBy = ["M","Ng"];           % colour of the points, one set of figures each, continuous rainbow (jet):
+                                   %   "M" (suffix "_colorM"), "Ng" (suffix "_colorNg"), "" = author colours
 
 if ~exist('A','var') || ~istable(A) || ~ismember('Pe', A.Properties.VariableNames)
     error('Run the all-authors section first (A not in the workspace)');
@@ -934,21 +934,28 @@ for q = 1:size(sclSets,1)
     relAS = daS ./ aS;  relAS(~isfinite(relAS)) = 0;
     y1  = T.KL_cm2min ./ (T.u_cmmin .* aS);
     dy1 = y1 .* sqrt(relKL.^2 + relAS.^2);
-    if sclColorM, cM = T.M; cTag = "_colorM"; else, cM = []; cTag = ""; end
-    plotScaledKL(T, T.Pe, T.dPe, y1, dy1, aaMarkers, aaAuthAll, ...
-        sprintf('Pe_\\alpha = u %s / D_0 [-]', aLbl), sprintf('K_L / (u %s) [-]', aLbl), ...
-        "K_L/(u alpha) vs Pe_alpha, " + sclSets{q,2}, "KL_ualpha_vs_Pealpha" + sclSets{q,3} + cTag, ...
-        pathExport, closeAfterSave, cM, 'M = \mu_2/\mu_1 [-]');
-
     % --- 2: KL/(u L) vs Pe_L
     PeL  = T.u_cmmin .* T.L_cm ./ T.D0_cm2min;
     dPeL = PeL .* relD0;
     y2   = T.KL_cm2min ./ (T.u_cmmin .* T.L_cm);
     dy2  = y2 .* relKL;
-    plotScaledKL(T, PeL, dPeL, y2, dy2, aaMarkers, aaAuthAll, ...
-        'Pe_L = u L / D_0 [-]', 'K_L / (u L) [-]', ...
-        "K_L/(u L) vs Pe_L, " + sclSets{q,2}, "KL_uL_vs_PeL" + sclSets{q,3} + cTag, ...
-        pathExport, closeAfterSave, cM, 'M = \mu_2/\mu_1 [-]');
+
+    for cb = string(sclColorBy)
+        switch cb
+            case "M",  cV = T.M;   cL = 'M = \mu_2/\mu_1 [-]';  cTag = "_colorM";
+            case "Ng", cV = T.Ng;  cL = 'N_g [-]';               cTag = "_colorNg";
+            otherwise, cV = [];    cL = '';                      cTag = "";
+        end
+        plotScaledKL(T, T.Pe, T.dPe, y1, dy1, aaMarkers, aaAuthAll, ...
+            sprintf('Pe_\\alpha = u %s / D_0 [-]', aLbl), sprintf('K_L / (u %s) [-]', aLbl), ...
+            "K_L/(u alpha) vs Pe_alpha, " + sclSets{q,2}, "KL_ualpha_vs_Pealpha" + sclSets{q,3} + cTag, ...
+            pathExport, closeAfterSave, cV, cL);
+        plotScaledKL(T, PeL, dPeL, y2, dy2, aaMarkers, aaAuthAll, ...
+            'Pe_L = u L / D_0 [-]', 'K_L / (u L) [-]', ...
+            "K_L/(u L) vs Pe_L, " + sclSets{q,2}, "KL_uL_vs_PeL" + sclSets{q,3} + cTag, ...
+            pathExport, closeAfterSave, cV, cL);
+    end
+
 end
 
 
