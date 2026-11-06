@@ -680,6 +680,11 @@ pmGroups   = analysisGroups;       % conditions plotted
 pmUseAll   = false;                % true: include the horizontal runs (squares, Ng = 0)
 pmLabels   = true;                 % experiment name next to each marker (where pmColorVars allows)
 pmNLevels  = 6;                    % number of discrete colour classes
+pmFsAx     = 20;                   % font size: tick labels, colour-bar ticks
+pmFsLbl    = 24;                   % font size: axis labels and colour-bar label
+pmFsLeg    = 24;                   % font size: legend
+pmMkScale  = 2;                    % marker size factor in the plot (1 = previous size)
+pmLegMk    = 16;                   % marker size in the legend [points]
 % colour variables: {column, colour-bar label, log scale, file tag, point labels}
 pmColorVars = {'M',  'M = \mu_2/\mu_1 [-]', true,  'M',  false; ...
                'Ng', 'N_g [-]',             false, 'Ng', false};   % N_g > 0 = gravity-stable
@@ -700,53 +705,64 @@ for g = pmGroups
         if ~all(isfinite(cLimP)), continue, end
         if diff(cLimP) == 0, cLimP = cLimP + [-0.5 0.5]*max(abs(cLimP(1))*0.1, 0.1); end
 
-        fig = figure('Position',[80 80 1150 750]);
+        fig = figure('Position',[80 80 1200 800]);
         ax = axes(fig);  hold(ax,'on')
 
         % uncertainty bars (grey, behind)
         dyLow = min(Tg.dKLD0, 0.99*Tg.KLD0);  dxLow = min(dxPm, 0.99*xPm);
         errorbar(ax, xPm, Tg.KLD0, dyLow, Tg.dKLD0, dxLow, dxPm, 'LineStyle','none', ...
-            'Color',[0.75 0.75 0.75], 'CapSize',3, 'HandleVisibility','off')
+            'Color',[0.75 0.75 0.75], 'CapSize',4, 'LineWidth',1, 'HandleVisibility','off')
 
         % markers: circle = UHS, square = XCT analog (He-Xe); horizontal runs (Ng = 0,
         % only with pmUseAll) as diamonds; CT sources with a thick edge
-        mkSets = {~isXCT & ~isH, 'o', 120, "UHS"; ...
-                   isXCT & ~isH, 's', 130, "XCT"; ...
-                   isH,          'd', 130, "horizontal (N_g = 0)"};
+        mkSets = {~isXCT & ~isH, 'o', 120*pmMkScale, "UHS"; ...
+                   isXCT & ~isH, 's', 130*pmMkScale, "XCT"; ...
+                   isH,          'd', 130*pmMkScale, "horizontal (N_g = 0)"};
         for s = 1:numel(pmSources)
             selS = Tg.source == pmSources(s);
-            lw = 0.8;  if s > 1, lw = 2; end
+            lw = 1;  if s > 1, lw = 2.2; end
             for q = 1:size(mkSets,1)
                 sel = selS & mkSets{q,1};
                 if ~any(sel), continue, end
                 scatter(ax, xPm(sel), Tg.KLD0(sel), mkSets{q,3}, cV(sel), mkSets{q,2}, ...
-                    'filled', 'MarkerEdgeColor','k', 'LineWidth',lw, ...
-                    'DisplayName', mkSets{q,4} + ternStr(numel(pmSources) > 1, " (" + pmSources(s) + ")", ""))
+                    'filled', 'MarkerEdgeColor','k', 'LineWidth',lw, 'HandleVisibility','off')
             end
         end
 
-        fsPm = 16;                                     % font size of everything in these figures
         if pmLabels && pmColorVars{cv,5}
-            text(ax, xPm, Tg.KLD0, "  " + namesOf(Tg.experiment, exps), 'FontSize',fsPm-4, 'Interpreter','none')
+            text(ax, xPm, Tg.KLD0, "    " + namesOf(Tg.experiment, exps), 'FontSize',pmFsAx-4, 'Interpreter','none')
         end
 
-        set(ax, 'XScale','log', 'YScale','log', 'FontSize',fsPm, ...
-            'LabelFontSizeMultiplier',1, 'TitleFontSizeMultiplier',1);  grid(ax,'on')
-        xlabel(ax, peLblMain, 'FontSize',fsPm)
-        ylabel(ax, 'K_L / D_0 [-]', 'FontSize',fsPm)
+        set(ax, 'XScale','log', 'YScale','log', 'FontSize',pmFsAx, 'LineWidth',1, ...
+            'LabelFontSizeMultiplier',1, 'TitleFontSizeMultiplier',1);  grid(ax,'on');  box(ax,'on')
+        xlabel(ax, peLblMain, 'FontSize',pmFsLbl)
+        ylabel(ax, 'K_L / D_0 [-]', 'FontSize',pmFsLbl)
 
         % discrete colour classes, ticks at the class edges
         colormap(ax, blueRedDiscrete(pmNLevels));  clim(ax, cLimP)
         cb = colorbar(ax);
         tk = linspace(cLimP(1), cLimP(2), pmNLevels + 1);
         cb.Ticks = tk;
-        if isLogC, cb.TickLabels = compose('%.3g', 10.^tk); else, cb.TickLabels = compose('%.3g', tk); end
+        if isLogC, cb.TickLabels = compose('%.3g', 10.^tk); else, cb.TickLabels = compose('%.2f', tk); end   % Ng: 2 decimals
         cb.Label.String = pmColorVars{cv,2};
-        cb.FontSize = fsPm;  cb.Label.FontSize = fsPm;
+        cb.FontSize = pmFsAx;  cb.Label.FontSize = pmFsLbl;
 
-        legend(ax, 'Location','southeast', 'FontSize',fsPm)
-        % title(ax, sprintf('K_L/D_0 vs %s, colour = %s -- %s', peShort, pmColorVars{cv,2}, groupTitle.(g)), ...
-        %     'Interpreter','tex')
+        % legend: one invisible marker per symbol actually used (scatter legend icons have a
+        % fixed small size; plot markers follow MarkerSize). Grey: colour = M / Ng (colour bar).
+        hLeg = gobjects(0);
+        for s = 1:numel(pmSources)
+            selS = Tg.source == pmSources(s);
+            lw = 1;  if s > 1, lw = 2.2; end
+            for q = 1:size(mkSets,1)
+                if ~any(selS & mkSets{q,1}), continue, end
+                hLeg(end+1) = plot(ax, NaN, NaN, mkSets{q,2}, 'LineStyle','none', ...
+                    'MarkerSize',pmLegMk, 'MarkerFaceColor',[0.7 0.7 0.7], 'MarkerEdgeColor','k', ...
+                    'LineWidth',lw, 'DisplayName', mkSets{q,4} + ...
+                    ternStr(numel(pmSources) > 1, " (" + pmSources(s) + ")", "")); %#ok<SAGROW>
+            end
+        end
+        lg = legend(ax, hLeg, 'Location','southeast', 'FontSize',pmFsLeg);
+        lg.ItemTokenSize = [30 24];
 
         fname = "KLD0_vs_" + peMain + "_color" + pmColorVars{cv,4} + "_" + g + ternStr(pmUseAll, "_allExp", "");
         saveas(fig, fullfile(pathExport, fname), 'png');
@@ -755,6 +771,139 @@ for g = pmGroups
     end
 end
 
+%% KL/D0 vs Pe with the dispersion model, marker colour = M and = N_g
+% Same figures as the section above, plus the fitted dispersion model as a dashed line:
+%   KL = D_eff + alpha*u,  D_eff = D0/tau   ->   KL/D0 = 1/tau + Pe_alpha   (Pe_alpha = u*alpha/D0)
+% (for peMain = "Pe" = uL/D0 the line is KL/D0 = 1/tau + (alpha/L)*Pe, alpha and L of the cases).
+% tau and alpha are those used for Pe_alpha (columns tau, alphaEff_cm of T; pooled fit -> one
+% value for all cases). Saved with the suffix "_model".
+
+pmSources  = srcNames(1);          % MFM; add srcNames(2:3) to include the XCT CT values
+pmGroups   = analysisGroups;       % conditions plotted
+pmUseAll   = false;                % true: include the horizontal runs (squares, Ng = 0)
+pmLabels   = true;                 % experiment name next to each marker (where pmColorVars allows)
+pmNLevels  = 6;                    % number of discrete colour classes
+pmFsAx     = 20;                   % font size: tick labels, colour-bar ticks
+pmFsLbl    = 24;                   % font size: axis labels and colour-bar label
+pmFsLeg    = 24;                   % font size: legend
+pmMkScale  = 2;                    % marker size factor in the plot (1 = previous size)
+pmLegMk    = 16;                   % marker size in the legend [points]
+pmTauBand  = true;                 % also draw the line for tau +/- d_tau (dotted)
+% colour variables: {column, colour-bar label, log scale, file tag, point labels}
+pmColorVars = {'M',  'M = \mu_2/\mu_1 [-]', true,  'M',  false; ...
+               'Ng', 'N_g [-]',             false, 'Ng', false};   % N_g > 0 = gravity-stable
+
+if pmUseAll, Tpm = Tall; else, Tpm = T; end
+for g = pmGroups
+    Tg = Tpm(Tpm.group == g & ismember(Tpm.source, pmSources) & isfinite(Tpm.KLD0) & Tpm.KLD0 > 0, :);
+    if isempty(Tg), warning('No entries for group %s', g); continue, end
+    isH   = Tg.Ng == 0;                                   % horizontal runs (Ng = 0)
+    isXCT = startsWith(Tg.experiment, "He-Xe");           % XCT analog cases (square), else UHS (circle)
+    xPm = Tg.(peMain);  dxPm = Tg.("d" + peMain);  dxPm(~isfinite(dxPm)) = 0;
+
+    for cv = 1:size(pmColorVars,1)
+        cName = pmColorVars{cv,1};  isLogC = pmColorVars{cv,3};
+        cV = Tg.(cName);
+        if isLogC, cV(cV <= 0) = NaN; cV = log10(cV); end
+        cLimP = [min(cV,[],'omitnan') max(cV,[],'omitnan')];
+        if ~all(isfinite(cLimP)), continue, end
+        if diff(cLimP) == 0, cLimP = cLimP + [-0.5 0.5]*max(abs(cLimP(1))*0.1, 0.1); end
+
+        fig = figure('Position',[80 80 1200 800]);
+        ax = axes(fig);  hold(ax,'on')
+
+        % uncertainty bars (grey, behind)
+        dyLow = min(Tg.dKLD0, 0.99*Tg.KLD0);  dxLow = min(dxPm, 0.99*xPm);
+        errorbar(ax, xPm, Tg.KLD0, dyLow, Tg.dKLD0, dxLow, dxPm, 'LineStyle','none', ...
+            'Color',[0.75 0.75 0.75], 'CapSize',4, 'LineWidth',1, 'HandleVisibility','off')
+
+        % markers: circle = UHS, square = XCT analog (He-Xe); horizontal runs (Ng = 0,
+        % only with pmUseAll) as diamonds; CT sources with a thick edge
+        mkSets = {~isXCT & ~isH, 'o', 120*pmMkScale, "UHS"; ...
+                   isXCT & ~isH, 's', 130*pmMkScale, "XCT"; ...
+                   isH,          'd', 130*pmMkScale, "horizontal (N_g = 0)"};
+        for s = 1:numel(pmSources)
+            selS = Tg.source == pmSources(s);
+            lw = 1;  if s > 1, lw = 2.2; end
+            for q = 1:size(mkSets,1)
+                sel = selS & mkSets{q,1};
+                if ~any(sel), continue, end
+                scatter(ax, xPm(sel), Tg.KLD0(sel), mkSets{q,3}, cV(sel), mkSets{q,2}, ...
+                    'filled', 'MarkerEdgeColor','k', 'LineWidth',lw, 'HandleVisibility','off')
+            end
+        end
+
+        if pmLabels && pmColorVars{cv,5}
+            text(ax, xPm, Tg.KLD0, "    " + namesOf(Tg.experiment, exps), 'FontSize',pmFsAx-4, 'Interpreter','none')
+        end
+
+        set(ax, 'XScale','log', 'YScale','log', 'FontSize',pmFsAx, 'LineWidth',1, ...
+            'LabelFontSizeMultiplier',1, 'TitleFontSizeMultiplier',1);  grid(ax,'on');  box(ax,'on')
+        xlabel(ax, peLblMain, 'FontSize',pmFsLbl)
+        ylabel(ax, 'K_L / D_0 [-]', 'FontSize',pmFsLbl)
+
+        % discrete colour classes, ticks at the class edges
+        colormap(ax, blueRedDiscrete(pmNLevels));  clim(ax, cLimP)
+        cb = colorbar(ax);
+        tk = linspace(cLimP(1), cLimP(2), pmNLevels + 1);
+        cb.Ticks = tk;
+        if isLogC, cb.TickLabels = compose('%.3g', 10.^tk); else, cb.TickLabels = compose('%.2f', tk); end   % Ng: 2 decimals
+        cb.Label.String = pmColorVars{cv,2};
+        cb.FontSize = pmFsAx;  cb.Label.FontSize = pmFsLbl;
+
+        % ---- dispersion model KL/D0 = 1/tau + Pe_alpha (dashed), tau of the plotted cases
+        tauV = Tg.tau(isfinite(Tg.tau) & Tg.tau > 0);
+        hMod = gobjects(0);
+        if ~isempty(tauV)
+            tauM = median(tauV);
+            dtauV = Tg.d_tau(isfinite(Tg.tau) & Tg.tau > 0);  dtauM = median(dtauV(isfinite(dtauV)));
+            if numel(unique(round(tauV, 6))) > 1
+                warning('%s: tau differs between cases (%.3g-%.3g) -- median %.3g used for the line', ...
+                    g, min(tauV), max(tauV), tauM);
+            end
+            xl = [min(xPm(xPm > 0))/2, max(xPm)*2];
+            xm = logspace(log10(xl(1)), log10(xl(2)), 200);
+            if peMain == "Pea"
+                slope = 1;                                            % KL/D0 = 1/tau + Pe_alpha
+                modTxt = sprintf('K_L/D_0 = 1/\\tau + Pe_\\alpha');
+            else
+                aL = median(Tg.Pea ./ Tg.Pe, 'omitnan');            % alpha/L = Pe_alpha/Pe (Pe = uL/D0)
+                slope = aL;
+                modTxt = sprintf('K_L/D_0 = 1/\\tau + (\\alpha/L) Pe');
+            end
+            hMod = plot(ax, xm, 1/tauM + slope*xm, 'k--', 'LineWidth',2, 'DisplayName', modTxt);
+            if pmTauBand && isfinite(dtauM) && dtauM > 0 && dtauM < tauM
+                plot(ax, xm, 1/(tauM - dtauM) + slope*xm, 'k:', 'LineWidth',1.2, 'HandleVisibility','off')
+                plot(ax, xm, 1/(tauM + dtauM) + slope*xm, 'k:', 'LineWidth',1.2, 'HandleVisibility','off')
+            end
+            xlim(ax, xl)
+        else
+            warning('%s: no tau in T -- model line not drawn', g);
+        end
+
+        % legend: one invisible marker per symbol actually used (scatter legend icons have a
+        % fixed small size; plot markers follow MarkerSize). Grey: colour = M / Ng (colour bar).
+        hLeg = gobjects(0);
+        for s = 1:numel(pmSources)
+            selS = Tg.source == pmSources(s);
+            lw = 1;  if s > 1, lw = 2.2; end
+            for q = 1:size(mkSets,1)
+                if ~any(selS & mkSets{q,1}), continue, end
+                hLeg(end+1) = plot(ax, NaN, NaN, mkSets{q,2}, 'LineStyle','none', ...
+                    'MarkerSize',pmLegMk, 'MarkerFaceColor',[0.7 0.7 0.7], 'MarkerEdgeColor','k', ...
+                    'LineWidth',lw, 'DisplayName', mkSets{q,4} + ...
+                    ternStr(numel(pmSources) > 1, " (" + pmSources(s) + ")", "")); %#ok<SAGROW>
+            end
+        end
+        lg = legend(ax, [hLeg hMod], 'Location','southeast', 'FontSize',pmFsLeg);
+        lg.ItemTokenSize = [30 24];
+
+        fname = "KLD0_vs_" + peMain + "_color" + pmColorVars{cv,4} + "_" + g + ternStr(pmUseAll, "_allExp", "") + "_model";
+        saveas(fig, fullfile(pathExport, fname), 'png');
+        saveas(fig, fullfile(pathExport, fname), 'fig');
+        if closeAfterSave, close(fig); end
+    end
+end
 %% MFM BTC moments (sigma, skewness) vs the dimensionless numbers, and KL/D0 vs moments
 % main (vertical) experiments, MFM rows only; moments are a property of the curve,
 % so they are the same in every group -- only the x values (conditions) change
