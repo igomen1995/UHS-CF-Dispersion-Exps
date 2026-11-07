@@ -663,7 +663,7 @@ else
 
     % ---- dimensionless numbers
     A.M  = A.mu2_Pas ./ A.mu1_Pas;
-    A.Ng = A.K_mD*9.869e-16 .* (A.rho2_kgm3 - A.rho1_kgm3) * 9.81 .* sind(A.theta_deg) ...
+    A.Ng = A.K_mD*9.869e-16 .* (A.rho1_kgm3 - A.rho2_kgm3) * 9.81 .* sind(A.theta_deg) ...
        ./ (A.mu2_Pas .* A.u_cmmin/6000);
     A.Nrho = (A.rho1_kgm3 - A.rho2_kgm3) ./ A.rho2_kgm3;
     A.M_source  = repmat("REFPROP (sheet T, P)", nA, 1);
