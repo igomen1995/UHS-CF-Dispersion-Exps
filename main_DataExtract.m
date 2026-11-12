@@ -1096,46 +1096,59 @@ for i = 1:length(filedataExp.Key)
 end
 
 %% Plot concentration molar all together
+% Runs on its own: imports the config, filedataExp and the saved expProcData.mat (as main_Plots.m),
+% so the extraction / density-to-concentration sections do not have to be run again.
+% y-axis: molar concentration of fluid 1 of each experiment, C_{Fluid1} (e.g. C_{H_2}, C_{He}).
+
+addpath('functions/');
+inputFileConfig = readtable('inputExpConfig.xlsx');
+pathExportAll   = inputFileConfig.exportPath{:};
+filedataExp     = import_inputExp(inputFileConfig.inputFileName{:});
+load(pathExportAll + "expProcData.mat")
+
 for i = 1:length(filedataExp.Key)
-    pumps_data_name = filedataExp.path(i) + filedataExp.pumps_data_name(i);
-    trans_data_name = filedataExp.path(i) + filedataExp.trans_data_name(i);
-    MFM_data_name = filedataExp.path(i) + filedataExp.MFM_data_name(i);
+    MFM_data_name  = filedataExp.path(i) + filedataExp.MFM_data_name(i);
     PGD1_data_name = filedataExp.path(i) + filedataExp.PGD1_data_name(i);
-    PGD2_data_name = filedataExp.path(i) + filedataExp.PGD1_data_name(i);
+    PGD2_data_name = filedataExp.path(i) + filedataExp.PGD2_data_name(i);   % was PGD1_data_name
+    if ~isfield(expProcData, filedataExp.Key(i))
+        warning('No processed data for %s', filedataExp.Key(i));  continue
+    end
+    E = expProcData.(filedataExp.Key(i));
+
+    % fluid 1 name for the labels, TeX subscripts for the numbers: H2 -> H_2, CO2 -> CO_2
+    fl1 = regexprep(string(filedataExp.Fluid1{i}), '(\d+)', '_{$1}');
+
     % Densities and concentrations PGD
     figure('Position', [100, 100, 700, 550]);
     tiledlayout(2,2, 'TileSpacing', 'tight', 'Padding','tight');
-    if ismissing(MFM_data_name) == 0
-        t = expProcData.(filedataExp.Key(i)).BT.TimeElapsed;
-        C1 = expProcData.(filedataExp.Key(i)).BT.Ci;
-        C1min = expProcData.(filedataExp.Key(i)).BT.CiMin;
-        C1max = expProcData.(filedataExp.Key(i)).BT.CiMax;
-        rho_norm = expProcData.(filedataExp.Key(i)).BT.rho_norm*100;
-        drho_norm = expProcData.(filedataExp.Key(i)).BT.drho_norm*100;
+    if ismissing(MFM_data_name) == 0 && isfield(E, 'BT')
+        t = E.BT.TimeElapsed;
+        C1 = E.BT.Ci;  C1min = E.BT.CiMin;  C1max = E.BT.CiMax;
         errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', 'Color', [255 193 183]/255,'HandleVisibility','off')
-        hold on 
-        h3 = scatter(t,C1,5,'filled','MarkerFaceColor','r','DisplayName','C_{MFM} \pm \DeltaC_{MFM}');
+        hold on
+        scatter(t, C1, 5, 'filled', 'MarkerFaceColor','r', 'DisplayName',"C_{MFM} \pm \DeltaC_{MFM}");
         % % Uncomment to plot density norm too
+        % rho_norm = E.BT.rho_norm*100;  drho_norm = E.BT.drho_norm*100;
         % errorbar(t, rho_norm, drho_norm/2, drho_norm/2, 'LineStyle', 'none', 'Color', [0.88 0.88 0.88] ,'HandleVisibility','off')
         % scatter(t,rho_norm,5,'filled','MarkerFaceColor','k','DisplayName','\rho* \pm \Delta\rho*');
     end
-    if ismissing(PGD2_data_name) == 0
-        h1 = scatter(expProcData.(filedataExp.Key(i)).PGD2Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD2Data.C1,7,'filled','MarkerFaceColor',[0.9290 0.6940 0.1250],'DisplayName','C_{PGD2}');
-        hold on 
+    if ismissing(PGD2_data_name) == 0 && isfield(E, 'PGD2Data')
+        scatter(E.PGD2Data.TimeElapsed, E.PGD2Data.C1, 7, 'filled', 'MarkerFaceColor',[0.9290 0.6940 0.1250], ...
+            'DisplayName',"C_{PGD2}");
+        hold on
     end
-    if ismissing(PGD1_data_name) == 0
-        h2 = scatter(expProcData.(filedataExp.Key(i)).PGD1Data.TimeElapsed,expProcData.(filedataExp.Key(i)).PGD1Data.C1,7,'filled','MarkerFaceColor',[0.4660    0.6740    0.1880],'DisplayName','C_{PGD1}');
-        hold on 
+    if ismissing(PGD1_data_name) == 0 && isfield(E, 'PGD1Data')
+        scatter(E.PGD1Data.TimeElapsed, E.PGD1Data.C1, 7, 'filled', 'MarkerFaceColor',[0.4660 0.6740 0.1880], ...
+            'DisplayName',"C_{PGD1}");
+        hold on
     end
     xlabel('Time elapsed [hh:mm:ss]','FontSize', 14);
     xtickformat('hh:mm:ss')
-    ylabel('C_{H_2} [mol %]','FontSize', 14);
+    ylabel("C_{" + fl1 + "} [mol %]",'FontSize', 14);
     ylim([0,100]);
     lgd = legend('Location','southeast','FontSize',14);
-    title (lgd, "Q = " + filedataExp.Q(i) + " ml/min",'FontSize',14)
+    title(lgd, "Q = " + filedataExp.Q(i) + " ml/min",'FontSize',14)
     grid on;
-    ax = gca; % Get current axes
-    ax.FontSize = 14;
-    % title("Breakthrough curve using " + eosMethod + " EOS") % check that calibration config eos and validation config eos are the same
-    saveas(gcf,pathExportAll + filedataExp.Key(i) + "_dens_conc",'png')
+    ax = gca;  ax.FontSize = 14;
+    saveas(gcf, pathExportAll + filedataExp.Key(i) + "_dens_conc", 'png')
 end
