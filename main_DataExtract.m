@@ -1096,26 +1096,28 @@ for i = 1:length(filedataExp.Key)
 end
 
 %% Plot concentration molar all together
-% Runs on its own: imports the config, filedataExp and the saved expProcData.mat (as main_Plots.m),
-% so the extraction / density-to-concentration sections do not have to be run again.
-% y-axis: molar concentration of fluid 1 of each experiment, C_{Fluid1} (e.g. C_{H_2}, C_{He}).
+% Runs on its own: imports the config, filedataExp and the saved expProcData.mat (as main_Plots.m).
+% y-axis: molar concentration of fluid 1, C_{Fluid1}. PGD1 is calibrated for H2: for another fluid 1
+% (He) its reading is corrected HERE, for the plot only, with the thermal conductivities:
+%   C_new = C / (100 K_new/K_H2)  ->  in mol %: C_new = C K_H2 / K_new   (K from REFPROP at Tpgd, Ppgd)
 
 addpath('functions/');
 inputFileConfig = readtable('inputExpConfig.xlsx');
 pathExportAll   = inputFileConfig.exportPath{:};
 filedataExp     = import_inputExp(inputFileConfig.inputFileName{:});
 load(pathExportAll + "expProcData.mat")
+Tpgd = 293.15;  Ppgd = 101.325;          % PGD sensor conditions for K [K, kPa]
 
 for i = 1:length(filedataExp.Key)
     MFM_data_name  = filedataExp.path(i) + filedataExp.MFM_data_name(i);
     PGD1_data_name = filedataExp.path(i) + filedataExp.PGD1_data_name(i);
-    PGD2_data_name = filedataExp.path(i) + filedataExp.PGD2_data_name(i);   % was PGD1_data_name
+    PGD2_data_name = filedataExp.path(i) + filedataExp.PGD2_data_name(i);
     if ~isfield(expProcData, filedataExp.Key(i))
         warning('No processed data for %s', filedataExp.Key(i));  continue
     end
     E = expProcData.(filedataExp.Key(i));
 
-    % fluid 1 name for the labels, TeX subscripts for the numbers: H2 -> H_2, CO2 -> CO_2
+    % fluid 1 name for the y label, TeX subscripts for the numbers: H2 -> H_2
     fl1 = regexprep(string(filedataExp.Fluid1{i}), '(\d+)', '_{$1}');
 
     % Densities and concentrations PGD
@@ -1126,7 +1128,7 @@ for i = 1:length(filedataExp.Key)
         C1 = E.BT.Ci;  C1min = E.BT.CiMin;  C1max = E.BT.CiMax;
         errorbar(t, C1, C1-C1min, C1max - C1, 'LineStyle', 'none', 'Color', [255 193 183]/255,'HandleVisibility','off')
         hold on
-        scatter(t, C1, 5, 'filled', 'MarkerFaceColor','r', 'DisplayName',"C_{MFM} \pm \DeltaC_{MFM}");
+        scatter(t, C1, 5, 'filled', 'MarkerFaceColor','r', 'DisplayName','C_{MFM} \pm \DeltaC_{MFM}');
         % % Uncomment to plot density norm too
         % rho_norm = E.BT.rho_norm*100;  drho_norm = E.BT.drho_norm*100;
         % errorbar(t, rho_norm, drho_norm/2, drho_norm/2, 'LineStyle', 'none', 'Color', [0.88 0.88 0.88] ,'HandleVisibility','off')
@@ -1134,12 +1136,20 @@ for i = 1:length(filedataExp.Key)
     end
     if ismissing(PGD2_data_name) == 0 && isfield(E, 'PGD2Data')
         scatter(E.PGD2Data.TimeElapsed, E.PGD2Data.C1, 7, 'filled', 'MarkerFaceColor',[0.9290 0.6940 0.1250], ...
-            'DisplayName',"C_{PGD2}");
+            'DisplayName','C_{PGD2}');
         hold on
     end
     if ismissing(PGD1_data_name) == 0 && isfield(E, 'PGD1Data')
-        scatter(E.PGD1Data.TimeElapsed, E.PGD1Data.C1, 7, 'filled', 'MarkerFaceColor',[0.4660 0.6740 0.1880], ...
-            'DisplayName',"C_{PGD1}");
+        C1pgd = E.PGD1Data.C1;  lblPGD1 = 'C_{PGD1}';
+        if ~strcmpi(fluidNameREFPROP(filedataExp.Fluid1{i}), "HYDROGEN")      % e.g. He: plot-only correction
+            if ~exist('RP','var') || isempty(RP), RP = initREFPROP(); end
+            Kfun = @(f) double(RP.REFPROPdll(char(fluidNameREFPROP(f)), 'TP', 'TCX', ...
+                int32(0), int32(0), int32(0), Tpgd, Ppgd, py.list({1.0})).Output(1));
+            C1pgd   = C1pgd * Kfun("H2") / Kfun(filedataExp.Fluid1{i});
+            lblPGD1 = 'C_{PGD1, corrected}';
+        end
+        scatter(E.PGD1Data.TimeElapsed, C1pgd, 7, 'filled', 'MarkerFaceColor',[0.4660 0.6740 0.1880], ...
+            'DisplayName', lblPGD1);
         hold on
     end
     xlabel('Time elapsed [hh:mm:ss]','FontSize', 14);
