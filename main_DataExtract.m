@@ -656,8 +656,8 @@ for i = 1:length(filedataExp.Key)
     % Dimensionless numbers (before processing or estimating KL)
     M = mu2/mu1; % viscosity ratio = displaced / displacing
     Nrho = (rho1-rho2)/rho2; % density number (> 0: displaced fluid denser)
-    Ng_upump = (filedataExp.K(i)*9.869*(10^-16))*(rho1-rho2)*9.8*sin(thetha)/(mu2*upump); % Ng = K*(rho2-rho1)*g*sin(theta)/(mu2*u), > 0 = gravity-stable
-    Ng_uMFM = (filedataExp.K(i)*9.869*(10^-16))*(rho1-rho2)*9.8*sin(thetha)/(mu2*uMFM);   % Ng = K*(rho2-rho1)*g*sin(theta)/(mu2*u), > 0 = gravity-stable
+    Ng_upump = (filedataExp.K(i)*9.869*(10^-16))*(rho1-rho2)*9.8*sin(thetha)/(mu2*upump); % NOT USED (stored only). Analysis uses Ng = K*(rho2-rho1)*g*sin(theta)/(mu1*u) with mu1 = injected fluid (Lake: lambda_1), see main_fluidProps_errorProp
+    Ng_uMFM = (filedataExp.K(i)*9.869*(10^-16))*(rho1-rho2)*9.8*sin(thetha)/(mu2*uMFM);   % NOT USED (stored only). Analysis uses Ng = K*(rho2-rho1)*g*sin(theta)/(mu1*u), see main_fluidProps_errorProp
     Pe_upump_L_D0 = upump*L/(D12_SI);
     Pe_uMFM_L_D0 = uMFM*L/(D12_SI);
     % uncertainties dimless numbers

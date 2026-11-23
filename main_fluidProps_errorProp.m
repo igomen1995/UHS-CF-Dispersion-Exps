@@ -288,10 +288,12 @@ for c = 1:numel(cases)
     Nrho  = (rho1-rho2)/rho2;
     dNrho = sqrt( (drho1/rho2)^2 + ((-rho1*drho2)/(rho2^2))^2 );
 
-    % gravity number Ng = K*(rho1-rho2)*g*sin(theta)/(mu2*u)
-    Ng  = K_SI*(rho1-rho2)*9.8*sin(theta)/(mu2*u_SI);
-    dNg = abs(Ng)*sqrt( (drho1/(rho1-rho2))^2 + (drho2/(rho1-rho2))^2 ...
-                      + (dmu2/mu2)^2 + (du_SI/u_SI)^2 + (dK_SI/K_SI)^2 );
+    % gravity number Ng = K*(rho2-rho1)*g*sin(theta)/(mu1*u), mu1 = injected fluid (Lake: lambda_1);
+    % theta = 90 deg for vertical top injection -> Ng > 0 = gravity-stable (light fluid on top)
+    Ng  = K_SI*(rho2-rho1)*9.8*sin(theta)/(mu1*u_SI);
+    dNg = abs(Ng)*sqrt( (drho1/(rho2-rho1))^2 + (drho2/(rho2-rho1))^2 ...
+                      + (dmu1/mu1)^2 + (du_SI/u_SI)^2 + (dK_SI/K_SI)^2 );
+    
     % Peclet number Pe = u*L/D12 (D12 at the 50/50 mixture point)
     Pe  = u_SI*L_SI/D12_SI;
     dPe = Pe*sqrt( (du_SI/u_SI)^2 + (dD12_SI/D12_SI)^2 );
