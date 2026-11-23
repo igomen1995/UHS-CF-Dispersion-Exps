@@ -958,7 +958,55 @@ for q = 1:size(sclSets,1)
 
 end
 
+%% N_g vs M - 1, colour = KL/D0 (stability map) -- all authors, selected authors, rock types
+% x = M - 1 (M = mu2/mu1), y = N_g = K (rho2 - rho1) g sin(theta) / (mu1 u), colour = KL/D0
+% (continuous rainbow, log scale by default), marker = author (aaAuthAll map, as the figures above).
+% Same scale and limits on both axes (square, equal aspect, centred on 0), so the stability line N_g = M - 1 is the
+% 1:1 diagonal (dashed): above it (N_g > M - 1, i.e. u < u_c) the front is stable,
+% below it (N_g < M - 1, u > u_c) viscously unstable (Lake et al. 2014). Dotted: M - 1 = 0 and N_g = 0.
+% Rows without M, N_g (no K or theta) or KL/D0 are skipped (KL/D0 missing: open grey).
+% Uses A from the workspace -- run the all-authors section first. ngAuthors = [] plots all authors,
+% a list plots only those (file suffix "_selected"). Saved as Ng_vs_Mminus1_colorKLD0[_<rock>][_selected].
+% ngThisWork = true adds the same figure with this work's data only (Ng_vs_Mminus1_colorKLD0_thisWork).
 
+ngAuthors  = [];                   % [] = all authors, or a list (as aaPlotAuthors)
+ngRockSets = ["Berea", "Fontainebleau", "Bentheimer"];   % rock types (case-insensitive substrings)
+ngCLog     = true;                 % true: colour = log10(KL/D0)
+ngScale    = "linear";             % "linear" | "signedlog" (sign*log10(1+|v|)), the SAME for x and y:
+                                   % equal limits and aspect ratio -> the stability line is the 1:1 diagonal
+ngLabels   = false;                % true: experiment name next to each point
+ngThisWork = true;                 % true: also the same figure with this work's data only
+                                   % (own rows = sheets 1_CF_CT_main and 2_extra_own), suffix "_thisWork"
+ngLegLoc   = "southwest";          % legend inside the axes: "southwest" | "northeast" | "best" | ...
+                                   % (stable label: top left, unstable label: bottom right)
+
+if ~exist('A','var') || ~istable(A) || ~ismember('Pe', A.Properties.VariableNames)
+    error('Run the all-authors section first (A not in the workspace)');
+end
+[Tng, ngName, ngTag] = selectAuthors(A, ngAuthors, "_selected");
+if ~isempty(Tng)
+    plotNgvsM1(Tng, aaMarkers, aaAuthAll, "N_g vs M - 1, " + ngName + " -- colour = K_L/D_0", ...
+        "Ng_vs_Mminus1_colorKLD0" + ngTag, pathExport, closeAfterSave, ngCLog, ngScale, ngLabels, ngLegLoc);
+    for rk = ngRockSets
+        sel = contains(lower(Tng.Rock), lower(rk));
+        if ~any(sel), continue, end
+        tag = matlab.lang.makeValidName(rk);
+        plotNgvsM1(Tng(sel,:), aaMarkers, aaAuthAll, "N_g vs M - 1, " + rk + ", " + ngName + " -- colour = K_L/D_0", ...
+            "Ng_vs_Mminus1_colorKLD0_" + tag + ngTag, pathExport, closeAfterSave, ngCLog, ngScale, ngLabels, ngLegLoc);
+    end
+end
+
+% this work only (own rows of input_KL_allAuthors.xlsx, sheets 1-2), all rock types together
+if ngThisWork
+    Tow = A(A.sheet <= 2, :);
+    if isempty(Tow)
+        warning('N_g vs M - 1: no own rows (sheets 1-2) in A');
+    else
+        fprintf('N_g vs M - 1, this work: %d points (%s)\n', height(Tow), strjoin(unique(Tow.Author,'stable'), ', '));
+        plotNgvsM1(Tow, aaMarkers, aaAuthAll, "N_g vs M - 1, this work -- colour = K_L/D_0", ...
+            "Ng_vs_Mminus1_colorKLD0_thisWork", pathExport, closeAfterSave, ngCLog, ngScale, ngLabels, ngLegLoc);
+    end
+end
 %% Local functions
 
 function plotScaledKL(A, x, dx, y, dy, mk, authAll, xLbl, yLbl, ttl, fname, pathExport, closeAfterSave, cv, cLbl)
@@ -1292,4 +1340,89 @@ if n == 1, cm = k(2,:); return, end
 x  = linspace(0, 1, size(k,1));
 xi = linspace(0, 1, n);
 cm = [interp1(x, k(:,1), xi)', interp1(x, k(:,2), xi)', interp1(x, k(:,3), xi)'];
+end
+
+function plotNgvsM1(A, mk, authAll, ttl, fname, pathExport, closeAfterSave, cLog, axScale, showLabels, legLoc)
+% N_g (y) vs M - 1 (x), colour = KL/D0 on a continuous rainbow (jet), marker = author (authAll map).
+% Both axes share the same scale, limits and aspect ratio, so the stability line N_g = M - 1 is the
+% 1:1 diagonal through the centre (dashed): stable above (u < u_c), unstable below (u > u_c). Dotted: x = 0, y = 0.
+% axScale: "linear" or "signedlog" (s(v) = sign(v) log10(1 + |v|), keeps sign and zero), both axes.
+% Rows without M or N_g skipped; rows without KL/D0 drawn open grey. Own data: larger markers.
+if nargin < 9  || isempty(axScale),    axScale = "linear"; end
+if nargin < 10 || isempty(showLabels), showLabels = false; end
+if nargin < 11 || isempty(legLoc),     legLoc = "southwest"; end
+fs = @(v) v;  if axScale == "signedlog", fs = @(v) sign(v).*log10(1 + abs(v)); end
+
+xr = A.M - 1;  yr = A.Ng;
+okXY = isfinite(xr) & isfinite(yr);
+if ~any(okXY), warning('%s: no points with both M and N_g', fname); return, end
+x = fs(xr);  y = fs(yr);
+c = A.KLD0;  c(~(c > 0)) = NaN;
+if cLog, c = log10(c); end
+okC = isfinite(c);
+
+fig = figure('Position',[80 80 1150 760], 'NumberTitle','off', 'Name', ttl);
+ax  = axes(fig);  hold(ax,'on')
+
+% common limits for both axes, symmetric about 0 (origin in the centre), then the 1:1 line N_g = M - 1
+hi = max(abs([x(okXY); y(okXY)]));  if ~(hi > 0), hi = 1; end
+hi = 1.08*hi;  lo = -hi;
+hS = plot(ax, [lo hi], [lo hi], '--k', 'LineWidth',1.8, 'DisplayName','N_g = M - 1 (u = u_c)');
+xline(ax, 0, ':', 'Color',[0.4 0.4 0.4], 'LineWidth',1.2, 'HandleVisibility','off');
+yline(ax, 0, ':', 'Color',[0.4 0.4 0.4], 'LineWidth',1.2, 'HandleVisibility','off');
+
+auth = unique(A.Author(okXY), 'stable');
+for k = 1:numel(auth)
+    s   = A.Author == auth(k) & okXY;
+    ka  = find(authAll == auth(k), 1);  if isempty(ka), ka = k; end
+    m   = mk{mod(ka-1, numel(mk)) + 1};
+    own = any(A.sheet(s) <= 2);
+    lw  = 0.6;  sz = 70;
+    if own, lw = 1.4; sz = 110; end
+    if any(s & okC)
+        scatter(ax, x(s & okC), y(s & okC), sz, c(s & okC), m, 'filled', ...
+            'MarkerEdgeColor','k', 'LineWidth',lw, 'DisplayName', auth(k))
+    end
+    if any(s & ~okC)
+        scatter(ax, x(s & ~okC), y(s & ~okC), sz, [0.55 0.55 0.55], m, 'LineWidth',lw, ...
+            'DisplayName', auth(k) + " (K_L/D_0 n/a)")
+    end
+end
+if showLabels
+    iL = find(okXY);
+    text(ax, x(iL), y(iL), "  " + A.Experiment(iL), 'FontSize',8, 'Interpreter','none', 'Clipping','on')
+end
+
+% same limits (centred on 0) and aspect ratio on both axes -> the stability line is at 45 degrees
+xlim(ax, [lo hi]);  ylim(ax, [lo hi]);  axis(ax, 'square');  daspect(ax, [1 1 1])
+XL = xlim(ax);  YL = ylim(ax);
+text(ax, XL(1) + 0.03*diff(XL), YL(2) - 0.05*diff(YL), 'stable  (N_g > M - 1, u < u_c)', ...
+    'FontSize',12, 'Color',[0 0.35 0], 'VerticalAlignment','top')
+text(ax, XL(2) - 0.03*diff(XL), YL(1) + 0.05*diff(YL), 'unstable  (N_g < M - 1, u > u_c)', ...
+    'FontSize',12, 'Color',[0.6 0 0], 'HorizontalAlignment','right', 'VerticalAlignment','bottom')
+uistack(hS, 'bottom');
+
+set(ax, 'FontSize',12);  grid(ax,'on');  box(ax,'on')
+xLbl = 'M - 1 [-]';  yLbl = 'N_g [-]';
+if axScale == "signedlog"
+    xLbl = 'sign(M - 1) log_{10}(1 + |M - 1|) [-]';  yLbl = 'sign(N_g) log_{10}(1 + |N_g|) [-]';
+end
+xlabel(ax, xLbl, 'FontSize',13);  ylabel(ax, yLbl, 'FontSize',13)
+
+cb = colorbar(ax);
+if any(okC)
+    lo = min(c(okC));  hi = max(c(okC));  if hi <= lo, hi = lo + 0.1; end
+    colormap(ax, jet(256));  clim(ax, [lo hi])
+    if cLog
+        tk = ceil(lo*2)/2:0.5:floor(hi*2)/2;              % every half decade inside the range
+        if numel(tk) < 2, tk = linspace(lo, hi, 5); end
+        cb.Ticks = tk;  cb.TickLabels = compose('%.3g', 10.^tk);
+    end
+end
+cb.Label.String = 'K_L / D_0 [-]';
+
+legend(ax, 'Location',char(legLoc), 'FontSize',9, 'Interpreter','tex', 'Box','on', 'Color','w')
+saveas(fig, fullfile(pathExport, fname), 'png');
+saveas(fig, fullfile(pathExport, fname), 'fig');
+if closeAfterSave, close(fig); end
 end
