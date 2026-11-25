@@ -860,3 +860,186 @@ legend([h1,h2],{'C_{H2,MFM}','C_{H2,MFM,fit} \pm \DeltaC_{H2,MFM,fit}'},'Locatio
 % title("Validation curve using " + eosMethod + " calibration") % check that calibration config eos and validation config eos are the same
 saveas(gcf,pathExportAll + "Val-P1500",'png')
 saveas(gcf,pathExportAll + "Val-P1500",'png')
+
+%% REFPROP EOS model of the binary mixture: rho(x, P, T) surface and rho(x), rho_norm(x)
+% Model only (no measured points), for one fluid pair (default: the pair of the first key, e.g. H2-CO2).
+% Composition is shown in mol % of fluid 1 (REFPROP is called with mole fractions internally).
+%  (1) Five 3D views of the same REFPROP grid rho(x, T, P) (x = mol % of fluid 1), one
+%      surface per value of the colour variable, values outside eosRhoLim left out:
+%        (a) base T, P       | up rho | colour x   (one surface per x)
+%        (b) base x, P       | up rho | colour T   (one surface per T)
+%        (c) base x, T       | up rho | colour P   (one surface per P)
+%        (d) base x, rho     | up P   | colour T   (one surface per T)
+%        (e) base x, P       | up T   | colour rho (one plane per T, coloured by rho)
+%  (2) rho_mix vs x and rho_norm vs x (two separate figures) at eosT_C and eosP_psig (plus any extra T / P in
+%      eosT2D / eosP2D), with rho_norm = (rho_2 - rho_mix)/(rho_2 - rho_1) as in the composition
+%      section (0 = pure fluid 2, 1 = pure fluid 1). T and P are given in the file name.
+%  (3) rho_mix vs x: curves of P at T = eosT_C (eosPcurves), and curves of T at P = eosP_psig (eosTcurves)
+% Needs RP and filedataExp from the sections above.
+
+eosPair   = string([filedataExp.Fluid1(1), filedataExp.Fluid2(1)]);   % fluid pair, e.g. ["H2","CO2"]
+eosX      = 0:0.05:1;              % mole fraction of fluid 1 (figure 2), plotted as mol %
+eosX3D    = 0:0.1:1;               % mole fraction axis of the 3D grid (surfaces in (a)), plotted as mol %
+eosT3D    = 25:1:35;               % temperature axis of the 3D grid [C]
+eosP3D    = 1000:100:2000;         % pressure axis of the 3D grid [psig]
+eosRhoLim = [0 800];               % density range kept [kg/m3] (outside -> not drawn)
+eosStepT  = 2;                     % (b), (d), (e): every eosStepT-th temperature as a surface
+eosStepP  = 2;                     % (c): every eosStepP-th pressure as a surface
+eosT_C    = 32;                    % figure (2): main temperature [C]
+eosP_psig = 1500;                  % figure (2): main pressure [psig]
+eosT2D    = [];                    % figure (2): extra temperatures at eosP_psig, e.g. [25 35]
+eosP2D    = [];                    % figure (2): extra pressures at eosT_C, e.g. [1000 2000]
+eosFs     = 14;
+
+psig2kPa = @(p) (p + 14.7)*0.00689476*1000;
+rhoMix   = @(x, T_C, P_psig) getMixtureProps_REFPROP(RP, {char(eosPair(1)), char(eosPair(2))}, ...
+    [x 1-x], T_C + 273.15, psig2kPa(P_psig)).rho;      % x = mole fraction
+cLbl  = sprintf('C_{%s} [mol %%]', eosPair(1));
+xPct  = 100*eosX;                  % composition axis of figures (2) and (3) [mol %]
+
+% ---------- (1) REFPROP grid rho(x, T, P), computed once
+[X3, T3, P3] = ndgrid(eosX3D, eosT3D, eosP3D);
+R3  = arrayfun(@(x, t, p) rhoMix(x, t, p), X3, T3, P3);
+bad = ~isfinite(R3) | R3 < eosRhoLim(1) | R3 > eosRhoLim(2);
+if any(bad(:)), fprintf('3D: %d of %d grid points outside rho = [%g %g] kg/m3 left out\n', nnz(bad), numel(bad), eosRhoLim); end
+R3(bad) = NaN;
+X3 = 100*X3;                       % mol % for plotting
+nX = numel(eosX3D);  nT = numel(eosT3D);  nP = numel(eosP3D);
+iTs = 1:eosStepT:nT;  if iTs(end) ~= nT, iTs(end+1) = nT; end
+iPs = 1:eosStepP:nP;  if iPs(end) ~= nP, iPs(end+1) = nP; end
+lblX = cLbl;  lblT = 'T [°C]';  lblP = 'P [psig]';  lblR = '\rho_{ref} [kg/m^3]';
+srfOpt = {'EdgeColor',[0.3 0.3 0.3], 'EdgeAlpha',0.25, 'FaceAlpha',0.85, 'FaceColor','flat'};
+views3D = struct('tag',{"a_T_P_rho_colX","b_X_P_rho_colT","c_X_T_rho_colP","d_X_rho_P_colT","e_X_P_T_colRho"}, ...
+                 'xl',{lblT,lblX,lblX,lblX,lblX}, 'yl',{lblP,lblP,lblT,lblR,lblP}, ...
+                 'zl',{lblR,lblR,lblR,lblP,lblT}, 'cl',{lblX,lblT,lblP,lblT,lblR});
+
+for v = 1:numel(views3D)
+    fig = figure('Position',[80 80 1050 780], 'NumberTitle','off', 'Name', ...
+        sprintf('REFPROP %s-%s, 3D view %s', eosPair(1), eosPair(2), views3D(v).tag));
+    ax = axes(fig);  hold(ax,'on')
+    switch v
+        case 1   % (a) base T, P | rho | colour x
+            for ix = 1:nX
+                Tg = squeeze(T3(ix,:,:));  Pg = squeeze(P3(ix,:,:));  Rg = squeeze(R3(ix,:,:));
+                surf(ax, Tg, Pg, Rg, 100*eosX3D(ix)*ones(size(Rg)), srfOpt{:});
+            end
+            cLimV = [0 100];
+        case 2   % (b) base x, P | rho | colour T
+            for it = iTs
+                Xg = squeeze(X3(:,it,:));  Pg = squeeze(P3(:,it,:));  Rg = squeeze(R3(:,it,:));
+                surf(ax, Xg, Pg, Rg, eosT3D(it)*ones(size(Rg)), srfOpt{:});
+            end
+            cLimV = [min(eosT3D) max(eosT3D)];
+        case 3   % (c) base x, T | rho | colour P
+            for ip = iPs
+                Xg = X3(:,:,ip);  Tg = T3(:,:,ip);  Rg = R3(:,:,ip);
+                surf(ax, Xg, Tg, Rg, eosP3D(ip)*ones(size(Rg)), srfOpt{:});
+            end
+            cLimV = [min(eosP3D) max(eosP3D)];
+        case 4   % (d) base x, rho | P | colour T
+            for it = iTs
+                Xg = squeeze(X3(:,it,:));  Pg = squeeze(P3(:,it,:));  Rg = squeeze(R3(:,it,:));
+                surf(ax, Xg, Rg, Pg, eosT3D(it)*ones(size(Rg)), srfOpt{:});
+            end
+            cLimV = [min(eosT3D) max(eosT3D)];
+        case 5   % (e) base x, P | T | colour rho (one plane per T)
+            for it = iTs
+                Xg = squeeze(X3(:,it,:));  Pg = squeeze(P3(:,it,:));  Rg = squeeze(R3(:,it,:));
+                surf(ax, Xg, Pg, eosT3D(it)*ones(size(Rg)), Rg, 'EdgeColor',[0.3 0.3 0.3], ...
+                    'EdgeAlpha',0.25, 'FaceAlpha',0.9, 'FaceColor','interp');
+            end
+            cLimV = eosRhoLim;
+    end
+    colormap(ax, jet(256));  clim(ax, cLimV)
+    cb = colorbar(ax);  cb.Label.String = views3D(v).cl;  cb.FontSize = eosFs;
+    xlabel(ax, views3D(v).xl, 'FontSize',eosFs);  ylabel(ax, views3D(v).yl, 'FontSize',eosFs)
+    zlabel(ax, views3D(v).zl, 'FontSize',eosFs)
+    % axis limits from the settings (rho axis: eosRhoLim)
+    lims = struct('x',[0 100], 'T',[min(eosT3D) max(eosT3D)], 'P',[min(eosP3D) max(eosP3D)], 'rho',eosRhoLim);
+    axLim = {{lims.T, lims.P, lims.rho}, {lims.x, lims.P, lims.rho}, {lims.x, lims.T, lims.rho}, ...
+             {lims.x, lims.rho, lims.P}, {lims.x, lims.P, lims.T}};
+    xlim(ax, axLim{v}{1});  ylim(ax, axLim{v}{2});  zlim(ax, axLim{v}{3})
+    set(ax, 'FontSize',eosFs);  grid(ax,'on');  box(ax,'on');  view(ax, -40, 25)
+    title(ax, sprintf('REFPROP, %s-%s', eosPair(1), eosPair(2)), 'FontWeight','normal')
+    fn = "EOS_REFPROP_3D_" + views3D(v).tag + "_" + join(eosPair,"_");
+    saveas(fig, pathExportAll + fn, 'png');  saveas(fig, pathExportAll + fn, 'fig');
+end
+
+% ---------- (2) rho_mix(x) and rho_norm(x) at T, P -- two separate figures
+curves = [eosT_C eosP_psig];
+curves = [curves; [eosT2D(:) repmat(eosP_psig, numel(eosT2D), 1)]; [repmat(eosT_C, numel(eosP2D), 1) eosP2D(:)]];
+figA = figure('Position',[100 100 800 620], 'NumberTitle','off', 'Name', ...
+    sprintf('REFPROP rho(x), %s-%s', eosPair(1), eosPair(2)));
+axA  = axes(figA);  hold(axA,'on')
+figB = figure('Position',[120 120 700 650], 'NumberTitle','off', 'Name', ...
+    sprintf('REFPROP rho_norm(x), %s-%s', eosPair(1), eosPair(2)));
+axB  = axes(figB);  hold(axB,'on')
+cols = lines(size(curves,1));  cols(1,:) = [0 0 0];          % main curve black
+rowsE = {};
+for k = 1:size(curves,1)
+    T_C = curves(k,1);  P_psig = curves(k,2);
+    rho  = arrayfun(@(x) rhoMix(x, T_C, P_psig), eosX);
+    rho1 = rho(eosX == 1);  rho2 = rho(eosX == 0);              % pure fluid 1 / fluid 2
+    rhoN = (rho2 - rho)/(rho2 - rho1);
+    lw = 1.5;  if k == 1, lw = 2.5; end
+    nm = sprintf('%g °C, %g psig', T_C, P_psig);
+    plot(axA, xPct, rho,  '-', 'Color',cols(k,:), 'LineWidth',lw, 'DisplayName',nm)
+    plot(axB, xPct, rhoN, '-', 'Color',cols(k,:), 'LineWidth',lw, 'DisplayName',nm)
+    [dMax, iMax] = max(abs(rhoN - eosX));
+    x_at_max_dev_molpct = xPct(iMax);
+    rowsE{end+1,1} = table(T_C, P_psig, rho1, rho2, dMax, x_at_max_dev_molpct, ...
+        'VariableNames', {'T_C','P_psig', char("rho_" + eosPair(1)), char("rho_" + eosPair(2)), ...
+        'max_dev_rhoNorm_from_x', 'x_at_max_dev_molpct'}); %#ok<SAGROW>
+end
+% (2a) mixture density
+xlabel(axA, cLbl, 'FontSize',eosFs);  ylabel(axA, '\rho_{ref} [kg/m^3]', 'FontSize',eosFs)
+xlim(axA, [0 100]);  xticks(axA, 0:20:100)
+set(axA, 'FontSize',eosFs);  grid(axA,'on');  box(axA,'on')
+% (2b) normalized density
+xlabel(axB, cLbl, 'FontSize',eosFs)
+ylabel(axB, '\rho_{norm} = (\rho_2 - \rho_{ref}) / (\rho_2 - \rho_1) [-]', 'FontSize',eosFs)
+xlim(axB, [0 100]);  ylim(axB, [0 1]);  xticks(axB, 0:20:100)
+set(axB, 'FontSize',eosFs);  grid(axB,'on');  box(axB,'on');  axis(axB, 'square')
+if size(curves,1) > 1      % legend only when extra T or P curves are plotted
+    legend(axA, 'Location','northeast', 'FontSize',eosFs-2)
+    legend(axB, 'Location','southeast', 'FontSize',eosFs-2)
+end
+fprintf('\nREFPROP %s-%s: pure densities and max deviation of rho_norm from ideal mixing:\n', eosPair(1), eosPair(2));
+disp(vertcat(rowsE{:}))
+tagTP = string(sprintf('%s_T%gC_P%gpsig', join(eosPair,"_"), eosT_C, eosP_psig));
+fnA = "EOS_REFPROP_rho_vs_x_" + tagTP;
+fnB = "EOS_REFPROP_rhoNorm_vs_x_" + tagTP;
+saveas(figA, pathExportAll + fnA, 'png');  saveas(figA, pathExportAll + fnA, 'fig');
+saveas(figB, pathExportAll + fnB, 'png');  saveas(figB, pathExportAll + fnB, 'fig');
+
+% ---------- (3) rho_mix vs x: several pressures at eosT_C, and several temperatures at eosP_psig
+eosPcurves = 1000:250:2000;        % (3a) pressures at T = eosT_C [psig]
+eosTcurves = 25:2.5:35;            % (3b) temperatures at P = eosP_psig [C]
+sets3 = {eosPcurves, [], 'P', 'P [psig]', sprintf('T = %g °C', eosT_C), ...
+         @(x, v) rhoMix(x, eosT_C, v), sprintf('EOS_REFPROP_rho_vs_x_Pcurves_%s_T%g', join(eosPair,"_"), eosT_C); ...
+         eosTcurves, [], 'T', 'T [°C]', sprintf('P = %g psig', eosP_psig), ...
+         @(x, v) rhoMix(x, v, eosP_psig), sprintf('EOS_REFPROP_rho_vs_x_Tcurves_%s_P%g', join(eosPair,"_"), eosP_psig)};
+for q = 1:size(sets3,1)
+    vals = sets3{q,1};  fRho = sets3{q,6};
+    fig = figure('Position',[100 100 850 620], 'NumberTitle','off', 'Name', ...
+        sprintf('REFPROP rho(x), %s-%s, %s, curves of %s', eosPair(1), eosPair(2), sets3{q,5}, sets3{q,3}));
+    ax = axes(fig);  hold(ax,'on')
+    cmapV = jet(256);  vLim = [min(vals) max(vals)];  if diff(vLim) == 0, vLim = vLim + [-1 1]; end
+    for v = vals
+        rho = arrayfun(@(x) fRho(x, v), eosX);
+        rho(~isfinite(rho) | rho < eosRhoLim(1) | rho > eosRhoLim(2)) = NaN;
+        cv = cmapV(round(1 + 255*(v - vLim(1))/diff(vLim)), :);
+        lw = 1.8;  if (q == 1 && v == eosP_psig) || (q == 2 && v == eosT_C), lw = 3; end   % main condition thicker
+        plot(ax, xPct, rho, '-', 'Color',cv, 'LineWidth',lw, 'DisplayName', ...
+            sprintf('%s = %g', sets3{q,3}, v))
+    end
+    colormap(ax, cmapV);  clim(ax, vLim)
+    cb = colorbar(ax);  cb.Label.String = sets3{q,4};  cb.FontSize = eosFs;  cb.Ticks = vals;
+    xlabel(ax, cLbl, 'FontSize',eosFs);  ylabel(ax, '\rho_{ref} [kg/m^3]', 'FontSize',eosFs)
+    xlim(ax, [0 100]);  xticks(ax, 0:20:100);  ylim(ax, [max(eosRhoLim(1), 0) inf])
+    set(ax, 'FontSize',eosFs);  grid(ax,'on');  box(ax,'on')
+    legend(ax, 'Location','northeast', 'FontSize',eosFs-2)
+    title(ax, sprintf('REFPROP, %s-%s, %s', eosPair(1), eosPair(2), sets3{q,5}), 'FontWeight','normal')
+    fn = string(sets3{q,7});
+    saveas(fig, pathExportAll + fn, 'png');  saveas(fig, pathExportAll + fn, 'fig');
+end
