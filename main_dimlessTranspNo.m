@@ -1321,6 +1321,133 @@ for radarGroup = analysisGroups
     saveas(fig, fullfile(pathExport, fname), 'fig');
     if closeAfterSave, close(fig); end
 end
+
+%% N_g vs M - 1, colour = KL/D0 (stability map), one figure per condition group
+% x = M - 1 (M = mu2/mu1), y = N_g = K (rho2 - rho1) g sin(theta) / (mu1 u) (main_fluidProps_errorProp),
+% colour = KL/D0 (continuous rainbow, log scale), one figure per group of analysisGroups
+% ("theory" nominal, "measAvg" run average, "measBegEnd" per-fluid beginning / end conditions).
+% Same scale, limits (centred on 0) and aspect ratio on both axes, so the stability line
+% N_g = M - 1 (dashed, u = u_c) is the 1:1 diagonal: above it stable (N_g > M - 1, u < u_c),
+% below it viscously unstable (N_g < M - 1, u > u_c) (Lake et al. 2014). Dotted: M - 1 = 0, N_g = 0.
+% Markers: circle = UHS, square = XCT analog (He-Xe); horizontal runs (N_g = 0, only with ngUseAll)
+% diamonds; CT sources (if added to ngSources) with a thick edge. Grey bars: dM and dNg.
+% Printed per group: M - 1, N_g +/- dN_g, KL/D0 and whether the point is on the stable side.
+
+ngSources = srcNames(1);          % MFM; add e.g. srcNames([3 6]) for the XCT CT values
+ngUseAll  = false;                % true: include the horizontal runs (N_g = 0)
+ngLabels  = true;                 % experiment name next to each marker
+ngCLog    = true;                 % colour = log10(KL/D0)
+ngCommon  = true;                 % true: same axis and colour limits in every group (comparable figures)
+ngErr     = true;                 % grey error bars dM (x) and dNg (y)
+ngLegLoc  = "southwest";          % legend inside the axes (stable label top left, unstable bottom right)
+ngFsAx    = 20;                   % font size: tick labels, colour-bar ticks
+ngFsLbl   = 24;                   % font size: axis and colour-bar labels
+ngFsLeg   = 18;                   % font size: legend
+ngMk      = 240;                  % marker size (scatter area)
+ngLegMk   = 14;                   % marker size in the legend [points]
+
+if ngUseAll, Tng0 = Tall; else, Tng0 = T; end
+Tng0 = Tng0(ismember(Tng0.group, analysisGroups) & ismember(Tng0.source, ngSources) & ...
+            isfinite(Tng0.M) & isfinite(Tng0.Ng), :);
+if isempty(Tng0), warning('N_g vs M - 1: no rows with M and N_g'); end
+
+% common limits over every group (ngCommon)
+cAll = Tng0.KLD0;  cAll(~(cAll > 0)) = NaN;  if ngCLog, cAll = log10(cAll); end
+LAll = 1.08*max(abs([Tng0.M - 1; Tng0.Ng]));
+cLAll = [min(cAll,[],'omitnan') max(cAll,[],'omitnan')];
+
+for g = analysisGroups
+    Tg = Tng0(Tng0.group == g, :);
+    if isempty(Tg), warning('N_g vs M - 1: no entries for group %s', g); continue, end
+    x  = Tg.M - 1;   y  = Tg.Ng;
+    dx = Tg.dM;      dy = Tg.dNg;    dx(~isfinite(dx)) = 0;  dy(~isfinite(dy)) = 0;
+    c  = Tg.KLD0;    c(~(c > 0)) = NaN;   if ngCLog, c = log10(c); end
+    if ngCommon
+        L = LAll;  cL = cLAll;
+    else
+        L = 1.08*max(abs([x; y]));  cL = [min(c,[],'omitnan') max(c,[],'omitnan')];
+    end
+    if ~(L > 0), L = 1; end
+    if ~all(isfinite(cL)), cL = [0 1]; end
+    if ~(diff(cL) > 0), cL = cL + [-0.1 0.1]; end
+
+    fig = figure('Position',[80 80 1050 950], 'NumberTitle','off', ...
+        'Name', sprintf('N_g vs M - 1, colour = KL/D0 -- %s', groupTitle.(g)));
+    ax = axes(fig);  hold(ax,'on')
+
+    hS = plot(ax, [-L L], [-L L], '--k', 'LineWidth',1.8, 'DisplayName','N_g = M - 1 (u = u_c)');
+    xline(ax, 0, ':', 'Color',[0.4 0.4 0.4], 'LineWidth',1.2, 'HandleVisibility','off');
+    yline(ax, 0, ':', 'Color',[0.4 0.4 0.4], 'LineWidth',1.2, 'HandleVisibility','off');
+    if ngErr
+        errorbar(ax, x, y, dy, dy, dx, dx, 'LineStyle','none', 'Color',[0.75 0.75 0.75], ...
+            'CapSize',4, 'LineWidth',1, 'HandleVisibility','off')
+    end
+
+    % markers: circle = UHS, square = XCT, diamond = horizontal; CT sources with a thick edge
+    isH   = Tg.Ng == 0;
+    isXCT = startsWith(Tg.experiment, "He-Xe");
+    mkSets = {~isXCT & ~isH, 'o', ngMk,        "UHS"; ...
+               isXCT & ~isH, 's', 1.08*ngMk,   "XCT"; ...
+               isH,          'd', 1.08*ngMk,   "horizontal (N_g = 0)"};
+    hLeg = gobjects(0);
+    for s = 1:numel(ngSources)
+        selS = Tg.source == ngSources(s);
+        lw = 1;  if s > 1, lw = 2.2; end
+        for q = 1:size(mkSets,1)
+            sel = selS & mkSets{q,1};
+            if ~any(sel), continue, end
+            okc = sel & isfinite(c);
+            if any(okc)
+                scatter(ax, x(okc), y(okc), mkSets{q,3}, c(okc), mkSets{q,2}, 'filled', ...
+                    'MarkerEdgeColor','k', 'LineWidth',lw, 'HandleVisibility','off')
+            end
+            if any(sel & ~isfinite(c))
+                scatter(ax, x(sel & ~isfinite(c)), y(sel & ~isfinite(c)), mkSets{q,3}, [0.55 0.55 0.55], ...
+                    mkSets{q,2}, 'LineWidth',lw, 'HandleVisibility','off')
+            end
+            hLeg(end+1) = plot(ax, NaN, NaN, mkSets{q,2}, 'LineStyle','none', 'MarkerSize',ngLegMk, ...
+                'MarkerFaceColor',[0.7 0.7 0.7], 'MarkerEdgeColor','k', 'LineWidth',lw, ...
+                'DisplayName', mkSets{q,4} + ternStr(numel(ngSources) > 1, " (" + ngSources(s) + ")", "")); %#ok<SAGROW>
+        end
+    end
+    if ngLabels
+        lbl = "  " + namesOf(Tg.experiment, exps);
+        if numel(ngSources) > 1, lbl = lbl + " (" + Tg.source + ")"; end
+        text(ax, x, y, lbl, 'FontSize',ngFsAx-8, 'Interpreter','none', 'Clipping','on')
+    end
+
+    % same limits (centred on 0) and aspect ratio -> stability line at 45 degrees
+    xlim(ax, [-L L]);  ylim(ax, [-L L]);  axis(ax, 'square');  daspect(ax, [1 1 1])
+    text(ax, -0.95*L, 0.95*L, 'stable  (N_g > M - 1, u < u_c)', 'FontSize',ngFsAx-4, ...
+        'Color',[0 0.35 0], 'VerticalAlignment','top')
+    text(ax, 0.95*L, -0.95*L, 'unstable  (N_g < M - 1, u > u_c)', 'FontSize',ngFsAx-4, ...
+        'Color',[0.6 0 0], 'HorizontalAlignment','right', 'VerticalAlignment','bottom')
+    uistack(hS, 'bottom');
+
+    set(ax, 'FontSize',ngFsAx, 'LineWidth',1, 'LabelFontSizeMultiplier',1);  grid(ax,'on');  box(ax,'on')
+    xlabel(ax, 'M - 1 [-]', 'FontSize',ngFsLbl);  ylabel(ax, 'N_g [-]', 'FontSize',ngFsLbl)
+
+    colormap(ax, jet(256));  clim(ax, cL)
+    cb = colorbar(ax);
+    if ngCLog
+        tk = ceil(cL(1)*4)/4:0.25:floor(cL(2)*4)/4;          % every quarter decade inside the range
+        if numel(tk) < 2, tk = linspace(cL(1), cL(2), 5); end
+        cb.Ticks = tk;  cb.TickLabels = compose('%.3g', 10.^tk);
+    end
+    cb.Label.String = 'K_L / D_0 [-]';  cb.FontSize = ngFsAx;  cb.Label.FontSize = ngFsLbl;
+
+    lg = legend(ax, [hLeg hS], 'Location',char(ngLegLoc), 'FontSize',ngFsLeg, 'Box','on', 'Color','w');
+    lg.ItemTokenSize = [30 24];
+
+    Tp = table(namesOf(Tg.experiment, exps), Tg.source, x, Tg.dM, y, Tg.dNg, Tg.KLD0, y > x, ...
+        'VariableNames', {'experiment','source','M_minus_1','dM','Ng','dNg','KLD0','stable_Ng_gt_Mminus1'});
+    fprintf('\nN_g vs M - 1 -- %s:\n', groupTitle.(g));  disp(Tp)
+
+    fname = "Ng_vs_Mminus1_colorKLD0_" + g + ternStr(ngUseAll, "_allExp", "");
+    saveas(fig, fullfile(pathExport, fname), 'png');
+    saveas(fig, fullfile(pathExport, fname), 'fig');
+    if closeAfterSave, close(fig); end
+end
  
 %% Local functions
  
